@@ -9,464 +9,99 @@
 <style>
 :root{
   color-scheme:light;
-  --bg:#f6f8fc;
-  --surface:#ffffff;
-  --surface2:#eaf1fb;
-  --text:#202124;
-  --muted:#68778c;
-  --border:#e5e7eb;
-  --hover:#f2f6fc;
-  --active:#d3e3fd;
-  --activeText:#041e49;
-  --compose:#c2e7ff;
-  --composeText:#001d35;
-  --input:#ffffff;
-  --accent:#0b57d0;
-  --shadow:0 3px 12px #00000012;
+  --bg:#f6f8fc;--surface:#fff;--surface2:#eaf1fb;
+  --text:#202124;--muted:#68778c;--border:#e5e7eb;
+  --hover:#f2f6fc;--active:#d3e3fd;--activeText:#041e49;
+  --compose:#c2e7ff;--composeText:#001d35;--input:#fff;
+  --accent:#0b57d0;--shadow:0 3px 12px #00000012;
 }
-
 body[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#131722;
-  --surface:#1e2533;
-  --surface2:#293449;
-  --text:#e5eaf3;
-  --muted:#a5b1c3;
-  --border:#354155;
-  --hover:#293449;
-  --active:#344968;
-  --activeText:#d9e8ff;
-  --compose:#344968;
-  --composeText:#e4efff;
-  --input:#202b3b;
-  --accent:#8ab4f8;
-  --shadow:0 3px 12px #00000035;
+  --bg:#131722;--surface:#1e2533;--surface2:#293449;
+  --text:#e5eaf3;--muted:#a5b1c3;--border:#354155;
+  --hover:#293449;--active:#344968;--activeText:#d9e8ff;
+  --compose:#344968;--composeText:#e4efff;--input:#202b3b;
+  --accent:#8ab4f8;--shadow:0 3px 12px #00000035;
 }
-
 *{box-sizing:border-box}
-
-body{
-  margin:0;
-  font:15px Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  transition:background .2s,color .2s;
-}
-
+body{margin:0;font:15px Arial,sans-serif;background:var(--bg);color:var(--text)}
 .hide{display:none!important}
 .muted{color:var(--muted);font-size:13px}
-
-button{
-  border:0;
-  border-radius:22px;
-  padding:10px 17px;
-  background:var(--accent);
-  color:white;
-  font-weight:600;
-  cursor:pointer;
-  margin:5px 4px 5px 0;
-}
-
-button.secondary{
-  background:var(--surface2);
-  color:var(--text);
-}
-
-input,select,textarea{
-  width:100%;
-  padding:12px;
-  border:1px solid var(--border);
-  border-radius:9px;
-  font:inherit;
-  background:var(--input);
-  color:var(--text);
-}
-
-label{
-  display:block;
-  margin:13px 0 5px;
-  font-size:13px;
-  font-weight:600;
-}
-
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-#loginCard{
-  max-width:520px;
-  margin:35px auto;
-  padding:25px;
-  background:var(--surface);
-  border-radius:18px;
-  border:1px solid var(--border);
-}
-
+button{border:0;border-radius:22px;padding:10px 17px;background:var(--accent);color:white;font-weight:600;cursor:pointer;margin:5px 4px 5px 0}
+button.secondary{background:var(--surface2);color:var(--text)}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:9px;font:inherit;background:var(--input);color:var(--text)}
+label{display:block;margin:13px 0 5px;font-size:13px;font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#loginCard{max-width:520px;margin:35px auto;padding:25px;background:var(--surface);border-radius:18px;border:1px solid var(--border)}
 #loginCard h1{color:var(--accent)}
 .status{color:#e05252;font-size:13px}
-
-.mail-header{
-  min-height:76px;
-  display:flex;
-  align-items:center;
-  gap:18px;
-  padding:10px 22px;
-  background:var(--bg);
-  border-bottom:1px solid var(--border);
-}
-
-.mail-brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  width:225px;
-  flex-shrink:0;
-}
-
-.mail-brand h2{
-  margin:0;
-  font-size:22px;
-  font-weight:500;
-}
-
-.menu-toggle{
-  background:transparent;
-  color:var(--text);
-  font-size:22px;
-  padding:9px 12px;
-  margin:0;
-}
-
-.mail-search{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  background:var(--surface2);
-  border-radius:28px;
-  padding:5px 16px;
-  max-width:720px;
-  flex:1;
-}
-
-.mail-search input{
-  border:0;
-  outline:0;
-  background:transparent;
-  padding:12px;
-  min-width:0;
-}
-
-.mail-search button{
-  background:transparent;
-  color:var(--text);
-  margin:0;
-  padding:8px;
-}
-
-.header-actions{
-  display:flex;
-  align-items:center;
-  gap:5px;
-}
-
+.mail-header{min-height:76px;display:flex;align-items:center;gap:18px;padding:10px 22px;background:var(--bg);border-bottom:1px solid var(--border)}
+.mail-brand{display:flex;align-items:center;gap:12px;width:225px;flex-shrink:0}
+.mail-brand h2{margin:0;font-size:22px;font-weight:500}
+.menu-toggle{background:transparent;color:var(--text);font-size:22px;padding:9px 12px;margin:0}
+.mail-search{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:28px;padding:5px 16px;max-width:720px;flex:1}
+.mail-search input{border:0;outline:0;background:transparent;padding:12px;min-width:0}
+.mail-search button{background:transparent;color:var(--text);margin:0;padding:8px}
+.header-actions{display:flex;align-items:center;gap:5px}
 .header-actions button{margin:0}
-
-.account{
-  padding:8px 18px;
-  color:var(--muted);
-  font-size:12px;
-  max-width:180px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.mail-layout{
-  display:grid;
-  grid-template-columns:250px minmax(0,1fr);
-  min-height:calc(100vh - 76px);
-}
-
-.mail-sidebar{
-  padding:15px 12px;
-  background:var(--bg);
-}
-
-.compose-button{
-  display:block;
-  background:var(--compose);
-  color:var(--composeText);
-  border-radius:16px;
-  padding:17px 25px;
-  margin:5px 0 20px 8px;
-  font-size:14px;
-  box-shadow:var(--shadow);
-}
-
-.folders{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-  padding:0;
-}
-
-.folders button{
-  display:flex;
-  align-items:center;
-  width:100%;
-  text-align:left;
-  padding:10px 20px;
-  border-radius:0 22px 22px 0;
-  background:transparent;
-  color:var(--text);
-  margin:0;
-  font-size:14px;
-}
-
+.account{padding:8px 18px;color:var(--muted);font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 76px)}
+.mail-sidebar{padding:15px 12px;background:var(--bg)}
+.compose-button{display:block;background:var(--compose);color:var(--composeText);border-radius:16px;padding:17px 25px;margin:5px 0 20px 8px;font-size:14px;box-shadow:var(--shadow)}
+.folders{display:flex;flex-direction:column;gap:4px;padding:0}
+.folders button{display:flex;align-items:center;width:100%;text-align:left;padding:10px 20px;border-radius:0 22px 22px 0;background:transparent;color:var(--text);margin:0;font-size:14px}
 .folders button:hover{background:var(--hover)}
-
-.folders button.active{
-  background:var(--active);
-  color:var(--activeText);
-  font-weight:700;
-}
-
-.mail-main{
-  min-width:0;
-  padding:12px 20px 25px 5px;
-}
-
-.mail-content{
-  background:var(--surface);
-  border-radius:18px;
-  min-height:calc(100vh - 100px);
-  padding:22px;
-  border:1px solid var(--border);
-}
-
-#folderTitle{
-  font-size:20px;
-  font-weight:500;
-  margin:5px 0 20px;
-}
-
-.msg{
-  display:grid;
-  grid-template-columns:minmax(130px,190px) minmax(0,1fr);
-  align-items:center;
-  gap:15px;
-  padding:14px 12px;
-  border-bottom:1px solid var(--border);
-  cursor:pointer;
-}
-
+.folders button.active{background:var(--active);color:var(--activeText);font-weight:700}
+.mail-main{min-width:0;padding:12px 20px 25px 5px}
+.mail-content{background:var(--surface);border-radius:18px;min-height:calc(100vh - 100px);padding:22px;border:1px solid var(--border)}
+#folderTitle{font-size:20px;font-weight:500;margin:5px 0 20px}
+.msg{display:grid;grid-template-columns:minmax(130px,190px) minmax(0,1fr);align-items:center;gap:15px;padding:14px 12px;border-bottom:1px solid var(--border);cursor:pointer}
 .msg:hover{background:var(--hover)}
-
-.msg b{
-  margin:0;
-  font-size:14px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.msg small{
-  color:var(--muted);
-  font-size:13px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
+.msg b{margin:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msg small{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #readSubject{overflow-wrap:anywhere}
-
-#readMeta{
-  border-bottom:1px solid var(--border);
-  padding-bottom:12px;
-  color:var(--muted);
-}
-
-.reader{
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  line-height:1.7;
-  padding:15px 0;
-}
-
-#readBody{
-  width:100%;
-  min-width:0;
-  overflow:hidden;
-}
-
-#readBody iframe{
-  display:block;
-  width:100%;
-  min-height:500px;
-  border:0;
-  background:white;
-}
-
-#readBody pre{
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  font:14px/1.7 Arial,sans-serif;
-}
-
-#attachments{
-  padding:12px 0;
-  overflow-wrap:anywhere;
-}
-
-.compose-card{
-  margin-top:18px;
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:18px;
-  max-width:750px;
-  box-shadow:var(--shadow);
-}
-
+#readMeta{border-bottom:1px solid var(--border);padding-bottom:12px;color:var(--muted)}
+.reader{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;padding:15px 0}
+#readBody{width:100%;min-width:0;overflow:hidden}
+#readBody iframe{display:block;width:100%;min-height:500px;border:0;background:white}
+#readBody pre{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.7 Arial,sans-serif}
+#attachments{padding:12px 0;overflow-wrap:anywhere}
+.compose-card{margin-top:18px;border:1px solid var(--border);border-radius:12px;padding:18px;max-width:750px;box-shadow:var(--shadow)}
 .compose-card h3{margin-top:0}
-
-.settings-overlay{
-  position:fixed;
-  inset:0;
-  background:#0007;
-  z-index:100;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:18px;
-}
-
-.settings-panel{
-  width:100%;
-  max-width:390px;
-  padding:24px;
-  background:var(--surface);
-  color:var(--text);
-  border:1px solid var(--border);
-  border-radius:18px;
-  box-shadow:var(--shadow);
-}
-
-.settings-heading{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:18px;
-}
-
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:18px 5px 5px;border-top:1px solid var(--border);margin-top:15px}
+.page-buttons{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.page-buttons button{margin:2px;padding:8px 12px;min-width:36px}
+.page-buttons button.current{background:var(--accent);color:white}
+.page-info{font-size:13px;color:var(--muted)}
+.settings-overlay{position:fixed;inset:0;background:#0007;z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}
+.settings-panel{width:100%;max-width:390px;padding:24px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.settings-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .settings-heading h3{margin:0;font-size:21px}
-
-.settings-close{
-  background:transparent;
-  color:var(--text);
-  font-size:22px;
-  padding:5px 10px;
-  margin:0;
-}
-
-.theme-options{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-top:14px;
-}
-
-.theme-option{
-  border:2px solid var(--border);
-  border-radius:13px;
-  padding:15px 8px;
-  background:var(--surface);
-  color:var(--text);
-  text-align:center;
-  margin:0;
-}
-
-.theme-option.selected{
-  border-color:var(--accent);
-  background:var(--surface2);
-}
-
-.theme-preview{
-  display:block;
-  height:65px;
-  border-radius:8px;
-  margin-bottom:10px;
-  border:1px solid #8885;
-}
-
-.light-preview{
-  background:linear-gradient(90deg,#e8edf5 28%,#fff 28%);
-}
-
-.dark-preview{
-  background:linear-gradient(90deg,#293449 28%,#171d29 28%);
-}
-
-.settings-description{
-  margin-top:18px;
-  font-size:13px;
-  color:var(--muted);
-  line-height:1.5;
-}
-
+.settings-close{background:transparent;color:var(--text);font-size:22px;padding:5px 10px;margin:0}
+.theme-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.theme-option{border:2px solid var(--border);border-radius:13px;padding:15px 8px;background:var(--surface);color:var(--text);text-align:center;margin:0}
+.theme-option.selected{border-color:var(--accent);background:var(--surface2)}
+.theme-preview{display:block;height:65px;border-radius:8px;margin-bottom:10px;border:1px solid #8885}
+.light-preview{background:linear-gradient(90deg,#e8edf5 28%,#fff 28%)}
+.dark-preview{background:linear-gradient(90deg,#293449 28%,#171d29 28%)}
+.settings-description{margin-top:18px;font-size:13px;color:var(--muted);line-height:1.5}
 @media(max-width:700px){
-  .mail-header{
-    min-height:65px;
-    height:auto;
-    padding:8px 10px;
-    flex-wrap:wrap;
-    gap:8px;
-  }
-
+  .mail-header{min-height:65px;height:auto;padding:8px 10px;flex-wrap:wrap;gap:8px}
   .mail-brand{width:auto;flex:1}
   .mail-brand h2{font-size:19px}
   .mail-search{order:3;flex-basis:100%;max-width:none}
-
-  .header-actions button{
-    padding:8px 10px;
-    font-size:12px;
-  }
-
-  .mail-layout{
-    display:block;
-    min-height:calc(100vh - 65px);
-  }
-
-  .mail-sidebar{
-    display:none;
-    position:absolute;
-    z-index:20;
-    top:65px;
-    left:0;
-    width:265px;
-    min-height:calc(100vh - 65px);
-    background:var(--bg);
-    box-shadow:4px 5px 15px #0002;
-  }
-
+  .header-actions button{padding:8px 10px;font-size:12px}
+  .mail-layout{display:block;min-height:calc(100vh - 65px)}
+  .mail-sidebar{display:none;position:absolute;z-index:20;top:65px;left:0;width:265px;min-height:calc(100vh - 65px);background:var(--bg);box-shadow:4px 5px 15px #0002}
   .mail-sidebar.open{display:block}
   .mail-main{padding:8px}
-
-  .mail-content{
-    padding:14px 10px;
-    border-radius:14px;
-  }
-
-  .msg{
-    grid-template-columns:1fr;
-    gap:5px;
-    padding:13px 8px;
-  }
-
+  .mail-content{padding:14px 10px;border-radius:14px}
+  .msg{grid-template-columns:1fr;gap:5px;padding:13px 8px}
   .msg small{white-space:normal}
   .row{grid-template-columns:1fr}
   #readBody iframe{min-height:450px}
+  .pagination{justify-content:center}
 }
 </style>
 </head>
@@ -516,12 +151,10 @@ label{
 
   <button id="loginBtn">Sign In</button>
   <span id="loginStatus" class="status"></span>
-
   <p class="muted">Use an app password if required by your provider. IMAP/SMTP access must be enabled by your email provider.</p>
 </section>
 
 <section id="mailCard" class="hide">
-
 <header class="mail-header">
   <div class="mail-brand">
     <button class="menu-toggle" id="menuToggle">☰</button>
@@ -546,9 +179,7 @@ label{
 <div class="mail-layout">
   <aside class="mail-sidebar" id="mailSidebar">
     <button class="compose-button" id="composeBtn">✎ Compose</button>
-    <nav class="folders" id="folders">
-      <p class="muted">Loading folders...</p>
-    </nav>
+    <nav class="folders" id="folders"><p class="muted">Loading folders...</p></nav>
   </aside>
 
   <main class="mail-main">
@@ -557,6 +188,11 @@ label{
       <div id="listPane">
         <h3 id="folderTitle">Inbox</h3>
         <div id="inbox"></div>
+
+        <div class="pagination" id="pagination">
+          <div class="page-info" id="pageInfo">Loading...</div>
+          <div class="page-buttons" id="pageButtons"></div>
+        </div>
       </div>
 
       <div id="readerPane" class="hide">
@@ -569,16 +205,12 @@ label{
 
       <div id="compose" class="compose-card hide">
         <h3>Compose Email</h3>
-
         <label>To</label>
         <input id="to" type="email" placeholder="recipient@example.com">
-
         <label>Subject</label>
         <input id="subject" placeholder="Enter subject">
-
         <label>Message</label>
         <textarea id="body" rows="7" placeholder="Write your message..."></textarea>
-
         <button id="send">Send Email</button>
         <span id="sendStatus" class="muted"></span>
       </div>
@@ -590,36 +222,25 @@ label{
 
 <div id="settingsOverlay" class="settings-overlay hide">
   <div class="settings-panel">
-
     <div class="settings-heading">
       <h3>Settings</h3>
       <button class="settings-close" id="closeSettings">✕</button>
     </div>
-
     <strong>Appearance</strong>
     <p class="muted">Choose your preferred theme.</p>
-
     <div class="theme-options">
       <button class="theme-option" id="lightTheme">
-        <span class="theme-preview light-preview"></span>
-        Light Mode
+        <span class="theme-preview light-preview"></span>Light Mode
       </button>
-
       <button class="theme-option" id="darkTheme">
-        <span class="theme-preview dark-preview"></span>
-        Dark Mode
+        <span class="theme-preview dark-preview"></span>Dark Mode
       </button>
     </div>
-
-    <p class="settings-description">
-      Your appearance preference is saved automatically on this device.
-    </p>
-
+    <p class="settings-description">Your appearance preference is saved automatically on this device.</p>
   </div>
 </div>
 
 <script src="/providers.js?v=20261111"></script>
-
 <script>
 const $ = id => document.getElementById(id);
 
@@ -627,59 +248,41 @@ let token = localStorage.getItem('dankeMailToken') || '';
 let currentFolder = 'INBOX';
 let providerList = [];
 let currentMessages = [];
+let currentPage = 1;
+let totalPages = 1;
+let currentLimit = 25;
 
-/* SESSION STORAGE */
-function saveSession(newToken, email){
-  localStorage.setItem('dankeMailToken', newToken);
-  localStorage.setItem('dankeMailEmail', email);
+/* SESSION */
+function saveSession(newToken,email){
+  localStorage.setItem('dankeMailToken',newToken);
+  localStorage.setItem('dankeMailEmail',email);
 }
-
 function clearSession(){
   localStorage.removeItem('dankeMailToken');
   localStorage.removeItem('dankeMailEmail');
-  token = '';
+  token='';
 }
 
 /* THEME */
 function setTheme(theme){
-  if(theme !== 'dark' && theme !== 'light') theme = 'light';
-
-  document.body.dataset.theme = theme;
-
-  try{
-    localStorage.setItem('dankeMailTheme',theme);
-  }catch(e){}
-
+  if(theme!=='dark'&&theme!=='light')theme='light';
+  document.body.dataset.theme=theme;
+  try{localStorage.setItem('dankeMailTheme',theme)}catch(e){}
   $('lightTheme').classList.toggle('selected',theme==='light');
   $('darkTheme').classList.toggle('selected',theme==='dark');
 }
-
 function loadTheme(){
-  let saved = 'light';
-
-  try{
-    saved = localStorage.getItem('dankeMailTheme') || 'light';
-  }catch(e){}
-
+  let saved='light';
+  try{saved=localStorage.getItem('dankeMailTheme')||'light'}catch(e){}
   setTheme(saved);
 }
-
 loadTheme();
 
-$('settingsBtn').onclick=()=>{
-  $('settingsOverlay').classList.remove('hide');
-};
-
-$('closeSettings').onclick=()=>{
-  $('settingsOverlay').classList.add('hide');
-};
-
+$('settingsBtn').onclick=()=>$('settingsOverlay').classList.remove('hide');
+$('closeSettings').onclick=()=>$('settingsOverlay').classList.add('hide');
 $('settingsOverlay').onclick=e=>{
-  if(e.target === $('settingsOverlay')){
-    $('settingsOverlay').classList.add('hide');
-  }
+  if(e.target===$('settingsOverlay'))$('settingsOverlay').classList.add('hide');
 };
-
 $('lightTheme').onclick=()=>setTheme('light');
 $('darkTheme').onclick=()=>setTheme('dark');
 
@@ -693,7 +296,6 @@ function applyProvider(p){
   $('smtpPort').value=p.smtpPort||465;
   $('smtpSecure').checked=p.smtpSecure!==false;
 }
-
 function initProviders(){
   const select=$('provider');
 
@@ -716,7 +318,6 @@ function initProviders(){
   const initial=providerList.find(p=>p.id==='dti')||providerList[0];
   select.value=initial.id;
   applyProvider(initial);
-
   $('providerNote').textContent='Successfully loaded '+providerList.length+' providers.';
 
   $('email').addEventListener('input',()=>{
@@ -736,7 +337,6 @@ function initProviders(){
     applyProvider(providerList.find(p=>p.id===select.value));
   });
 }
-
 initProviders();
 
 /* API */
@@ -776,14 +376,12 @@ $('loginBtn').onclick=async()=>{
 
     token=j.token;
     saveSession(j.token,j.email);
-
     $('accountLabel').textContent=j.email;
     $('loginCard').classList.add('hide');
     $('mailCard').classList.remove('hide');
     $('loginStatus').textContent='';
-
+    currentPage=1;
     await loadFolders();
-
   }catch(e){
     $('loginStatus').textContent=e.message;
   }finally{
@@ -803,7 +401,6 @@ function folderLabel(f){
   if(s.includes('trash')||/trash|deleted|ゴミ箱/.test(p+' '+n))return 'Trash';
   if(s.includes('junk')||/spam|junk|迷惑/.test(p+' '+n))return 'Spam';
   if(s.includes('archive')||/archive|アーカイブ/.test(p+' '+n))return 'Archive';
-
   return f.name||f.path;
 }
 
@@ -811,30 +408,26 @@ async function loadFolders(){
   try{
     const j=await api('/api/folders');
     const fs=j.folders||[];
-
     $('folders').innerHTML='';
 
     if(!fs.some(f=>f.path===currentFolder)){
-      currentFolder=fs.find(f=>String(f.path).toUpperCase()==='INBOX')?.path
-        ||fs[0]?.path||'INBOX';
+      currentFolder=fs.find(f=>String(f.path).toUpperCase()==='INBOX')?.path||fs[0]?.path||'INBOX';
     }
 
     fs.forEach(f=>{
       const b=document.createElement('button');
       b.textContent=folderLabel(f);
       b.className=f.path===currentFolder?'active':'';
-
       b.onclick=()=>{
         currentFolder=f.path;
+        currentPage=1;
         loadFolders();
         $('mailSidebar').classList.remove('open');
       };
-
       $('folders').append(b);
     });
 
-    await loadInbox();
-
+    await loadInbox(1);
   }catch(e){
     $('folders').textContent=e.message;
   }
@@ -857,44 +450,102 @@ function renderMessages(messages){
     sender.textContent=m.from||'Unknown sender';
 
     const details=document.createElement('small');
-    details.textContent=(m.subject||'(No subject)')+
-      ' · '+(m.date?new Date(m.date).toLocaleString():'');
+    details.textContent=(m.subject||'(No subject)')+' · '+
+      (m.date?new Date(m.date).toLocaleString():'');
 
     d.append(sender,details);
     d.onclick=()=>readMail(m.uid);
-
     $('inbox').append(d);
   });
 }
 
-async function loadInbox(){
+/* PAGINATION */
+function renderPagination(data){
+  currentPage=data.page||1;
+  totalPages=data.totalPages||1;
+
+  const total=data.total||0;
+  const first=total?((currentPage-1)*currentLimit)+1:0;
+  const last=Math.min(currentPage*currentLimit,total);
+
+  $('pageInfo').textContent=`Showing ${first}-${last} of ${total} emails`;
+
+  const area=$('pageButtons');
+  area.innerHTML='';
+
+  function addButton(label,page,disabled=false,active=false){
+    const b=document.createElement('button');
+    b.textContent=label;
+    b.className='secondary'+(active?' current':'');
+    b.disabled=disabled;
+    b.onclick=()=>loadInbox(page);
+    area.append(b);
+  }
+
+  addButton('Previous',currentPage-1,currentPage<=1);
+
+  let start=Math.max(1,currentPage-2);
+  let end=Math.min(totalPages,currentPage+2);
+
+  if(start>1){
+    addButton('1',1,false,currentPage===1);
+    if(start>2){
+      const dots=document.createElement('span');
+      dots.textContent='…';
+      dots.style.padding='0 5px';
+      area.append(dots);
+    }
+  }
+
+  for(let p=start;p<=end;p++){
+    addButton(String(p),p,false,p===currentPage);
+  }
+
+  if(end<totalPages){
+    if(end<totalPages-1){
+      const dots=document.createElement('span');
+      dots.textContent='…';
+      dots.style.padding='0 5px';
+      area.append(dots);
+    }
+    addButton(String(totalPages),totalPages,false,currentPage===totalPages);
+  }
+
+  addButton('Next',currentPage+1,currentPage>=totalPages);
+}
+
+/* LOAD EMAILS */
+async function loadInbox(page=1){
   $('listPane').classList.remove('hide');
   $('readerPane').classList.add('hide');
   $('compose').classList.add('hide');
   $('searchInput').value='';
-
-  $('folderTitle').textContent=folderLabel({
-    path:currentFolder,name:currentFolder
-  });
-
+  $('folderTitle').textContent=folderLabel({path:currentFolder,name:currentFolder});
   $('inbox').textContent='Loading messages...';
+  $('pageInfo').textContent='Loading...';
+  $('pageButtons').innerHTML='';
 
   try{
-    const j=await api('/api/inbox?folder='+encodeURIComponent(currentFolder));
+    const j=await api('/api/inbox?folder='+encodeURIComponent(currentFolder)+
+      '&page='+page+'&limit='+currentLimit);
+
     currentMessages=j.messages||[];
+    currentPage=j.page||page;
+    totalPages=j.totalPages||1;
 
     $('folderTitle').textContent=folderLabel({
       path:currentFolder,name:currentFolder
-    })+' ('+currentMessages.length+')';
+    })+' ('+(j.total||0)+')';
 
     renderMessages(currentMessages);
-
+    renderPagination(j);
   }catch(e){
     $('inbox').textContent=e.message;
+    $('pageInfo').textContent='';
   }
 }
 
-/* SEARCH */
+/* SEARCH - CURRENT PAGE */
 function searchEmails(){
   const query=$('searchInput').value.trim().toLowerCase();
 
@@ -904,18 +555,13 @@ function searchEmails(){
   }
 
   const filtered=currentMessages.filter(m=>{
-    const text=[
-      m.subject||'',m.from||'',m.to||'',m.text||''
-    ].join(' ').toLowerCase();
-
+    const text=[m.subject||'',m.from||'',m.to||''].join(' ').toLowerCase();
     return text.includes(query);
   });
 
   renderMessages(filtered);
 
-  if(!filtered.length){
-    $('inbox').textContent='No matching emails found.';
-  }
+  if(!filtered.length)$('inbox').textContent='No matching emails on this page.';
 }
 
 $('searchBtn').onclick=searchEmails;
@@ -923,7 +569,6 @@ $('searchInput').addEventListener('input',searchEmails);
 $('searchInput').addEventListener('keydown',e=>{
   if(e.key==='Enter')searchEmails();
 });
-
 $('clearSearch').onclick=()=>{
   $('searchInput').value='';
   renderMessages(currentMessages);
@@ -933,64 +578,40 @@ $('clearSearch').onclick=()=>{
 async function readMail(uid){
   $('listPane').classList.add('hide');
   $('readerPane').classList.remove('hide');
-
   $('readSubject').textContent='Loading message...';
   $('readMeta').textContent='';
   $('readBody').innerHTML='';
   $('attachments').textContent='';
 
   try{
-    const m=await api('/api/message/'+uid+'?folder='+
-      encodeURIComponent(currentFolder));
+    const m=await api('/api/message/'+uid+'?folder='+encodeURIComponent(currentFolder));
 
     $('readSubject').textContent=m.subject||'(No subject)';
     $('readMeta').textContent='From: '+(m.from||'')+
-      ' | To: '+(m.to||'')+
-      ' | '+(m.date?new Date(m.date).toLocaleString():'');
+      '\nTo: '+(m.to||'')+
+      '\nDate: '+(m.date?new Date(m.date).toLocaleString():'');
 
-    if(m.htmlAvailable && m.html){
-      const frame=document.createElement('iframe');
-
-      frame.setAttribute('sandbox','');
-      frame.setAttribute('referrerpolicy','no-referrer');
-      frame.title='Email content';
-
-      frame.style.width='100%';
-      frame.style.minHeight='500px';
-      frame.style.height='70vh';
-      frame.style.border='0';
-      frame.style.background='#fff';
-
-      frame.srcdoc=m.html;
-      $('readBody').appendChild(frame);
+    if(m.html){
+      const iframe=document.createElement('iframe');
+      iframe.setAttribute('sandbox','allow-popups allow-popups-to-escape-sandbox');
+      iframe.srcdoc=m.html;
+      $('readBody').append(iframe);
     }else{
       const pre=document.createElement('pre');
-      pre.style.whiteSpace='pre-wrap';
-      pre.style.overflowWrap='anywhere';
-      pre.textContent=m.text||'(Empty message)';
-      $('readBody').appendChild(pre);
+      pre.textContent=m.text||'(This email has no readable content.)';
+      $('readBody').append(pre);
     }
 
-    if(m.attachments && m.attachments.length){
-      $('attachments').textContent='Attachments: '+
-        m.attachments.map(a=>
-          a.filename+' ('+a.size+' bytes)'+
-          (a.inline?' - Inline image':'')
-        ).join(', ');
+    if(m.attachments&&m.attachments.length){
+      $('attachments').textContent='Attachments: '+m.attachments.map(a=>
+        `${a.filename} (${a.size||0} bytes)`
+      ).join(', ');
     }
-
   }catch(e){
     $('readSubject').textContent='Unable to open email';
     $('readBody').textContent=e.message;
   }
 }
-
-/* MENU */
-$('menuToggle').onclick=()=>{
-  $('mailSidebar').classList.toggle('open');
-};
-
-$('refresh').onclick=loadFolders;
 
 $('backBtn').onclick=()=>{
   $('readerPane').classList.add('hide');
@@ -1002,12 +623,13 @@ $('composeBtn').onclick=()=>{
   $('listPane').classList.add('hide');
   $('readerPane').classList.add('hide');
   $('compose').classList.remove('hide');
+  $('sendStatus').textContent='';
   $('mailSidebar').classList.remove('open');
 };
 
-/* SEND EMAIL */
 $('send').onclick=async()=>{
   $('sendStatus').textContent='Sending...';
+  $('send').disabled=true;
 
   try{
     await api('/api/send',{
@@ -1023,54 +645,50 @@ $('send').onclick=async()=>{
     $('to').value='';
     $('subject').value='';
     $('body').value='';
-
   }catch(e){
     $('sendStatus').textContent=e.message;
+  }finally{
+    $('send').disabled=false;
   }
+};
+
+/* REFRESH */
+$('refresh').onclick=()=>loadInbox(currentPage);
+
+/* MOBILE MENU */
+$('menuToggle').onclick=()=>{
+  $('mailSidebar').classList.toggle('open');
 };
 
 /* LOGOUT */
 $('logout').onclick=async()=>{
-  try{
-    await api('/api/logout',{method:'POST'});
-  }catch(e){}
-
+  try{await api('/api/logout',{method:'POST'})}catch(e){}
   clearSession();
-
   $('mailCard').classList.add('hide');
   $('loginCard').classList.remove('hide');
-  $('password').value='';
-  $('loginStatus').textContent='';
 };
 
-/* RESTORE LOGIN AFTER REFRESH */
+/* RESTORE SESSION */
 async function restoreSession(){
-  if(!token){
-    return;
-  }
+  if(!token)return;
+
+  $('loginStatus').textContent='Restoring session...';
 
   try{
     const email=localStorage.getItem('dankeMailEmail')||'';
-
-    // Verify the saved token with the server
-    await api('/api/folders');
-
     $('accountLabel').textContent=email;
     $('loginCard').classList.add('hide');
     $('mailCard').classList.remove('hide');
-
     await loadFolders();
-
   }catch(e){
     clearSession();
     $('mailCard').classList.add('hide');
     $('loginCard').classList.remove('hide');
-    $('loginStatus').textContent='Your session has expired. Please sign in again.';
+    $('loginStatus').textContent='Please sign in again.';
   }
 }
 
 restoreSession();
 </script>
-
 </body>
 </html>
