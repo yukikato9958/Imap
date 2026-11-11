@@ -331,7 +331,6 @@ label{
 
 .compose-card h3{margin-top:0}
 
-/* Settings */
 .settings-overlay{
   position:fixed;
   inset:0;
@@ -545,7 +544,6 @@ label{
 <div class="account" id="accountLabel"></div>
 
 <div class="mail-layout">
-
   <aside class="mail-sidebar" id="mailSidebar">
     <button class="compose-button" id="composeBtn">✎ Compose</button>
     <nav class="folders" id="folders">
@@ -590,7 +588,6 @@ label{
 </div>
 </section>
 
-<!-- Settings Window -->
 <div id="settingsOverlay" class="settings-overlay hide">
   <div class="settings-panel">
 
@@ -603,7 +600,6 @@ label{
     <p class="muted">Choose your preferred theme.</p>
 
     <div class="theme-options">
-
       <button class="theme-option" id="lightTheme">
         <span class="theme-preview light-preview"></span>
         Light Mode
@@ -613,7 +609,6 @@ label{
         <span class="theme-preview dark-preview"></span>
         Dark Mode
       </button>
-
     </div>
 
     <p class="settings-description">
@@ -628,11 +623,24 @@ label{
 <script>
 const $ = id => document.getElementById(id);
 
-let token = '';
+let token = localStorage.getItem('dankeMailToken') || '';
 let currentFolder = 'INBOX';
 let providerList = [];
 let currentMessages = [];
 
+/* SESSION STORAGE */
+function saveSession(newToken, email){
+  localStorage.setItem('dankeMailToken', newToken);
+  localStorage.setItem('dankeMailEmail', email);
+}
+
+function clearSession(){
+  localStorage.removeItem('dankeMailToken');
+  localStorage.removeItem('dankeMailEmail');
+  token = '';
+}
+
+/* THEME */
 function setTheme(theme){
   if(theme !== 'dark' && theme !== 'light') theme = 'light';
 
@@ -675,6 +683,7 @@ $('settingsOverlay').onclick=e=>{
 $('lightTheme').onclick=()=>setTheme('light');
 $('darkTheme').onclick=()=>setTheme('dark');
 
+/* PROVIDERS */
 function applyProvider(p){
   if(!p)return;
   $('imapHost').value=p.imapHost||'';
@@ -683,7 +692,6 @@ function applyProvider(p){
   $('smtpHost').value=p.smtpHost||'';
   $('smtpPort').value=p.smtpPort||465;
   $('smtpSecure').checked=p.smtpSecure!==false;
-  $('providerNote').textContent=p.notes||'';
 }
 
 function initProviders(){
@@ -731,6 +739,7 @@ function initProviders(){
 
 initProviders();
 
+/* API */
 async function api(path,opt={}){
   opt.headers={
     ...(opt.headers||{}),
@@ -745,8 +754,10 @@ async function api(path,opt={}){
   return j;
 }
 
+/* LOGIN */
 $('loginBtn').onclick=async()=>{
   $('loginStatus').textContent='Connecting...';
+  $('loginBtn').disabled=true;
 
   try{
     const j=await api('/api/login',{
@@ -764,6 +775,8 @@ $('loginBtn').onclick=async()=>{
     });
 
     token=j.token;
+    saveSession(j.token,j.email);
+
     $('accountLabel').textContent=j.email;
     $('loginCard').classList.add('hide');
     $('mailCard').classList.remove('hide');
@@ -773,9 +786,12 @@ $('loginBtn').onclick=async()=>{
 
   }catch(e){
     $('loginStatus').textContent=e.message;
+  }finally{
+    $('loginBtn').disabled=false;
   }
 };
 
+/* FOLDERS */
 function folderLabel(f){
   const s=String(f.specialUse||'').toLowerCase();
   const p=String(f.path||'').toLowerCase();
@@ -824,6 +840,7 @@ async function loadFolders(){
   }
 }
 
+/* MESSAGE LIST */
 function renderMessages(messages){
   $('inbox').innerHTML='';
 
@@ -877,6 +894,7 @@ async function loadInbox(){
   }
 }
 
+/* SEARCH */
 function searchEmails(){
   const query=$('searchInput').value.trim().toLowerCase();
 
@@ -911,6 +929,7 @@ $('clearSearch').onclick=()=>{
   renderMessages(currentMessages);
 };
 
+/* READ EMAIL */
 async function readMail(uid){
   $('listPane').classList.add('hide');
   $('readerPane').classList.remove('hide');
@@ -966,6 +985,7 @@ async function readMail(uid){
   }
 }
 
+/* MENU */
 $('menuToggle').onclick=()=>{
   $('mailSidebar').classList.toggle('open');
 };
@@ -977,6 +997,7 @@ $('backBtn').onclick=()=>{
   $('listPane').classList.remove('hide');
 };
 
+/* COMPOSE */
 $('composeBtn').onclick=()=>{
   $('listPane').classList.add('hide');
   $('readerPane').classList.add('hide');
@@ -984,6 +1005,7 @@ $('composeBtn').onclick=()=>{
   $('mailSidebar').classList.remove('open');
 };
 
+/* SEND EMAIL */
 $('send').onclick=async()=>{
   $('sendStatus').textContent='Sending...';
 
@@ -1007,15 +1029,47 @@ $('send').onclick=async()=>{
   }
 };
 
+/* LOGOUT */
 $('logout').onclick=async()=>{
   try{
     await api('/api/logout',{method:'POST'});
-  }catch{}
+  }catch(e){}
 
-  token='';
+  clearSession();
+
   $('mailCard').classList.add('hide');
   $('loginCard').classList.remove('hide');
+  $('password').value='';
+  $('loginStatus').textContent='';
 };
+
+/* RESTORE LOGIN AFTER REFRESH */
+async function restoreSession(){
+  if(!token){
+    return;
+  }
+
+  try{
+    const email=localStorage.getItem('dankeMailEmail')||'';
+
+    // Verify the saved token with the server
+    await api('/api/folders');
+
+    $('accountLabel').textContent=email;
+    $('loginCard').classList.add('hide');
+    $('mailCard').classList.remove('hide');
+
+    await loadFolders();
+
+  }catch(e){
+    clearSession();
+    $('mailCard').classList.add('hide');
+    $('loginCard').classList.remove('hide');
+    $('loginStatus').textContent='Your session has expired. Please sign in again.';
+  }
+}
+
+restoreSession();
 </script>
 
 </body>
