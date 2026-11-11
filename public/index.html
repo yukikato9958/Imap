@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Danke Mail</title>
+
 <style>
 :root{
  --bg:#f6f8fc;
@@ -501,17 +502,27 @@ button{cursor:pointer}
 <script src="/providers.js"></script>
 
 <script>
+// ========================================
+// DANKE MAIL - SESSION RESTORE VERSION
+// ========================================
+
 const $ = id => document.getElementById(id);
 
-let sessionId = null;
-let currentFolder = 'INBOX';
+const STORAGE_SESSION = 'dankeSessionId';
+const STORAGE_ACCOUNT = 'dankeAccount';
+const STORAGE_FOLDER = 'dankeCurrentFolder';
+
+let sessionId = localStorage.getItem(STORAGE_SESSION) || null;
+
+let currentFolder =
+ localStorage.getItem(STORAGE_FOLDER) || 'INBOX';
+
 let currentPage = 1;
 let currentMessages = [];
 let searchResults = null;
 
 let account = {
  email:'',
- password:'',
  smtpHost:'',
  smtpPort:465,
  smtpSecure:true
@@ -529,6 +540,7 @@ const themes = [
  {id:'purple',name:'💜 Purple'}
 ];
 
+// ESCAPE HTML
 function esc(s=''){
  return String(s).replace(/[&<>"']/g,c=>({
   '&':'&amp;',
@@ -539,7 +551,10 @@ function esc(s=''){
  }[c]));
 }
 
-// THEME SYSTEM
+// ========================================
+// THEME
+// ========================================
+
 function theme(){
  const saved = localStorage.getItem('dankeTheme') || 'light';
 
@@ -579,6 +594,29 @@ function themeOptions(){
 
 theme();
 
+// ========================================
+// SESSION STORAGE
+// ========================================
+
+function saveSession(){
+ if(sessionId){
+  localStorage.setItem(STORAGE_SESSION,sessionId);
+ }
+
+ localStorage.setItem(STORAGE_ACCOUNT,JSON.stringify(account));
+ localStorage.setItem(STORAGE_FOLDER,currentFolder);
+}
+
+function clearSavedSession(){
+ localStorage.removeItem(STORAGE_SESSION);
+ localStorage.removeItem(STORAGE_ACCOUNT);
+ localStorage.removeItem(STORAGE_FOLDER);
+}
+
+// ========================================
+// LOGIN SCREEN
+// ========================================
+
 function loginScreen(error=''){
  $('app').innerHTML = `
  <div class="loginwrap">
@@ -598,7 +636,8 @@ function loginScreen(error=''){
 
     <div class="field">
      <label>Email address / Username</label>
-     <input id="email" autocomplete="username" required placeholder="name@example.jp">
+     <input id="email" autocomplete="username" required
+      placeholder="name@example.jp">
     </div>
 
     <div class="field">
@@ -606,12 +645,15 @@ function loginScreen(error=''){
      <select id="providerSelect">
       <option value="manual">Other / Manual</option>
      </select>
-     <div class="small" id="providerStatus">Auto Detect berdasarkan domain email</div>
+     <div class="small" id="providerStatus">
+      Auto Detect berdasarkan domain email
+     </div>
     </div>
 
     <div class="field">
      <label>Email password</label>
-     <input id="password" type="password" autocomplete="current-password" required>
+     <input id="password" type="password"
+      autocomplete="current-password" required>
     </div>
 
     <div class="field">
@@ -654,7 +696,9 @@ function loginScreen(error=''){
     <div class="status error" id="loginError">${esc(error)}</div>
    </form>
 
-   <p class="small">Use the IMAP/SMTP settings supplied by your email provider.</p>
+   <p class="small">
+    Use the IMAP/SMTP settings supplied by your email provider.
+   </p>
   </div>
  </div>`;
 
@@ -663,6 +707,10 @@ function loginScreen(error=''){
  $('loginForm').addEventListener('submit',doLogin);
  setupProviderDetection();
 }
+
+// ========================================
+// PROVIDER DETECTION
+// ========================================
 
 function setupProviderDetection(){
  const select = $('providerSelect');
@@ -678,17 +726,19 @@ function setupProviderDetection(){
   if(!p) return;
 
   select.value = p.id;
+
   $('imapHost').value = p.imapHost || '';
   $('imapPort').value = p.imapPort || 993;
   $('imapSecure').value = String(p.imapSecure !== false);
+
   $('smtpHost').value = p.smtpHost || '';
   $('smtpPort').value = p.smtpPort || 465;
   $('smtpSecure').value = String(p.smtpSecure !== false);
 
   $('providerStatus').textContent =
    p.id === 'manual'
-   ? 'Provider tidak terdeteksi. Isi server manual.'
-   : 'Provider terdeteksi: ' + p.name;
+    ? 'Provider tidak terdeteksi. Isi server manual.'
+    : 'Provider terdeteksi: ' + p.name;
  }
 
  email.addEventListener('input',()=>{
@@ -700,7 +750,9 @@ function setupProviderDetection(){
  });
 
  select.addEventListener('change',()=>{
-  applyProvider(window.PROVIDERS.find(p=>p.id===select.value));
+  applyProvider(
+   window.PROVIDERS.find(p=>p.id===select.value)
+  );
  });
 
  applyProvider(
@@ -710,15 +762,28 @@ function setupProviderDetection(){
  );
 }
 
+// ========================================
+// API
+// ========================================
+
 async function api(path,options={}){
  const headers = {...(options.headers || {})};
 
- if(sessionId) headers['x-session-id'] = sessionId;
- if(options.body) headers['Content-Type'] = 'application/json';
+ if(sessionId){
+  headers['x-session-id'] = sessionId;
+ }
 
- const response = await fetch(path,{...options,headers});
+ if(options.body){
+  headers['Content-Type'] = 'application/json';
+ }
+
+ const response = await fetch(path,{
+  ...options,
+  headers
+ });
 
  let data;
+
  try{
   data = await response.json();
  }catch{
@@ -726,11 +791,19 @@ async function api(path,options={}){
  }
 
  if(!response.ok){
-  throw new Error(data.details?.message || data.error || `HTTP ${response.status}`);
+  throw new Error(
+   data.details?.message ||
+   data.error ||
+   `HTTP ${response.status}`
+  );
  }
 
  return data;
 }
+
+// ========================================
+// LOGIN
+// ========================================
 
 async function doLogin(e){
  e.preventDefault();
@@ -738,6 +811,7 @@ async function doLogin(e){
  const btn = $('loginBtn');
  btn.disabled = true;
  btn.textContent = 'Connecting…';
+
  $('loginError').textContent = '';
 
  const email = $('email').value.trim();
@@ -746,7 +820,6 @@ async function doLogin(e){
 
  account = {
   email,
-  password,
   smtpHost:$('smtpHost').value.trim(),
   smtpPort:Number($('smtpPort').value || 465),
   smtpSecure:$('smtpSecure').value === 'true'
@@ -764,8 +837,16 @@ async function doLogin(e){
    })
   });
 
+  if(!data.sessionId){
+   throw new Error('Server did not return a session ID.');
+  }
+
   sessionId = data.sessionId;
-  localStorage.setItem('dankeEmail',email);
+
+  currentFolder = 'INBOX';
+  currentPage = 1;
+
+  saveSession();
 
   shell();
 
@@ -779,13 +860,63 @@ async function doLogin(e){
  }
 }
 
+// ========================================
+// RESTORE SESSION AFTER REFRESH
+// ========================================
+
+async function restoreSession(){
+ const savedSession = localStorage.getItem(STORAGE_SESSION);
+
+ if(!savedSession){
+  loginScreen();
+  return;
+ }
+
+ sessionId = savedSession;
+
+ try{
+  const savedAccount = localStorage.getItem(STORAGE_ACCOUNT);
+
+  if(savedAccount){
+   account = JSON.parse(savedAccount);
+  }
+
+  currentFolder =
+   localStorage.getItem(STORAGE_FOLDER) || 'INBOX';
+
+  // Check whether server still recognizes the session
+  await loadFolders();
+
+  shell();
+
+  await showMail();
+
+ }catch(err){
+  console.warn('Session restore failed:',err.message);
+
+  sessionId = null;
+  folders = [];
+
+  clearSavedSession();
+
+  loginScreen(
+   'Your session has expired. Please sign in again.'
+  );
+ }
+}
+
+// ========================================
+// MAIN APP
+// ========================================
+
 function shell(){
  $('app').innerHTML = `
  <header class="top">
   <div class="logo">✉ Danke Mail</div>
 
   <div class="search">
-   <input id="searchInput" placeholder="Search all mail (example: Amazon)">
+   <input id="searchInput"
+    placeholder="Search all mail (example: Amazon)">
    <button class="iconbtn" onclick="searchMail()">Search</button>
   </div>
 
@@ -826,6 +957,10 @@ function shell(){
  });
 }
 
+// ========================================
+// FOLDERS
+// ========================================
+
 function folderLabel(f){
  const s = (f.specialUse || f.name || f.path || '').toLowerCase();
 
@@ -841,9 +976,14 @@ function folderLabel(f){
 
 async function loadFolders(){
  const data = await api('/api/folders');
- folders = data;
 
- if(!folders.some(f=>(f.path || f.name).toLowerCase()==='inbox')){
+ folders = Array.isArray(data)
+  ? data
+  : (data.folders || []);
+
+ if(!folders.some(f=>
+  (f.path || f.name || '').toLowerCase()==='inbox'
+ )){
   folders.unshift({
    name:'INBOX',
    path:'INBOX',
@@ -872,11 +1012,15 @@ function folderIcon(f){
  const n = folderLabel(f).toLowerCase();
 
  return n==='inbox'?'▣':
- n==='sent'?'➤':
- n==='drafts'?'▤':
- n==='trash'?'♲':
- n==='spam'?'⚠':'▰';
+  n==='sent'?'➤':
+  n==='drafts'?'▤':
+  n==='trash'?'♲':
+  n==='spam'?'⚠':'▰';
 }
+
+// ========================================
+// MESSAGES
+// ========================================
 
 function renderMessages(messages){
  const panel = $('mailPanel');
@@ -895,10 +1039,16 @@ function renderMessages(messages){
     ${esc(m.subject || '(No subject)')}
     ${m.folder ? `<span class="small"> · ${esc(m.folder)}</span>` : ''}
    </div>
-   <div class="date">${m.date ? new Date(m.date).toLocaleDateString() : ''}</div>
+   <div class="date">
+    ${m.date ? new Date(m.date).toLocaleDateString() : ''}
+   </div>
   </div>
  `).join('');
 }
+
+// ========================================
+// INBOX
+// ========================================
 
 async function showMail(){
  if(!sessionId) return;
@@ -910,7 +1060,8 @@ async function showMail(){
  if(!panel) return;
 
  $('pageTitle').textContent = folderLabel(
-  folders.find(f=>(f.path || f.name)===currentFolder) || {name:currentFolder}
+  folders.find(f=>(f.path || f.name)===currentFolder)
+   || {name:currentFolder}
  );
 
  panel.innerHTML = '<div class="status">Loading messages…</div>';
@@ -921,6 +1072,7 @@ async function showMail(){
   );
 
   currentMessages = data.messages || [];
+
   $('pageLabel').textContent = `Page ${currentPage}`;
 
   renderMessages(currentMessages);
@@ -929,6 +1081,10 @@ async function showMail(){
   panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
  }
 }
+
+// ========================================
+// SEARCH
+// ========================================
 
 async function searchMail(){
  const input = $('searchInput');
@@ -940,7 +1096,9 @@ async function searchMail(){
 
  if(!query) return showMail();
 
- panel.innerHTML = '<div class="status">Searching all folders for "'+esc(query)+'"…</div>';
+ panel.innerHTML =
+  `<div class="status">Searching all folders for "${esc(query)}"…</div>`;
+
  $('pageTitle').textContent = 'Search Results';
 
  try{
@@ -965,12 +1123,20 @@ function clearSearch(){
 
  searchResults = null;
  currentPage = 1;
+
  showMail();
 }
+
+// ========================================
+// FOLDER NAVIGATION
+// ========================================
 
 async function selectFolder(path){
  currentFolder = path;
  currentPage = 1;
+
+ localStorage.setItem(STORAGE_FOLDER,currentFolder);
+
  await showMail();
 }
 
@@ -978,8 +1144,13 @@ async function changePage(d){
  if(searchResults) return;
 
  currentPage = Math.max(1,currentPage+d);
+
  await showMail();
 }
+
+// ========================================
+// OPEN MESSAGE
+// ========================================
 
 async function openMessage(uid,folder=currentFolder){
  const panel = $('mailPanel');
@@ -1025,12 +1196,20 @@ function backFromMessage(){
  }
 }
 
+// ========================================
+// HTML SANITIZER
+// ========================================
+
 function sanitizeHtml(html){
  return String(html)
   .replace(/<script[\s\S]*?<\/script>/gi,'')
   .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
   .replace(/javascript:/gi,'');
 }
+
+// ========================================
+// COMPOSE
+// ========================================
 
 function openCompose(){
  $('composeModal').classList.add('show');
@@ -1062,6 +1241,7 @@ $('composeForm').addEventListener('submit',async e=>{
 
   closeCompose();
   $('composeForm').reset();
+
   alert('Message sent.');
 
  }catch(err){
@@ -1073,13 +1253,19 @@ $('composeForm').addEventListener('submit',async e=>{
  }
 });
 
+// ========================================
+// LOGOUT
+// ========================================
+
 async function logout(){
  try{
   await api('/api/logout',{
    method:'POST',
    body:JSON.stringify({sessionId})
   });
- }catch{}
+ }catch(err){
+  console.warn('Logout request failed:',err.message);
+ }
 
  sessionId = null;
  currentFolder = 'INBOX';
@@ -1088,10 +1274,17 @@ async function logout(){
  searchResults = null;
  folders = [];
 
+ clearSavedSession();
+
  loginScreen();
 }
 
-loginScreen();
+// ========================================
+// START
+// ========================================
+
+restoreSession();
+
 </script>
 </body>
 </html>
