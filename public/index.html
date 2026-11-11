@@ -38,6 +38,7 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
 </div>
 </div>
 
+<script src="/providers.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 let sessionId=null,currentFolder='INBOX',currentPage=1,currentMessages=[];
@@ -53,6 +54,7 @@ function loginScreen(error=''){
 $('app').innerHTML=`<div class="loginwrap"><div class="login"><h1>Danke Mail</h1><p>Sign in to your email account</p>
 <form id="loginForm">
 <div class="field"><label>Email address / Username</label><input id="email" autocomplete="username" required placeholder="name@example.jp"></div>
+<div class="field"><label>Provider</label><select id="providerSelect"><option value="manual">Other / Manual</option></select><div class="small" id="providerStatus">Auto Detect berdasarkan domain email</div></div>
 <div class="field"><label>Email password</label><input id="password" type="password" autocomplete="current-password" required></div>
 <div class="field"><label>IMAP host</label><input id="imapHost" required placeholder="imap.example.jp"></div>
 <div class="field"><label>IMAP port</label><input id="imapPort" type="number" value="993" required></div>
@@ -63,6 +65,27 @@ $('app').innerHTML=`<div class="loginwrap"><div class="login"><h1>Danke Mail</h1
 <button class="btn primary" id="loginBtn">Sign in</button><div class="status error" id="loginError">${esc(error)}</div>
 </form><p class="small">Use the IMAP/SMTP settings supplied by your email provider.</p></div></div>`;
 $('loginForm').addEventListener('submit',doLogin);
+setupProviderDetection();
+}
+
+function setupProviderDetection(){
+ const select=$('providerSelect'),email=$('email');
+ if(!select||!email||!window.PROVIDERS)return;
+ select.innerHTML=window.PROVIDERS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+ function applyProvider(p){
+  if(!p)return;
+  select.value=p.id;
+  $('imapHost').value=p.imapHost||'';
+  $('imapPort').value=p.imapPort||993;
+  $('imapSecure').value=String(p.imapSecure!==false);
+  $('smtpHost').value=p.smtpHost||'';
+  $('smtpPort').value=p.smtpPort||465;
+  $('smtpSecure').value=String(p.smtpSecure!==false);
+  $('providerStatus').textContent=p.id==='manual'?'Provider tidak terdeteksi. Isi server manual.':'Provider terdeteksi: '+p.name;
+ }
+ email.addEventListener('input',()=>applyProvider(window.detectProvider?window.detectProvider(email.value):window.PROVIDERS.find(p=>p.id==='manual')));
+ select.addEventListener('change',()=>applyProvider(window.PROVIDERS.find(p=>p.id===select.value)));
+ applyProvider(window.detectProvider?window.detectProvider(email.value):window.PROVIDERS.find(p=>p.id==='manual'));
 }
 
 async function api(path,options={}){
