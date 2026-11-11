@@ -9,19 +9,153 @@ const { simpleParser } = require('mailparser');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ========================================
+// CONFIGURATION
+// ========================================
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const sessions = new Map();
+// PENTING:
+// Atur SESSION_SECRET sebagai Environment Variable di Railway.
+// Jangan mengubah nilainya setelah aplikasi berjalan.
+const SESSION_SECRET =
+    process.env.SESSION_SECRET ||
+    crypto.randomBytes(32).toString('hex');
 
-// TLS COMPATIBILITY FOR OLDER MAIL SERVERS
+if (!process.env.SESSION_SECRET) {
+    console.warn(
+        'WARNING: SESSION_SECRET is not configured. ' +
+        'Sessions will not survive a server restart.'
+    );
+}
+
+const SESSION_KEY = crypto
+    .createHash('sha256')
+    .update(SESSION_SECRET)
+    .digest();
+
+// Session berlaku 7 hari
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
+
+// ========================================
+// TLS COMPATIBILITY
+// ========================================
+
 const tlsOptions = {
     rejectUnauthorized: true,
     minDHSize: 512,
     ciphers: 'DEFAULT@SECLEVEL=0'
 };
 
+// ========================================
+// ENCRYPTED SESSION TOKEN
+// ========================================
+
+function createSessionToken(config) {
+    const iv = crypto.randomBytes(12);
+
+    const payload = {
+        config,
+        expiresAt: Date.now() + SESSION_DURATION
+    };
+
+    const cipher = crypto.createCipheriv(
+        'aes-256-gcm',
+        SESSION_KEY,
+        iv
+    );
+
+    const encrypted = Buffer.concat([
+        cipher.update(JSON.stringify(payload), 'utf8'),
+        cipher.final()
+    ]);
+
+    const tag = cipher.getAuthTag();
+
+    return [
+        'v1',
+        iv.toString('hex'),
+        tag.toString('hex'),
+        encrypted.toString('hex')
+    ].join('.');
+}
+
+function readSessionToken(token) {
+    if (!token || typeof token !== 'string') {
+        return null;
+    }
+
+    try {
+        const parts = token.split('.');
+
+        if (parts.length !== 4 || parts[0] !== 'v1') {
+            return null;
+        }
+
+        const iv = Buffer.from(parts[1], 'hex');
+        const tag = Buffer.from(parts[2], 'hex');
+        const encrypted = Buffer.from(parts[3], 'hex');
+
+        if (
+            iv.length !== 12 ||
+            tag.length !== 16 ||
+            encrypted.length === 0
+        ) {
+            return null;
+        }
+
+        const decipher = crypto.createDecipheriv(
+            'aes-256-gcm',
+            SESSION_KEY,
+            iv
+        );
+
+        decipher.setAuthTag(tag);
+
+        const decrypted = Buffer.concat([
+            decipher.update(encrypted),
+            decipher.final()
+        ]);
+
+        const payload = JSON.parse(decrypted.toString('utf8'));
+
+        if (!payload.expiresAt || Date.now() > payload.expiresAt) {
+            return null;
+        }
+
+        if (
+            !payload.config ||
+            !payload.config.host ||
+            !payload.config.username ||
+            !payload.config.password
+        ) {
+            return null;
+        }
+
+        return payload.config;
+
+    } catch (err) {
+        return null;
+    }
+}
+
+// ========================================
+// SESSION
+// ========================================
+
+function getSession(req) {
+    const id =
+        req.headers['x-session-id'] ||
+        req.body?.sessionId;
+
+    return readSessionToken(id);
+}
+
+// ========================================
 // IMAP CLIENT
+// ========================================
+
 function createImapClient(config) {
     const client = new ImapFlow({
         host: config.host,
@@ -53,13 +187,10 @@ function createImapClient(config) {
     return client;
 }
 
-// SESSION
-function getSession(req) {
-    const id = req.headers['x-session-id'] || req.body?.sessionId;
-    return id ? sessions.get(id) : null;
-}
-
+// ========================================
 // SAFE IMAP CONNECTION
+// ========================================
+
 async function withImap(config, callback) {
     const client = createImapClient(config);
     let connected = false;
@@ -77,11 +208,20 @@ async function withImap(config, callback) {
             } catch (err) {
                 console.log('IMAP logout:', err.message);
             }
+        } else {
+            try {
+                client.close();
+            } catch (err) {
+                // Ignore close errors
+            }
         }
     }
 }
 
+// ========================================
 // ADDRESS FORMAT
+// ========================================
+
 function addressList(list = []) {
     return list.map(x => {
         if (x.name && x.address) {
@@ -89,10 +229,14 @@ function addressList(list = []) {
         }
 
         return x.address || x.name || '';
+
     }).filter(Boolean).join(', ');
 }
 
+// ========================================
 // MESSAGE FORMAT
+// ========================================
+
 function formatMessage(message, folder) {
     const envelope = message.envelope || {};
 
@@ -107,7 +251,10 @@ function formatMessage(message, folder) {
     };
 }
 
-// CHECK SELECTABLE FOLDER
+// ========================================
+// FOLDER CHECK
+// ========================================
+
 function isSelectable(mailbox) {
     const flags = Array.from(mailbox.flags || []);
 
@@ -116,35 +263,54 @@ function isSelectable(mailbox) {
     );
 }
 
+// ========================================
 // ERROR HANDLER
+// ========================================
+
 function sendError(res, err, operation) {
     console.error(operation + ':', err);
 
     const message = err.message || 'Unknown error';
+
     const timeout = /timeout|timed out|ETIMEDOUT/i.test(message);
 
     res.status(timeout ? 504 : 500).json({
-        error: timeout ? 'Connection timed out' : operation + ' failed',
+        error: timeout
+            ? 'Connection timed out'
+            : operation + ' failed',
+
         details: {
             message
         }
     });
 }
 
+// ========================================
 // HEALTH
+// ========================================
+
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
-        app: 'Danke Mail'
+        app: 'Danke Mail',
+        sessionStorage: 'encrypted-token'
     });
 });
 
+// ========================================
 // PROVIDERS
+// ========================================
+
 app.get('/api/providers', (req, res) => {
-    res.json({ providers: [] });
+    res.json({
+        providers: []
+    });
 });
 
+// ========================================
 // LOGIN
+// ========================================
+
 app.post('/api/login', async (req, res) => {
     const {
         host,
@@ -161,21 +327,29 @@ app.post('/api/login', async (req, res) => {
     }
 
     const config = {
-        host,
+        host: String(host).trim(),
         port: Number(port || 993),
         secure: secure !== false,
-        username,
-        password
+        username: String(username).trim(),
+        password: String(password)
     };
+
+    if (
+        !Number.isInteger(config.port) ||
+        config.port < 1 ||
+        config.port > 65535
+    ) {
+        return res.status(400).json({
+            error: 'Invalid IMAP port.'
+        });
+    }
 
     try {
         await withImap(config, async client => {
             await client.list();
         });
 
-        const sessionId = crypto.randomBytes(32).toString('hex');
-
-        sessions.set(sessionId, config);
+        const sessionId = createSessionToken(config);
 
         res.json({
             success: true,
@@ -185,10 +359,14 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error('IMAP login failed:', err.message);
 
-        const timeout = /timeout|timed out|ETIMEDOUT/i.test(err.message);
+        const timeout =
+            /timeout|timed out|ETIMEDOUT/i.test(err.message);
 
         res.status(timeout ? 504 : 401).json({
-            error: timeout ? 'IMAP connection timed out' : 'IMAP login failed',
+            error: timeout
+                ? 'IMAP connection timed out'
+                : 'IMAP login failed',
+
             details: {
                 message: err.message
             }
@@ -196,13 +374,16 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// ========================================
 // FOLDER LIST
+// ========================================
+
 app.get('/api/folders', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
         return res.status(401).json({
-            error: 'Not logged in'
+            error: 'Session expired. Please sign in again.'
         });
     }
 
@@ -226,19 +407,30 @@ app.get('/api/folders', async (req, res) => {
     }
 });
 
+// ========================================
 // INBOX / FOLDER MESSAGES
+// ========================================
+
 app.get('/api/inbox', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
         return res.status(401).json({
-            error: 'Not logged in'
+            error: 'Session expired. Please sign in again.'
         });
     }
 
     const folder = String(req.query.folder || 'INBOX');
-    const page = Math.max(1, Number(req.query.page || 1));
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 25)));
+
+    const page = Math.max(
+        1,
+        Number(req.query.page || 1)
+    );
+
+    const limit = Math.min(
+        100,
+        Math.max(1, Number(req.query.limit || 25))
+    );
 
     try {
         const result = await withImap(config, async client => {
@@ -258,10 +450,17 @@ app.get('/api/inbox', async (req, res) => {
                 }
 
                 const total = uids.length;
-                const start = Math.max(0, total - page * limit);
+
+                const start = Math.max(
+                    0,
+                    total - page * limit
+                );
+
                 const end = total - (page - 1) * limit;
 
-                const selected = uids.slice(start, end).reverse();
+                const selected = uids
+                    .slice(start, end)
+                    .reverse();
 
                 const messages = await client.fetchAll(
                     selected,
@@ -275,7 +474,9 @@ app.get('/api/inbox', async (req, res) => {
                 );
 
                 return {
-                    messages: messages.map(m => formatMessage(m, folder)),
+                    messages: messages.map(
+                        m => formatMessage(m, folder)
+                    ),
                     total
                 };
 
@@ -291,18 +492,25 @@ app.get('/api/inbox', async (req, res) => {
     }
 });
 
+// ========================================
 // SEARCH ALL MAILBOXES
+// ========================================
+
 app.get('/api/search', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
         return res.status(401).json({
-            error: 'Not logged in'
+            error: 'Session expired. Please sign in again.'
         });
     }
 
     const query = String(req.query.q || '').trim();
-    const limit = Math.min(200, Math.max(1, Number(req.query.limit || 100)));
+
+    const limit = Math.min(
+        200,
+        Math.max(1, Number(req.query.limit || 100))
+    );
 
     if (!query) {
         return res.status(400).json({
@@ -319,10 +527,13 @@ app.get('/api/search', async (req, res) => {
     try {
         const results = await withImap(config, async client => {
             const mailboxes = await client.list();
+
             const allResults = [];
 
             for (const mailbox of mailboxes) {
-                if (!isSelectable(mailbox)) continue;
+                if (!isSelectable(mailbox)) {
+                    continue;
+                }
 
                 const folder = mailbox.path;
                 let lock;
@@ -335,9 +546,13 @@ app.get('/api/search', async (req, res) => {
                         { uid: true }
                     );
 
-                    if (!uids || !uids.length) continue;
+                    if (!uids || !uids.length) {
+                        continue;
+                    }
 
-                    const selected = uids.slice(-limit).reverse();
+                    const selected = uids
+                        .slice(-limit)
+                        .reverse();
 
                     const messages = await client.fetchAll(
                         selected,
@@ -351,7 +566,9 @@ app.get('/api/search', async (req, res) => {
                     );
 
                     for (const message of messages) {
-                        allResults.push(formatMessage(message, folder));
+                        allResults.push(
+                            formatMessage(message, folder)
+                        );
                     }
 
                 } catch (err) {
@@ -369,7 +586,8 @@ app.get('/api/search', async (req, res) => {
             }
 
             allResults.sort((a, b) => {
-                return new Date(b.date || 0) - new Date(a.date || 0);
+                return new Date(b.date || 0) -
+                    new Date(a.date || 0);
             });
 
             return allResults.slice(0, limit);
@@ -386,18 +604,24 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
+// ========================================
 // OPEN MESSAGE
+// ========================================
+
 app.get('/api/message/:uid', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
         return res.status(401).json({
-            error: 'Not logged in'
+            error: 'Session expired. Please sign in again.'
         });
     }
 
     const uid = Number(req.params.uid);
-    const folder = String(req.query.folder || 'INBOX');
+
+    const folder = String(
+        req.query.folder || 'INBOX'
+    );
 
     if (!Number.isSafeInteger(uid) || uid < 1) {
         return res.status(400).json({
@@ -423,7 +647,9 @@ app.get('/api/message/:uid', async (req, res) => {
                     throw new Error('Message not found');
                 }
 
-                const parsed = await simpleParser(message.source);
+                const parsed = await simpleParser(
+                    message.source
+                );
 
                 return {
                     uid,
@@ -449,13 +675,16 @@ app.get('/api/message/:uid', async (req, res) => {
     }
 });
 
+// ========================================
 // SEND EMAIL
+// ========================================
+
 app.post('/api/send', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
         return res.status(401).json({
-            error: 'Not logged in'
+            error: 'Session expired. Please sign in again.'
         });
     }
 
@@ -474,9 +703,22 @@ app.post('/api/send', async (req, res) => {
         });
     }
 
+    const port = Number(smtpPort || 465);
+
+    if (
+        !Number.isInteger(port) ||
+        port < 1 ||
+        port > 65535
+    ) {
+        return res.status(400).json({
+            error: 'Invalid SMTP port'
+        });
+    }
+
     const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: Number(smtpPort || 465),
+        host: String(smtpHost).trim(),
+        port,
+
         secure: smtpSecure !== false,
 
         auth: {
@@ -512,20 +754,23 @@ app.post('/api/send', async (req, res) => {
     }
 });
 
+// ========================================
 // LOGOUT
-app.post('/api/logout', (req, res) => {
-    const id = req.headers['x-session-id'] || req.body?.sessionId;
+// ========================================
 
-    if (id) {
-        sessions.delete(id);
-    }
+app.post('/api/logout', (req, res) => {
+    // Client clears its saved token.
+    // Stateless encrypted tokens expire automatically.
 
     res.json({
         success: true
     });
 });
 
+// ========================================
 // GLOBAL ERROR HANDLER
+// ========================================
+
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
 
@@ -541,7 +786,10 @@ app.use((err, req, res, next) => {
     });
 });
 
+// ========================================
 // START SERVER
+// ========================================
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Danke Mail running on port ${PORT}`);
 });
