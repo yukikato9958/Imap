@@ -1,300 +1,445 @@
 
 const express = require('express');
+const path = require('path');
+const crypto = require('crypto');
 const { ImapFlow } = require('imapflow');
 const nodemailer = require('nodemailer');
 const { simpleParser } = require('mailparser');
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
-app.use(express.static('public'));
+const PORT = process.env.PORT || 3000;
 
-const PORT = process.env.PORT || 8080;
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
 const sessions = new Map();
 
-function safeError(err) {
-  return {
-    message: err?.message || String(err),
-    code: err?.code || null,
-    response: err?.response || null,
-    responseCode: err?.responseCode || null,
-    command: err?.command || null
-  };
+function createImapClient(config) {
+    return new ImapFlow({
+        host: config.host,
+        port: Number(config.port || 993),
+        secure: config.secure !== false,
+        auth: {
+            user: config.username,
+            pass: config.password
+        },
+        logger: false,
+        socketTimeout: 60000,
+        tls: {
+            rejectUnauthorized: true,
+            minDHSize: 512,
+            ciphers: 'DEFAULT@SECLEVEL=0'
+        }
+    });
 }
 
 function getSession(req) {
-  const id = req.headers['x-session-id'] || req.body?.sessionId;
-  return id ? sessions.get(id) : null;
+    const id = req.headers['x-session-id'] || req.body?.sessionId;
+    return id ? sessions.get(id) : null;
 }
 
-app.get('/health', (_req, res) =>
-  res.json({ ok: true, app: 'Danke Mail' })
-);
+async function withImap(config, callback) {
+    const client = createImapClient(config);
 
-app.get('/api/providers', (_req, res) => {
-  try {
-    res.json(require('./public/providers.js'));
-  } catch (_e) {
-    res.json([]);
-  }
-});
-
-app.post('/api/login', async (req, res) => {
-  const { host, port = 993, secure = true, username, password } = req.body || {};
-
-  if (!host || !username || !password) {
-    return res.status(400).json({
-      error: 'Host, username, and password are required.'
-    });
-  }
-
-  const client = new ImapFlow({
-    host,
-    port: Number(port),
-    secure: Boolean(secure),
-    auth: { user: username, pass: password },
-    logger: false,
-    tls: {
-      rejectUnauthorized: true,
-      ciphers: 'DEFAULT@SECLEVEL=0',
-      minDHSize: 512
-    },
-    socketTimeout: 30000
-  });
-
-  try {
     await client.connect();
 
-    const sessionId =
-      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    sessions.set(sessionId, { client, username, host });
-
-    res.json({ ok: true, sessionId, username, host });
-
-  } catch (err) {
-    try { client.close(); } catch (_e) {}
-
-    console.error('IMAP LOGIN ERROR:', safeError(err));
-
-    res.status(401).json({
-      error: 'IMAP login failed',
-      details: safeError(err)
-    });
-  }
-});
-
-app.get('/api/folders', async (req, res) => {
-  const session = getSession(req);
-
-  if (!session)
-    return res.status(401).json({ error: 'Not logged in' });
-
-  try {
-    const folders = await session.client.list();
-
-    res.json(folders.map(f => ({
-      name: f.name,
-      path: f.path,
-      delimiter: f.delimiter,
-      specialUse: f.specialUse || null
-    })));
-
-  } catch (err) {
-    console.error('FOLDER LIST ERROR:', safeError(err));
-
-    res.status(500).json({
-      error: 'Could not load folders',
-      details: safeError(err)
-    });
-  }
-});
-
-app.get('/api/inbox', async (req, res) => {
-  const session = getSession(req);
-
-  if (!session)
-    return res.status(401).json({ error: 'Not logged in' });
-
-  const folder = req.query.folder || 'INBOX';
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
-
-  try {
-    const lock = await session.client.getMailboxLock(folder);
-
     try {
-      const mailbox = session.client.mailbox;
-      const total = mailbox?.exists || 0;
-
-      const start = Math.max(1, total - (page * limit) + 1);
-      const end = Math.max(0, total - ((page - 1) * limit));
-
-      if (!total || end < start) {
-        return res.json({ messages: [], total, page, limit });
-      }
-
-      const messages = [];
-
-      for await (const msg of session.client.fetch(
-        `${start}:${end}`,
-        {
-          uid: true,
-          envelope: true,
-          flags: true,
-          internalDate: true,
-          size: true
+        return await callback(client);
+    } finally {
+        try {
+            await client.logout();
+        } catch (e) {
+            // Connection may already be closed.
         }
-      )) {
-        messages.push({
-          uid: msg.uid,
-          subject: msg.envelope?.subject || '(No subject)',
-          from: msg.envelope?.from?.map(x =>
-            x.name ? `${x.name} <${x.address}>` : x.address
-          ).join(', ') || '',
-          to: msg.envelope?.to?.map(x => x.address).join(', ') || '',
-          date: msg.internalDate,
-          flags: [...(msg.flags || [])],
-          size: msg.size
+    }
+}
+
+function addressList(list = []) {
+    return list.map(x => {
+        if (x.name && x.address) {
+            return `${x.name} <${x.address}>`;
+        }
+        return x.address || x.name || '';
+    }).filter(Boolean).join(', ');
+}
+
+function formatMessage(message, folder) {
+    const envelope = message.envelope || {};
+
+    return {
+        uid: message.uid,
+        folder,
+        from: addressList(envelope.from),
+        to: addressList(envelope.to),
+        subject: envelope.subject || '(No subject)',
+        date: message.internalDate || envelope.date || null,
+        flags: Array.from(message.flags || [])
+    };
+}
+
+function isSelectable(mailbox) {
+    const flags = mailbox.flags || new Set();
+    return !(flags.has && flags.has('\\Noselect'));
+}
+
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        app: 'Danke Mail'
+    });
+});
+
+app.get('/api/providers', (req, res) => {
+    res.json({ providers: [] });
+});
+
+// LOGIN
+app.post('/api/login', async (req, res) => {
+    const {
+        host,
+        port,
+        secure,
+        username,
+        password
+    } = req.body || {};
+
+    if (!host || !username || !password) {
+        return res.status(400).json({
+            error: 'Host, username, and password are required.'
         });
-      }
-
-      messages.sort((a, b) => b.uid - a.uid);
-
-      res.json({ messages, total, page, limit });
-
-    } finally {
-      lock.release();
     }
 
-  } catch (err) {
-    console.error('INBOX ERROR:', safeError(err));
+    const config = {
+        host,
+        port: Number(port || 993),
+        secure: secure !== false,
+        username,
+        password
+    };
 
-    res.status(500).json({
-      error: 'Could not load messages',
-      details: safeError(err)
-    });
-  }
+    try {
+        await withImap(config, async client => {
+            await client.list();
+        });
+
+        const sessionId = crypto.randomBytes(32).toString('hex');
+
+        sessions.set(sessionId, config);
+
+        res.json({
+            success: true,
+            sessionId
+        });
+
+    } catch (err) {
+        res.status(401).json({
+            error: 'IMAP login failed',
+            details: {
+                message: err.message
+            }
+        });
+    }
 });
 
+// AUTHENTICATED FOLDER LIST
+app.get('/api/folders', async (req, res) => {
+    const config = getSession(req);
+
+    if (!config) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+
+    try {
+        const folders = await withImap(config, async client => {
+            const list = await client.list();
+
+            return list.map(f => ({
+                name: f.name,
+                path: f.path,
+                delimiter: f.delimiter,
+                specialUse: f.specialUse || '',
+                flags: Array.from(f.flags || [])
+            }));
+        });
+
+        res.json(folders);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// INBOX / FOLDER MESSAGES
+app.get('/api/inbox', async (req, res) => {
+    const config = getSession(req);
+
+    if (!config) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+
+    const folder = String(req.query.folder || 'INBOX');
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 25)));
+
+    try {
+        const result = await withImap(config, async client => {
+            const lock = await client.getMailboxLock(folder);
+
+            try {
+                const uids = await client.search(
+                    { all: true },
+                    { uid: true }
+                );
+
+                if (!uids || !uids.length) {
+                    return { messages: [], total: 0 };
+                }
+
+                const total = uids.length;
+                const start = Math.max(0, total - page * limit);
+                const end = total - (page - 1) * limit;
+                const selected = uids.slice(start, end).reverse();
+
+                const messages = await client.fetchAll(
+                    selected,
+                    {
+                        uid: true,
+                        envelope: true,
+                        flags: true,
+                        internalDate: true
+                    },
+                    { uid: true }
+                );
+
+                return {
+                    messages: messages.map(m => formatMessage(m, folder)),
+                    total
+                };
+
+            } finally {
+                lock.release();
+            }
+        });
+
+        res.json(result);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// SEARCH ALL MAILBOXES
+app.get('/api/search', async (req, res) => {
+    const config = getSession(req);
+
+    if (!config) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
+
+    const query = String(req.query.q || '').trim();
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit || 100)));
+
+    if (!query) {
+        return res.status(400).json({
+            error: 'Search query is required'
+        });
+    }
+
+    if (query.length > 200) {
+        return res.status(400).json({
+            error: 'Search query is too long'
+        });
+    }
+
+    try {
+        const results = await withImap(config, async client => {
+            const mailboxes = await client.list();
+            const allResults = [];
+
+            for (const mailbox of mailboxes) {
+                if (!isSelectable(mailbox)) continue;
+
+                const folder = mailbox.path;
+                let lock;
+
+                try {
+                    lock = await client.getMailboxLock(folder);
+
+                    const uids = await client.search(
+                        { text: query },
+                        { uid: true }
+                    );
+
+                    if (!uids || !uids.length) continue;
+
+                    const selected = uids.slice(-limit).reverse();
+
+                    const messages = await client.fetchAll(
+                        selected,
+                        {
+                            uid: true,
+                            envelope: true,
+                            flags: true,
+                            internalDate: true
+                        },
+                        { uid: true }
+                    );
+
+                    for (const message of messages) {
+                        allResults.push(formatMessage(message, folder));
+                    }
+
+                } catch (err) {
+                    // Skip folders that cannot be searched.
+                    console.error('Search folder error:', folder, err.message);
+                } finally {
+                    if (lock) lock.release();
+                }
+            }
+
+            allResults.sort((a, b) => {
+                return new Date(b.date || 0) - new Date(a.date || 0);
+            });
+
+            return allResults.slice(0, limit);
+        });
+
+        res.json({
+            query,
+            total: results.length,
+            messages: results
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            error: 'Search failed',
+            details: { message: err.message }
+        });
+    }
+});
+
+// OPEN MESSAGE
 app.get('/api/message/:uid', async (req, res) => {
-  const session = getSession(req);
+    const config = getSession(req);
 
-  if (!session)
-    return res.status(401).json({ error: 'Not logged in' });
-
-  const folder = req.query.folder || 'INBOX';
-
-  try {
-    const lock = await session.client.getMailboxLock(folder);
-
-    try {
-      const msg = await session.client.fetchOne(
-        Number(req.params.uid),
-        {
-          uid: true,
-          source: true,
-          envelope: true,
-          flags: true,
-          internalDate: true
-        },
-        { uid: true }
-      );
-
-      if (!msg)
-        return res.status(404).json({ error: 'Message not found' });
-
-      const parsed = await simpleParser(msg.source);
-
-      res.json({
-        uid: msg.uid,
-        subject: parsed.subject || '(No subject)',
-        from: parsed.from?.text || '',
-        to: parsed.to?.text || '',
-        date: parsed.date || msg.internalDate,
-        text: parsed.text || '',
-        html: parsed.html || '',
-        attachments: (parsed.attachments || []).map(a => ({
-          filename: a.filename,
-          contentType: a.contentType,
-          size: a.size
-        }))
-      });
-
-    } finally {
-      lock.release();
+    if (!config) {
+        return res.status(401).json({ error: 'Not logged in' });
     }
 
-  } catch (err) {
-    console.error('MESSAGE ERROR:', safeError(err));
+    const uid = Number(req.params.uid);
+    const folder = String(req.query.folder || 'INBOX');
 
-    res.status(500).json({
-      error: 'Could not open message',
-      details: safeError(err)
-    });
-  }
+    if (!Number.isSafeInteger(uid) || uid < 1) {
+        return res.status(400).json({ error: 'Invalid message UID' });
+    }
+
+    try {
+        const result = await withImap(config, async client => {
+            const lock = await client.getMailboxLock(folder);
+
+            try {
+                const message = await client.fetchOne(
+                    uid,
+                    { source: true, uid: true },
+                    { uid: true }
+                );
+
+                if (!message || !message.source) {
+                    throw new Error('Message not found');
+                }
+
+                const parsed = await simpleParser(message.source);
+
+                return {
+                    uid,
+                    folder,
+                    from: parsed.from?.text || '',
+                    to: parsed.to?.text || '',
+                    cc: parsed.cc?.text || '',
+                    subject: parsed.subject || '(No subject)',
+                    date: parsed.date || null,
+                    text: parsed.text || '',
+                    html: parsed.html || ''
+                };
+
+            } finally {
+                lock.release();
+            }
+        });
+
+        res.json(result);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
+// SEND EMAIL
 app.post('/api/send', async (req, res) => {
-  const session = getSession(req);
+    const config = getSession(req);
 
-  if (!session)
-    return res.status(401).json({ error: 'Not logged in' });
+    if (!config) {
+        return res.status(401).json({ error: 'Not logged in' });
+    }
 
-  const { to, subject, text, html } = req.body || {};
+    const {
+        to,
+        subject,
+        text,
+        smtpHost,
+        smtpPort,
+        smtpSecure
+    } = req.body || {};
 
-  if (!to)
-    return res.status(400).json({ error: 'Recipient is required' });
-
-  const transporter = nodemailer.createTransport({
-    host: req.body.smtpHost,
-    port: Number(req.body.smtpPort || 465),
-    secure: req.body.smtpSecure !== false,
-    auth: {
-      user: session.username,
-      pass: req.body.password
-    },
-    tls: { rejectUnauthorized: true }
-  });
-
-  try {
-    const info = await transporter.sendMail({
-      from: session.username,
-      to,
-      subject: subject || '',
-      text: text || '',
-      html: html || undefined
-    });
-
-    res.json({ ok: true, messageId: info.messageId });
-
-  } catch (err) {
-    console.error('SMTP SEND ERROR:', safeError(err));
-
-    res.status(500).json({
-      error: 'SMTP send failed',
-      details: safeError(err)
-    });
-  }
-});
-
-app.post('/api/logout', async (req, res) => {
-  const session = getSession(req);
-
-  if (session) {
-    sessions.delete(
-      req.headers['x-session-id'] || req.body?.sessionId
-    );
+    if (!to || !smtpHost) {
+        return res.status(400).json({
+            error: 'Recipient and SMTP host are required'
+        });
+    }
 
     try {
-      await session.client.logout();
-    } catch (_e) {
-      try { session.client.close(); } catch (_e2) {}
-    }
-  }
+        const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: Number(smtpPort || 465),
+            secure: smtpSecure !== false,
+            auth: {
+                user: config.username,
+                pass: config.password
+            },
+            tls: {
+                rejectUnauthorized: true
+            }
+        });
 
-  res.json({ ok: true });
+        const info = await transporter.sendMail({
+            from: config.username,
+            to,
+            subject: subject || '',
+            text: text || ''
+        });
+
+        res.json({
+            success: true,
+            messageId: info.messageId
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            error: 'Send failed',
+            details: { message: err.message }
+        });
+    }
+});
+
+// LOGOUT
+app.post('/api/logout', (req, res) => {
+    const id = req.headers['x-session-id'] || req.body?.sessionId;
+
+    if (id) sessions.delete(id);
+
+    res.json({ success: true });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Danke Mail running on port ${PORT}`);
+    console.log(`Danke Mail running on port ${PORT}`);
 });
