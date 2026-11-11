@@ -9,10 +9,6 @@ const { simpleParser } = require('mailparser');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ========================================
-// CONFIGURATION
-// ========================================
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -30,10 +26,6 @@ const SESSION_KEY = crypto
     .digest();
 
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
-
-// ========================================
-// TLS
-// ========================================
 
 const tlsOptions = {
     rejectUnauthorized: true,
@@ -66,14 +58,10 @@ function getCachedMessage(key) {
 }
 
 function setCachedMessage(key, data) {
-    if (MESSAGE_CACHE.has(key)) {
-        MESSAGE_CACHE.delete(key);
-    }
+    MESSAGE_CACHE.delete(key);
 
     while (MESSAGE_CACHE.size >= MESSAGE_CACHE_MAX) {
-        MESSAGE_CACHE.delete(
-            MESSAGE_CACHE.keys().next().value
-        );
+        MESSAGE_CACHE.delete(MESSAGE_CACHE.keys().next().value);
     }
 
     MESSAGE_CACHE.set(key, {
@@ -114,9 +102,7 @@ function createSessionToken(config) {
 }
 
 function readSessionToken(token) {
-    if (!token || typeof token !== 'string') {
-        return null;
-    }
+    if (!token || typeof token !== 'string') return null;
 
     try {
         const parts = token.split('.');
@@ -129,11 +115,7 @@ function readSessionToken(token) {
         const tag = Buffer.from(parts[2], 'hex');
         const encrypted = Buffer.from(parts[3], 'hex');
 
-        if (
-            iv.length !== 12 ||
-            tag.length !== 16 ||
-            !encrypted.length
-        ) {
+        if (iv.length !== 12 || tag.length !== 16 || !encrypted.length) {
             return null;
         }
 
@@ -152,37 +134,39 @@ function readSessionToken(token) {
 
         const payload = JSON.parse(decrypted.toString('utf8'));
 
-        if (Date.now() > payload.expiresAt) {
-            return null;
-        }
+        if (Date.now() > payload.expiresAt) return null;
 
         const config = payload.config;
 
-        if (
-            !config ||
-            !config.host ||
-            !config.username ||
-            !config.password
-        ) {
+        if (!config || !config.host || !config.username || !config.password) {
             return null;
         }
 
         return config;
-
     } catch {
         return null;
     }
 }
 
+// Supports session token from header, Bearer token, body, or URL.
 function getSession(req) {
-    return readSessionToken(
+    const authorization = req.headers.authorization || '';
+
+    const bearer = authorization.startsWith('Bearer ')
+        ? authorization.slice(7)
+        : null;
+
+    const token =
         req.headers['x-session-id'] ||
-        req.body?.sessionId
-    );
+        bearer ||
+        req.body?.sessionId ||
+        req.query?.sessionId;
+
+    return readSessionToken(token);
 }
 
 // ========================================
-// IMAP CLIENT
+// IMAP
 // ========================================
 
 function createImapClient(config) {
@@ -190,18 +174,14 @@ function createImapClient(config) {
         host: config.host,
         port: Number(config.port || 993),
         secure: config.secure !== false,
-
         auth: {
             user: config.username,
             pass: config.password
         },
-
         logger: false,
-
         connectionTimeout: 30000,
         greetingTimeout: 20000,
         socketTimeout: 60000,
-
         tls: { ...tlsOptions }
     });
 
@@ -219,9 +199,7 @@ async function withImap(config, callback) {
     try {
         await client.connect();
         connected = true;
-
         return await callback(client);
-
     } finally {
         if (connected) {
             try {
@@ -280,9 +258,7 @@ function sendError(res, err, operation) {
     const timeout = /timeout|timed out|ETIMEDOUT/i.test(message);
 
     res.status(timeout ? 504 : 500).json({
-        error: timeout
-            ? 'Connection timed out'
-            : operation + ' failed',
+        error: timeout ? 'Connection timed out' : operation + ' failed',
         details: { message }
     });
 }
@@ -300,11 +276,23 @@ function clearMessageCache(config, folder, uids) {
     }
 }
 
+function normalizeFolder(value) {
+    return String(value || 'INBOX').trim();
+}
+
 // ========================================
 // HEALTH
 // ========================================
 
 app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        app: 'Danke Mail',
+        cache: MESSAGE_CACHE.size
+    });
+});
+
+app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         app: 'Danke Mail',
@@ -362,20 +350,23 @@ app.post('/api/login', async (req, res) => {
             await client.list();
         });
 
+        const sessionId = createSessionToken(config);
+
         res.json({
             success: true,
-            sessionId: createSessionToken(config)
+            sessionId,
+            account: {
+                username: config.username,
+                host: config.host
+            }
         });
-
     } catch (err) {
         console.error('Login:', err.message);
 
         const timeout = /timeout|timed out|ETIMEDOUT/i.test(err.message);
 
         res.status(timeout ? 504 : 401).json({
-            error: timeout
-                ? 'IMAP connection timed out'
-                : 'IMAP login failed',
+            error: timeout ? 'IMAP connection timed out' : 'IMAP login failed',
             details: { message: err.message }
         });
     }
@@ -408,14 +399,13 @@ app.get('/api/folders', async (req, res) => {
         });
 
         res.json(folders);
-
     } catch (err) {
         sendError(res, err, 'Folder loading');
     }
 });
 
 // ========================================
-// INBOX
+// INBOX / SELECTED FOLDER
 // ========================================
 
 app.get('/api/inbox', async (req, res) => {
@@ -427,7 +417,7 @@ app.get('/api/inbox', async (req, res) => {
         });
     }
 
-    const folder = String(req.query.folder || 'INBOX');
+    const folder = normalizeFolder(req.query.folder);
     const page = Math.max(1, Number(req.query.page || 1));
     const limit = Math.min(100, Math.max(1, Number(req.query.limit || 25)));
 
@@ -442,13 +432,12 @@ app.get('/api/inbox', async (req, res) => {
                 );
 
                 if (!uids.length) {
-                    return { messages: [], total: 0 };
+                    return { messages: [], total: 0, folder };
                 }
 
                 const total = uids.length;
                 const start = Math.max(0, total - page * limit);
                 const end = total - (page - 1) * limit;
-
                 const selected = uids.slice(start, end).reverse();
 
                 const messages = await client.fetchAll(
@@ -464,23 +453,23 @@ app.get('/api/inbox', async (req, res) => {
 
                 return {
                     messages: messages.map(m => formatMessage(m, folder)),
-                    total
+                    total,
+                    folder
                 };
-
             } finally {
                 lock.release();
             }
         });
 
         res.json(result);
-
     } catch (err) {
-        sendError(res, err, 'Inbox loading');
+        sendError(res, err, 'Folder message loading');
     }
 });
 
 // ========================================
 // SEARCH
+// Supports ALL or a specific folder
 // ========================================
 
 app.get('/api/search', async (req, res) => {
@@ -493,6 +482,7 @@ app.get('/api/search', async (req, res) => {
     }
 
     const query = String(req.query.q || '').trim();
+    const requestedFolder = String(req.query.folder || 'ALL');
     const limit = Math.min(200, Math.max(1, Number(req.query.limit || 100)));
 
     if (!query || query.length > 200) {
@@ -504,10 +494,18 @@ app.get('/api/search', async (req, res) => {
     try {
         const results = await withImap(config, async client => {
             const mailboxes = await client.list();
+
+            const selectedMailboxes =
+                requestedFolder.toUpperCase() === 'ALL'
+                    ? mailboxes.filter(isSelectable)
+                    : mailboxes.filter(mailbox =>
+                        mailbox.path === requestedFolder
+                    );
+
             const allResults = [];
 
-            for (const mailbox of mailboxes) {
-                if (!isSelectable(mailbox)) continue;
+            for (const mailbox of selectedMailboxes) {
+                if (allResults.length >= limit) break;
 
                 let lock;
 
@@ -521,7 +519,8 @@ app.get('/api/search', async (req, res) => {
 
                     if (!uids.length) continue;
 
-                    const selected = uids.slice(-limit).reverse();
+                    const remaining = limit - allResults.length;
+                    const selected = uids.slice(-remaining).reverse();
 
                     const messages = await client.fetchAll(
                         selected,
@@ -539,10 +538,12 @@ app.get('/api/search', async (req, res) => {
                             formatMessage(message, mailbox.path)
                         );
                     }
-
                 } catch (err) {
-                    console.error('Search:', mailbox.path, err.message);
-
+                    console.error(
+                        'Search folder:',
+                        mailbox.path,
+                        err.message
+                    );
                 } finally {
                     if (lock) lock.release();
                 }
@@ -557,17 +558,17 @@ app.get('/api/search', async (req, res) => {
 
         res.json({
             query,
+            folder: requestedFolder,
             total: results.length,
             messages: results
         });
-
     } catch (err) {
         sendError(res, err, 'Search');
     }
 });
 
 // ========================================
-// OPEN MESSAGE - FAST CACHE
+// OPEN MESSAGE
 // ========================================
 
 app.get('/api/message/:uid', async (req, res) => {
@@ -580,7 +581,7 @@ app.get('/api/message/:uid', async (req, res) => {
     }
 
     const uid = Number(req.params.uid);
-    const folder = String(req.query.folder || 'INBOX');
+    const folder = normalizeFolder(req.query.folder);
 
     if (!Number.isSafeInteger(uid) || uid < 1) {
         return res.status(400).json({
@@ -638,7 +639,6 @@ app.get('/api/message/:uid', async (req, res) => {
                 setCachedMessage(cacheKey, data);
 
                 return data;
-
             } finally {
                 lock.release();
             }
@@ -646,7 +646,6 @@ app.get('/api/message/:uid', async (req, res) => {
 
         res.set('X-Danke-Cache', 'MISS');
         res.json(result);
-
     } catch (err) {
         sendError(res, err, 'Message loading');
     }
@@ -700,29 +699,23 @@ app.post('/api/message/action', async (req, res) => {
             const lock = await client.getMailboxLock(folder);
 
             try {
-                for (const uid of validUIDs) {
-                    if (action === 'read') {
-                        await client.messageFlagsAdd(
-                            uid,
-                            ['\\Seen'],
-                            { uid: true }
-                        );
-                    }
-
-                    if (action === 'unread') {
-                        await client.messageFlagsRemove(
-                            uid,
-                            ['\\Seen'],
-                            { uid: true }
-                        );
-                    }
-
-                    if (action === 'delete') {
-                        await client.messageDelete(
-                            uid,
-                            { uid: true }
-                        );
-                    }
+                if (action === 'read') {
+                    await client.messageFlagsAdd(
+                        validUIDs,
+                        ['\\Seen'],
+                        { uid: true }
+                    );
+                } else if (action === 'unread') {
+                    await client.messageFlagsRemove(
+                        validUIDs,
+                        ['\\Seen'],
+                        { uid: true }
+                    );
+                } else if (action === 'delete') {
+                    await client.messageDelete(
+                        validUIDs,
+                        { uid: true }
+                    );
                 }
             } finally {
                 lock.release();
@@ -742,7 +735,6 @@ app.post('/api/message/action', async (req, res) => {
                     ? 'Emails marked as unread'
                     : 'Emails deleted'
         });
-
     } catch (err) {
         sendError(res, err, 'Message action');
     }
@@ -763,8 +755,11 @@ app.post('/api/send', async (req, res) => {
 
     const {
         to,
+        cc,
+        bcc,
         subject,
         text,
+        html,
         smtpHost,
         smtpPort,
         smtpSecure
@@ -788,16 +783,13 @@ app.post('/api/send', async (req, res) => {
         host: String(smtpHost).trim(),
         port,
         secure: smtpSecure !== false,
-
         auth: {
             user: config.username,
             pass: config.password
         },
-
         connectionTimeout: 30000,
         greetingTimeout: 20000,
         socketTimeout: 60000,
-
         tls: { ...tlsOptions }
     });
 
@@ -805,18 +797,19 @@ app.post('/api/send', async (req, res) => {
         const info = await transporter.sendMail({
             from: config.username,
             to,
+            cc: cc || undefined,
+            bcc: bcc || undefined,
             subject: subject || '',
-            text: text || ''
+            text: text || '',
+            html: html || undefined
         });
 
         res.json({
             success: true,
             messageId: info.messageId
         });
-
     } catch (err) {
         sendError(res, err, 'Email sending');
-
     } finally {
         transporter.close();
     }
