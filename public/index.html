@@ -1,1377 +1,833 @@
 
 <!DOCTYPE html>
-<html lang="id" data-theme="light" data-accent="purple">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f6f3ff">
+<meta name="theme-color" content="#7257d8">
 <title>Danke Mail</title>
-
 <style>
 :root{
- --bg:#f6f3ff;--surface:#fff;--surface2:#f0edff;
- --text:#241d3b;--muted:#817a98;--line:#e5def7;
- --accent:#7c3aed;--accent2:#a78bfa;--accent-soft:#eee7ff;
- --danger:#e5484d;--success:#16a34a;
- --shadow:0 12px 36px rgba(48,30,90,.08);
- --radius:18px;
+  --bg:#f5f3fb;--surface:#fff;--surface2:#f0edfa;
+  --text:#211d32;--muted:#89849b;--line:#e9e5f1;
+  --primary:#7257d8;--primary2:#5b40c4;
+  --danger:#e45b70;--success:#269b75;
+  --shadow:0 12px 35px rgba(43,30,86,.08);
 }
-html[data-theme="dark"]{
- --bg:#11111b;--surface:#191927;--surface2:#222235;
- --text:#f3f0ff;--muted:#aaa4c2;--line:#302d45;
- --accent-soft:#302344;
- --shadow:0 12px 36px rgba(0,0,0,.28);
-}
-html[data-accent="pink"]{--accent:#e11d8a;--accent2:#f472b6;--accent-soft:#3a2035}
-html[data-accent="blue"]{--accent:#2563eb;--accent2:#60a5fa;--accent-soft:#1d2d4c}
-html[data-accent="cyan"]{--accent:#0891b2;--accent2:#22d3ee;--accent-soft:#17353d}
-html[data-accent="teal"]{--accent:#0d9488;--accent2:#5eead4;--accent-soft:#193936}
-html[data-accent="green"]{--accent:#16a34a;--accent2:#4ade80;--accent-soft:#1d3829}
-html[data-accent="amber"]{--accent:#d97706;--accent2:#fbbf24;--accent-soft:#3a2e1d}
-html[data-accent="red"]{--accent:#dc2626;--accent2:#f87171;--accent-soft:#3b2225}
-html[data-accent="indigo"]{--accent:#4f46e5;--accent2:#818cf8;--accent-soft:#282746}
-
 *{box-sizing:border-box}
-body{
- margin:0;background:var(--bg);color:var(--text);
- font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif
-}
-button,input,select,textarea{font:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,textarea,select{font:inherit}
 button{cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}
-.app{min-height:100vh;display:flex;flex-direction:column}
-
-.topbar{
- height:72px;display:flex;align-items:center;gap:16px;
- padding:0 24px;background:var(--surface);
- border-bottom:1px solid var(--line);
- position:sticky;top:0;z-index:5
-}
-.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;min-width:205px}
-.logo{
- width:38px;height:38px;border-radius:13px;
- background:linear-gradient(135deg,var(--accent),var(--accent2));
- display:grid;place-items:center;color:#fff;font-weight:900
-}
-.searchbar{
- flex:1;max-width:760px;display:flex;align-items:center;gap:8px;
- background:var(--bg);border:1px solid var(--line);
- border-radius:14px;padding:7px 10px
-}
-.searchbar select,.searchbar input{border:0;outline:0;background:transparent;color:var(--text)}
-.searchbar select{max-width:155px;font-size:12px;font-weight:700}
-.searchbar input{flex:1;min-width:60px;padding:5px}
-.iconbtn,.btn{
- border:1px solid var(--line);background:var(--surface);
- color:var(--text);border-radius:11px;padding:9px 12px
-}
-.iconbtn{width:40px;height:40px;display:grid;place-items:center;padding:0;font-size:17px}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
-.btn.soft{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:700}
-.btn.danger{color:var(--danger)}
-.top-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-
-.layout{
- display:grid;grid-template-columns:250px minmax(0,1fr);
- gap:18px;padding:18px;flex:1;min-height:0
-}
-.sidebar,.mainpanel{
- background:var(--surface);border:1px solid var(--line);
- border-radius:18px;box-shadow:var(--shadow);min-width:0
-}
-.sidebar{padding:16px;display:flex;flex-direction:column;gap:14px}
-.compose{width:100%;padding:13px;border-radius:14px;font-size:14px}
-.accountbox{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
-.accountbox label,.small-label{
- font-size:11px;color:var(--muted);font-weight:800;
- text-transform:uppercase;letter-spacing:.7px
-}
-.accountbox select{
- width:100%;margin-top:8px;padding:9px;border:1px solid var(--line);
- border-radius:10px;background:var(--surface);color:var(--text)
-}
-.nav{display:flex;flex-direction:column;gap:4px}
-.navitem{
- display:flex;align-items:center;gap:11px;padding:10px 12px;
- border-radius:11px;color:var(--muted);cursor:pointer;
- border:0;background:transparent;text-align:left;width:100%
-}
-.navitem:hover,.navitem.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
-.sectionline{height:1px;background:var(--line);margin:4px 0}
-.themebox{margin-top:auto;padding:12px;border:1px solid var(--line);border-radius:14px}
-.theme-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
-.theme-choice{
- width:25px;height:25px;border-radius:50%;border:2px solid var(--surface);
- outline:1px solid var(--line);padding:0
-}
-.theme-choice.selected{outline:2px solid var(--text)}
-.theme-toggle{display:flex;gap:6px;margin-top:9px}
-.theme-toggle button{
- flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);
- background:var(--surface);color:var(--text)
-}
-.theme-toggle button.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-
-.mainpanel{display:flex;flex-direction:column;overflow:hidden}
-.panelhead{
- padding:20px 22px 14px;border-bottom:1px solid var(--line);
- display:flex;align-items:center;gap:12px;flex-wrap:wrap
-}
-.panelhead h1{font-size:22px;margin:0;font-weight:800}
-.panelhead .sub{color:var(--muted);margin-top:3px;font-size:12px}
-.head-actions{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
-.toolbar{
- padding:12px 20px;display:flex;align-items:center;gap:8px;
- border-bottom:1px solid var(--line);flex-wrap:wrap
-}
-.toolbar .spacer{flex:1}
-.mail-list{overflow:auto;flex:1;min-height:250px}
-.mailrow{
- display:grid;grid-template-columns:28px 38px minmax(120px,190px) minmax(0,1fr) 100px;
- gap:12px;align-items:center;padding:14px 20px;
- border-bottom:1px solid var(--line);cursor:pointer
-}
-.mailrow:hover{background:var(--bg)}
-.mailrow.unread{background:color-mix(in srgb,var(--accent-soft) 35%,var(--surface));font-weight:700}
-.mailrow input{accent-color:var(--accent);width:16px;height:16px}
-.avatar{
- width:36px;height:36px;border-radius:12px;background:var(--accent-soft);
- color:var(--accent);display:grid;place-items:center;font-weight:800
-}
-.sender,.subject{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.subject .snippet{font-weight:400;color:var(--muted)}
-.maildate{text-align:right;color:var(--muted);font-size:12px;white-space:nowrap}
-.empty{padding:55px 20px;text-align:center;color:var(--muted)}
-.status{padding:10px 20px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
-.view{padding:22px;overflow:auto;flex:1}
-.messagehead{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
-.messagehead h2{font-size:22px;margin:12px 0}
-.messagemeta{color:var(--muted);font-size:13px;line-height:1.8}
-.messagebody{line-height:1.7;overflow-wrap:anywhere}
-.messagebody img{max-width:100%}
-.messagebody pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
-.messageframe{width:100%;min-height:300px;border:0;background:#fff;border-radius:10px}
-
-.modalback{
- position:fixed;inset:0;background:rgba(8,7,20,.55);
- display:none;align-items:center;justify-content:center;
- padding:18px;z-index:20
-}
-.modalback.show{display:flex}
-.modal{
- width:min(620px,100%);max-height:90vh;overflow:auto;
- background:var(--surface);border:1px solid var(--line);
- border-radius:20px;box-shadow:var(--shadow);padding:22px
-}
-.modal h2{margin:0 0 18px}
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
-.field label{font-size:12px;color:var(--muted);font-weight:700}
-.field input,.field select,.field textarea{
- padding:11px 12px;border:1px solid var(--line);
- border-radius:11px;background:var(--bg);color:var(--text);width:100%
-}
-.field textarea{min-height:180px;resize:vertical}
-.modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.toast{
- position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
- background:var(--text);color:var(--surface);padding:12px 18px;
- border-radius:12px;z-index:30;display:none;max-width:90%;text-align:center
-}
-.toast.show{display:block}
-.loading{opacity:.65;pointer-events:none}
 .hidden{display:none!important}
-
-@media(max-width:900px){
- .layout{grid-template-columns:205px minmax(0,1fr);padding:12px;gap:12px}
- .brand{min-width:auto}
- .mailrow{grid-template-columns:25px 34px minmax(90px,140px) minmax(0,1fr);gap:8px;padding:12px}
- .maildate{display:none}
- .topbar{padding:0 12px;gap:10px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.brand{font-size:25px;font-weight:800;letter-spacing:-1px}
+.brand span{color:var(--primary)}
+.logo{
+ width:42px;height:42px;border-radius:14px;background:var(--primary);
+ color:white;display:grid;place-items:center;font-size:21px;font-weight:800;
+ box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 30%,transparent)
 }
-@media(max-width:650px){
- .topbar{height:auto;min-height:62px;flex-wrap:wrap;padding:10px}
- .brand{display:none}
- .searchbar{order:2;flex-basis:100%;max-width:none}
- .layout{display:flex;flex-direction:column;padding:10px}
- .sidebar{padding:10px}
- .compose{padding:10px}
- .accountbox{display:block}
- .nav{flex-direction:row;overflow:auto}
- .navitem{width:auto;white-space:nowrap;padding:9px 12px}
- .themebox{margin-top:0}
- .mainpanel{min-height:65vh}
- .panelhead{padding:16px}
- .panelhead h1{font-size:19px}
- .toolbar{padding:10px}
- .mailrow{grid-template-columns:22px 32px minmax(0,1fr);gap:8px}
- .sender,.subject{grid-column:3}
- .avatar{grid-row:1/3}
- .mailrow input{grid-row:1/3}
- .head-actions{margin-left:0}
- .view{padding:16px}
+.primary{
+ border:0;background:var(--primary);color:white;padding:12px 18px;
+ border-radius:11px;font-weight:700
+}
+.primary:hover{background:var(--primary2)}
+.secondary{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:10px 14px;border-radius:10px}
+.danger{color:var(--danger)}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.field label{font-size:12px;font-weight:700;color:var(--muted)}
+.field input,.field select,.field textarea{
+ width:100%;border:1px solid var(--line);background:var(--surface);
+ color:var(--text);padding:12px 13px;border-radius:10px;outline:none
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent)}
+.field textarea{resize:vertical;min-height:120px}
+.row{display:flex;gap:10px}
+.row>*{min-width:0;flex:1}
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;background:radial-gradient(circle at 15% 10%,color-mix(in srgb,var(--primary) 16%,transparent),transparent 35%),var(--bg)}
+.login-wrap{width:100%;max-width:520px}
+.login-brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:24px}
+.login-card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:30px;box-shadow:var(--shadow)}
+.login-card h1{font-size:23px;margin:0 0 7px}
+.login-card .subtitle{color:var(--muted);margin:0 0 25px}
+.login-footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}
+.provider-note{padding:10px 12px;border-radius:10px;background:var(--surface2);font-size:12px;color:var(--muted);margin:10px 0 15px;line-height:1.5}
+#dashboard{height:100vh;display:flex;overflow:hidden}
+.sidebar{width:255px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px}
+.side-brand{display:flex;align-items:center;gap:10px;padding:2px 8px 22px}
+.account-switch{width:100%;padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);color:var(--text);text-align:left;margin-bottom:18px}
+.account-switch strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-label{font-size:10px;letter-spacing:1.2px;font-weight:800;color:var(--muted);padding:10px 11px}
+.folder-list{overflow:auto;flex:1}
+.folder-btn{display:flex;align-items:center;gap:11px;width:100%;padding:11px;border:0;border-radius:10px;background:transparent;color:var(--text);text-align:left;margin:2px 0}
+.folder-btn:hover,.folder-btn.active{background:var(--surface2);color:var(--primary)}
+.folder-btn .folder-count{margin-left:auto;color:var(--muted);font-size:11px}
+.side-bottom{border-top:1px solid var(--line);padding-top:12px}
+.side-bottom button{width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:10px;border-radius:9px}
+.side-bottom button:hover{background:var(--surface2)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:70px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 24px}
+.searchbox{max-width:650px;flex:1;position:relative}
+.searchbox input{width:100%;padding:12px 15px 12px 40px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--text);outline:none}
+.searchbox span{position:absolute;left:14px;top:10px;font-size:18px;color:var(--muted)}
+.top-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.icon-btn{width:40px;height:40px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--text)}
+.content{padding:24px;overflow:auto;flex:1}
+.content-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}
+.content-head h2{font-size:22px;margin:0}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.toolbar button{padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text)}
+.toolbar button:hover{border-color:var(--primary);color:var(--primary)}
+.mail-list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mail-row{display:flex;align-items:center;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line);cursor:pointer;min-width:0}
+.mail-row:last-child{border-bottom:0}
+.mail-row:hover{background:var(--surface2)}
+.mail-row.unread .sender,.mail-row.unread .subject{font-weight:800}
+.mail-row input{accent-color:var(--primary)}
+.mail-info{min-width:0;flex:1}
+.sender{font-weight:600;margin-bottom:4px}
+.subject{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.mail-date{font-size:11px;color:var(--muted);white-space:nowrap}
+.empty{padding:65px 20px;text-align:center;color:var(--muted)}
+.empty .big{font-size:40px;margin-bottom:10px}
+#messageView{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+.message-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.message-toolbar button{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:9px 12px;border-radius:9px}
+.message-meta{padding:15px 0;border-bottom:1px solid var(--line);margin-bottom:18px}
+.message-body{line-height:1.7;overflow-wrap:anywhere}
+.message-body iframe{width:100%;min-height:420px;border:0;background:white}
+.modal-backdrop{position:fixed;inset:0;background:#16122688;z-index:20;display:flex;align-items:center;justify-content:center;padding:15px}
+.modal{width:100%;max-width:570px;max-height:92vh;overflow:auto;background:var(--surface);border-radius:18px;padding:23px;box-shadow:var(--shadow)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-head h3{margin:0;font-size:19px}
+.close{border:0;background:var(--surface2);color:var(--text);border-radius:9px;width:34px;height:34px}
+.toast{position:fixed;bottom:22px;right:22px;z-index:50;background:#29243b;color:#fff;padding:13px 17px;border-radius:11px;box-shadow:var(--shadow);max-width:90vw}
+.theme-options{display:flex;gap:9px;flex-wrap:wrap}
+.theme-dot{width:30px;height:30px;border:3px solid var(--surface);outline:1px solid var(--line);border-radius:50%}
+.mobile-menu{display:none}
+@media(max-width:760px){
+ #dashboard{height:100dvh}
+ .sidebar{position:fixed;z-index:15;left:-270px;top:0;bottom:0;transition:left .2s;box-shadow:var(--shadow)}
+ .sidebar.open{left:0}
+ .mobile-menu{display:inline-block}
+ .topbar{padding:0 12px;height:62px;gap:8px}
+ .content{padding:15px 11px}
+ .content-head h2{font-size:19px}
+ .mail-row{padding:13px 10px;gap:8px}
+ .mail-date{display:none}
+ .login-card{padding:22px 18px}
+ .row.mobile-stack{display:block}
+ .row.mobile-stack>*{width:100%}
 }
 </style>
 </head>
-
 <body>
-<div class="app">
 
-<header class="topbar">
- <div class="brand"><div class="logo">D</div><span>Danke Mail</span></div>
-
- <div class="searchbar">
-  <select id="searchScope">
-   <option value="ALL">All Folders</option>
-  </select>
-  <span>⌕</span>
-  <input id="searchInput" placeholder="Search emails...">
-  <button class="iconbtn" id="searchBtn" title="Search">⌕</button>
- </div>
-
- <div class="top-actions">
-  <button class="iconbtn" id="refreshBtn" title="Refresh">↻</button>
-  <button class="iconbtn" id="settingsBtn" title="Settings">⚙</button>
- </div>
-</header>
-
-<div class="layout">
-
-<aside class="sidebar">
- <button class="btn primary compose" id="composeBtn">＋ Compose</button>
-
- <div class="accountbox">
-  <label>Account</label>
-  <select id="accountSelect">
-   <option value="">No account</option>
-  </select>
-  <div style="display:flex;gap:6px;margin-top:8px">
-   <button class="btn soft" id="addAccountBtn">＋ Add</button>
-   <button class="btn" id="logoutBtn">Logout</button>
+<!-- LOGIN PAGE: TERPISAH DARI DASHBOARD -->
+<section id="loginPage">
+ <div class="login-wrap">
+  <div class="login-brand">
+   <div class="logo">D</div>
+   <div class="brand">Danke <span>Mail</span></div>
   </div>
- </div>
+  <div class="login-card">
+   <h1>Connect your email</h1>
+   <p class="subtitle">Masuk menggunakan akun email kamu.</p>
 
- <nav class="nav" id="folderNav"></nav>
-
- <div class="sectionline"></div>
-
- <div class="themebox">
-  <div class="small-label">Mode</div>
-  <div class="theme-toggle">
-   <button data-mode="light">☀ Light</button>
-   <button data-mode="dark">☾ Dark</button>
+   <form id="loginForm">
+    <div class="field">
+     <label>EMAIL ADDRESS</label>
+     <input id="email" type="email" placeholder="nama@example.com" autocomplete="username" required>
+    </div>
+    <div class="field">
+     <label>PASSWORD</label>
+     <input id="password" type="password" placeholder="Password email" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+     <label>EMAIL PROVIDER</label>
+     <select id="provider"></select>
+    </div>
+    <div class="provider-note" id="providerNote">
+     Provider akan terdeteksi otomatis berdasarkan domain email.
+    </div>
+    <div class="field">
+     <label>IMAP HOST</label>
+     <input id="imapHost" placeholder="imap.example.com" required>
+    </div>
+    <div class="row">
+     <div class="field">
+      <label>IMAP PORT</label>
+      <input id="imapPort" type="number" value="993" required>
+     </div>
+     <div class="field">
+      <label>IMAP SECURITY</label>
+      <select id="imapSecure">
+       <option value="true">SSL / TLS</option>
+       <option value="false">STARTTLS / None</option>
+      </select>
+     </div>
+    </div>
+    <div class="field">
+     <label>SMTP HOST</label>
+     <input id="smtpHost" placeholder="smtp.example.com" required>
+    </div>
+    <div class="row">
+     <div class="field">
+      <label>SMTP PORT</label>
+      <input id="smtpPort" type="number" value="465" required>
+     </div>
+     <div class="field">
+      <label>SMTP SECURITY</label>
+      <select id="smtpSecure">
+       <option value="true">SSL / TLS</option>
+       <option value="false">STARTTLS / None</option>
+      </select>
+     </div>
+    </div>
+    <button class="primary" id="connectBtn" type="submit" style="width:100%">Connect Account</button>
+   </form>
   </div>
+  <div class="login-footer">Danke Mail · IMAP / SMTP Email Client</div>
+ </div>
+</section>
 
-  <div class="small-label" style="margin-top:13px">Accent color</div>
-  <div class="theme-row">
-   <button class="theme-choice" data-accent="purple" style="background:#7c3aed"></button>
-   <button class="theme-choice" data-accent="pink" style="background:#e11d8a"></button>
-   <button class="theme-choice" data-accent="blue" style="background:#2563eb"></button>
-   <button class="theme-choice" data-accent="cyan" style="background:#0891b2"></button>
-   <button class="theme-choice" data-accent="teal" style="background:#0d9488"></button>
-   <button class="theme-choice" data-accent="green" style="background:#16a34a"></button>
-   <button class="theme-choice" data-accent="amber" style="background:#d97706"></button>
-   <button class="theme-choice" data-accent="red" style="background:#dc2626"></button>
-   <button class="theme-choice" data-accent="indigo" style="background:#4f46e5"></button>
+<!-- DASHBOARD: HANYA MUNCUL SETELAH LOGIN -->
+<section id="dashboard" class="hidden">
+ <aside class="sidebar" id="sidebar">
+  <div class="side-brand">
+   <div class="logo">D</div>
+   <div class="brand">Danke <span>Mail</span></div>
   </div>
- </div>
-</aside>
-
-<main class="mainpanel">
-
- <div class="panelhead">
-  <div>
-   <h1 id="panelTitle">Inbox</h1>
-   <div class="sub" id="panelSub">Your messages</div>
+  <button class="account-switch" id="accountSwitch">
+   <span class="small muted">CURRENT ACCOUNT</span>
+   <strong id="accountLabel">Email account</strong>
+   <span class="small muted">▾ Switch account</span>
+  </button>
+  <button class="primary" id="addAccountBtn" style="width:100%;margin-bottom:15px">＋ Add Account</button>
+  <div class="side-label">MAILBOXES</div>
+  <div class="folder-list" id="folderList"></div>
+  <div class="side-bottom">
+   <button id="themeBtn">◐ Appearance & Theme</button>
+   <button id="logoutBtn" class="danger">↪ Logout</button>
   </div>
-  <div class="head-actions">
-   <button class="btn" id="manageAccountsBtn">Manage accounts</button>
+ </aside>
+
+ <main class="main">
+  <header class="topbar">
+   <button class="icon-btn mobile-menu" id="menuBtn">☰</button>
+   <div class="searchbox">
+    <span>⌕</span>
+    <input id="searchInput" placeholder="Search all folders...">
+   </div>
+   <div class="top-actions">
+    <button class="icon-btn" id="refreshBtn" title="Refresh">↻</button>
+    <button class="primary" id="composeBtn">＋ Compose</button>
+   </div>
+  </header>
+
+  <div class="content">
+   <div class="content-head">
+    <div>
+     <h2 id="pageTitle">Inbox</h2>
+     <div class="small muted" id="pageSubtitle">Your messages</div>
+    </div>
+   </div>
+   <div id="listView">
+    <div class="toolbar">
+     <button id="selectAllBtn">Select all</button>
+     <button id="readBtn">Mark read</button>
+     <button id="unreadBtn">Mark unread</button>
+     <button id="deleteBtn" class="danger">Delete</button>
+     <button id="clearSearchBtn" class="hidden">Clear search</button>
+    </div>
+    <div class="mail-list" id="mailList">
+     <div class="empty"><div class="big">✉</div>Loading messages...</div>
+    </div>
+   </div>
+   <div id="messageView" class="hidden"></div>
   </div>
+ </main>
+</section>
+
+<!-- COMPOSE MODAL -->
+<div class="modal-backdrop hidden" id="composeModal">
+ <div class="modal">
+  <div class="modal-head">
+   <h3>New Message</h3>
+   <button class="close" data-close="composeModal">✕</button>
+  </div>
+  <form id="composeForm">
+   <div class="field"><label>TO</label><input id="composeTo" type="email" placeholder="recipient@example.com" required></div>
+   <div class="field"><label>SUBJECT</label><input id="composeSubject" placeholder="Subject"></div>
+   <div class="field"><label>MESSAGE</label><textarea id="composeText" placeholder="Write your message..." required></textarea></div>
+   <div class="row">
+    <div class="field"><label>SMTP HOST</label><input id="composeSmtpHost"></div>
+    <div class="field"><label>SMTP PORT</label><input id="composeSmtpPort" type="number"></div>
+   </div>
+   <div class="field"><label>SMTP SECURITY</label>
+    <select id="composeSmtpSecure"><option value="true">SSL / TLS</option><option value="false">STARTTLS / None</option></select>
+   </div>
+   <button class="primary" type="submit" style="width:100%">Send Message</button>
+  </form>
  </div>
-
- <div class="toolbar" id="listToolbar">
-  <label><input type="checkbox" id="selectAll"> Select all</label>
-  <span class="spacer"></span>
-  <button class="btn" id="markReadBtn">Mark read</button>
-  <button class="btn" id="markUnreadBtn">Mark unread</button>
-  <button class="btn danger" id="deleteBtn">Delete</button>
- </div>
-
- <div class="mail-list" id="mailList">
-  <div class="empty">Add an account to start.</div>
- </div>
-
- <div class="status" id="status">Ready</div>
-
-</main>
 </div>
+
+<!-- THEME MODAL -->
+<div class="modal-backdrop hidden" id="themeModal">
+ <div class="modal">
+  <div class="modal-head"><h3>Appearance & Theme</h3><button class="close" data-close="themeModal">✕</button></div>
+  <div class="field"><label>COLOR THEME</label>
+   <div class="theme-options">
+    <button class="theme-dot" style="background:#7257d8" data-accent="#7257d8" title="Purple"></button>
+    <button class="theme-dot" style="background:#e85b9b" data-accent="#e85b9b" title="Pink"></button>
+    <button class="theme-dot" style="background:#3186dc" data-accent="#3186dc" title="Blue"></button>
+    <button class="theme-dot" style="background:#259c83" data-accent="#259c83" title="Green"></button>
+    <button class="theme-dot" style="background:#e58b38" data-accent="#e58b38" title="Orange"></button>
+   </div>
+  </div>
+  <div class="field"><label>DISPLAY MODE</label>
+   <select id="modeSelect"><option value="light">Light Mode</option><option value="dark">Dark Mode</option></select>
+  </div>
+  <button class="primary" id="saveThemeBtn" style="width:100%">Apply Theme</button>
+ </div>
 </div>
 
-<div class="modalback" id="modalBack">
- <div class="modal" id="modal"></div>
-</div>
-
-<div class="toast" id="toast"></div>
+<div id="toast" class="toast hidden"></div>
 
 <script>
-// ========================================
-// STATE
-// ========================================
-
-const $ = id => document.getElementById(id);
-
-let accounts = JSON.parse(localStorage.getItem('danke_accounts') || '[]');
-let activeId = localStorage.getItem('danke_active') || '';
-
-let folder = 'INBOX';
-let folders = [];
-let messages = [];
-let selected = new Set();
-let currentMessage = null;
-let currentMessageFolder = 'INBOX';
-let searchMode = false;
-let searchTerm = '';
-let toastTimer = null;
-
-// ========================================
-// PROVIDERS
-// ========================================
-
-const providers = [
- {
-  id:'ttcn',
-  name:'TTCN',
-  domains:['mx3.ttcn.ne.jp','ttcn.ne.jp'],
-  imapHost:'imap2.cm.dream.jp',
-  imapPort:993,
-  imapSecure:true,
-  smtpHost:'vsmtp2.cm.dream.jp',
-  smtpPort:465,
-  smtpSecure:true
- },
- {
-  id:'dti',
-  name:'DTI',
-  domains:['dti.ne.jp','snow.dti2.ne.jp','dti2.ne.jp'],
-  imapHost:'imap.dti.ne.jp',
-  imapPort:993,
-  imapSecure:true,
-  smtpHost:'smtp.dti.ne.jp',
-  smtpPort:465,
-  smtpSecure:true
- },
- {
-  id:'toukai',
-  name:'Toukai',
-  domains:['toukai.me'],
-  imapHost:'mail.toukai.me',
-  imapPort:993,
-  imapSecure:true,
-  smtpHost:'mail.toukai.me',
-  smtpPort:465,
-  smtpSecure:true
- },
- {
-  id:'kanto',
-  name:'Kanto',
-  domains:['kanto.me'],
-  imapHost:'mail.kanto.me',
-  imapPort:993,
-  imapSecure:true,
-  smtpHost:'mail.kanto.me',
-  smtpPort:465,
-  smtpSecure:true
- },
- {
-  id:'custom',
-  name:'Custom IMAP/SMTP',
-  domains:[],
-  imapHost:'',
-  imapPort:993,
-  imapSecure:true,
-  smtpHost:'',
-  smtpPort:465,
-  smtpSecure:true
- }
+/* =========================================================
+   DANKE MAIL PROVIDERS
+   Host dan port dipertahankan dari daftar provider pengguna.
+   Host kosong berarti perlu diisi sesuai informasi provider.
+========================================================= */
+window.PROVIDERS = [
+{id:'ttcn',name:'TTCN',domains:['mx3.ttcn.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true},
+{id:'dti',name:'DTI',domains:['dti.ne.jp','dti2.ne.jp','fides.dti.ne.jp','mars.dti.ne.jp','zephyr.dti.ne.jp','river.dti.ne.jp','aurora.dti.ne.jp','mica.dti.ne.jp','vesta.dti.ne.jp','saturn.dti.ne.jp','sky.dti2.ne.jp','snow.dti2.ne.jp'],matchSubdomains:true,imapHost:'imap.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp.cm.dream.jp',smtpPort:465,smtpSecure:true},
+{id:'jcom',name:'J:COM / ZAQ',domains:['jcom.zaq.ne.jp'],imapHost:'imap.jcom.zaq.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtpa.jcom.zaq.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'dream',name:'Dream.jp',domains:['dream.jp'],imapHost:'imap.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp.cm.dream.jp',smtpPort:465,smtpSecure:true},
+{id:'mb-point',name:'MB Point',domains:['mb.point.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true,notes:'Server mapping needs confirmation with MB Point.'},
+{id:'biglobe',name:'BIGLOBE',domains:['biglobe.ne.jp'],imapHost:'mail.biglobe.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.biglobe.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'ocn',name:'OCN',domains:['ocn.ne.jp'],imapHost:'imap.ocn.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.ocn.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'so-net',name:'So-net',domains:['so-net.ne.jp'],imapHost:'imap.so-net.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.so-net.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'nifty',name:'@nifty',domains:['nifty.com'],imapHost:'imap.nifty.com',imapPort:993,imapSecure:true,smtpHost:'smtp.nifty.com',smtpPort:465,smtpSecure:true},
+{id:'hi-ho',name:'hi-ho',domains:['hi-ho.ne.jp'],matchSubdomains:true,imapHost:'hi-ho.mose-mail.jp',imapPort:993,imapSecure:true,smtpHost:'hi-ho.mose-mail.jp',smtpPort:465,smtpSecure:true},
+{id:'katch',name:'KATCH',domains:['katch.ne.jp'],imapHost:'imap.katch.ne.jp',imapPort:993,imapSecure:true,smtpHost:'imap.katch.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'btv',name:'BTV',domains:['btvm.ne.jp'],imapHost:'imap.btvm.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.btvm.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'mineo',name:'mineo',domains:['mineo.jp'],imapHost:'imaps.mineo.jp',imapPort:993,imapSecure:true,smtpHost:'smtps.mineo.jp',smtpPort:465,smtpSecure:true},
+{id:'t-online',name:'T-Online / Telekom',domains:['t-online.de','magenta.de'],imapHost:'secureimap.t-online.de',imapPort:993,imapSecure:true,smtpHost:'securesmtp.t-online.de',smtpPort:465,smtpSecure:true,notes:'Use your email program password, not your normal Telekom login password.'},
+{id:'web-de',name:'WEB.DE',domains:['web.de'],imapHost:'imap.web.de',imapPort:993,imapSecure:true,smtpHost:'smtp.web.de',smtpPort:587,smtpSecure:false,notes:'Enable IMAP access in WEB.DE account settings.'},
+{id:'web-de-com',name:'WEB.DE (web.de.com)',domains:['web.de.com'],imapHost:'imap.web.de',imapPort:993,imapSecure:true,smtpHost:'smtp.web.de',smtpPort:587,smtpSecure:false,notes:'Server mapping is unverified. Confirm that this domain is hosted by WEB.DE.'},
+{id:'gmx-de',name:'GMX Germany',domains:['gmx.de','gmx.net'],imapHost:'imap.gmx.net',imapPort:993,imapSecure:true,smtpHost:'mail.gmx.net',smtpPort:465,smtpSecure:true,notes:'Enable IMAP access in GMX account settings.'},
+{id:'gmx-com',name:'GMX International',domains:['gmx.com'],imapHost:'imap.gmx.com',imapPort:993,imapSecure:true,smtpHost:'mail.gmx.com',smtpPort:465,smtpSecure:true,notes:'Enable IMAP access in GMX account settings.'},
+{id:'online-de',name:'online.de',domains:['online.de'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'Server settings need confirmation from the email provider.'},
+{id:'yahoo-jp',name:'Yahoo! JAPAN',domains:['yahoo.co.jp'],imapHost:'imap.mail.yahoo.co.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.mail.yahoo.co.jp',smtpPort:465,smtpSecure:true},
+{id:'yahoo-com',name:'Yahoo Mail',domains:['yahoo.com'],imapHost:'imap.mail.yahoo.com',imapPort:993,imapSecure:true,smtpHost:'smtp.mail.yahoo.com',smtpPort:465,smtpSecure:true},
+{id:'gmail',name:'Gmail',domains:['gmail.com','googlemail.com'],imapHost:'imap.gmail.com',imapPort:993,imapSecure:true,smtpHost:'smtp.gmail.com',smtpPort:465,smtpSecure:true,notes:'App Password may be required.'},
+{id:'icloud',name:'iCloud',domains:['icloud.com','me.com','mac.com'],imapHost:'imap.mail.me.com',imapPort:993,imapSecure:true,smtpHost:'smtp.mail.me.com',smtpPort:587,smtpSecure:false,notes:'Apple app-specific password required.'},
+{id:'outlook',name:'Outlook / Hotmail',domains:['outlook.com','hotmail.com','live.com'],imapHost:'outlook.office365.com',imapPort:993,imapSecure:true,smtpHost:'smtp.office365.com',smtpPort:587,smtpSecure:false},
+{id:'toukai',name:'Toukai',domains:['toukai.me'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'kanto',name:'Kanto',domains:['kanto.me'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'cty-net',name:'CTY-NET',domains:['m5.cty-net.ne.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'IMAP server needs confirmation from CTY.'},
+{id:'nir',name:'FamilyNet / NIR',domains:['pwt.nir.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'sunbathe',name:'Sunbathe',domains:['sunbathe.co.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'384',name:'384.jp',domains:['384.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'MX is mx.mose-mail.jp; IMAP/SMTP not confirmed.'},
+{id:'actinc',name:'ACTINC',domains:['actinc.co.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'bb4u',name:'BB4U',domains:['pycm.bb4u.ne.jp'],imapHost:'mbox.mose-mail.jp',imapPort:993,imapSecure:true,smtpHost:'mbox.mose-mail.jp',smtpPort:465,smtpSecure:true},
+{id:'heavytees',name:'Heavytees',domains:['heavytees.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'mesh',name:'BIGLOBE MESH',domains:['mesh.ne.jp'],matchSubdomains:true,imapHost:'mail.biglobe.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.biglobe.ne.jp',smtpPort:465,smtpSecure:true,notes:'Legacy MESH accounts may require completed BIGLOBE migration.'},
+{id:'smilewedding',name:'Smile Wedding',domains:['smilewedding.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'soutbank',name:'Soutbank',domains:['soutbank.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'rakuten',name:'Rakuten',domains:['rakuten.co.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'Mailbox service not confirmed for this domain.'},
+{id:'speednet',name:'Speednet',domains:['spn1.speednet.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true},
+{id:'em-net',name:'e-mansion / EM-NET',domains:['ce.em-net.ne.jp'],imapHost:'imap.em-net.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.ce.em-net.ne.jp',smtpPort:465,smtpSecure:true,notes:'Confirm the SMTP server name for your account.'},
+{id:'kcn-m4',name:'KCN m4',domains:['m4.kcn.ne.jp'],imapHost:'m4.kcn.ne.jp',imapPort:993,imapSecure:true,smtpHost:'m4.kcn.ne.jp',smtpPort:465,smtpSecure:true,notes:'Example server only. Confirm against your KCN registration details.'},
+{id:'enjoy',name:'ENJOY',domains:['enjoy.ne.jp'],imapHost:'imaps.enjoy.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtps.enjoy.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'stupid',name:'Stupid.jp',domains:['stupid.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
+{id:'myad',name:'BIGLOBE Myad',domains:['myad.jp'],imapHost:'mail.biglobe.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.biglobe.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'manual',name:'Other / Manual',domains:[],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true}
 ];
 
-const activeAccount = () => accounts.find(a => a.id === activeId);
+window.detectProvider=function(email){
+ const value=(email||'').trim().toLowerCase();
+ const at=value.lastIndexOf('@');
+ if(at<1||at===value.length-1)return window.PROVIDERS.find(p=>p.id==='manual');
+ const domain=value.substring(at+1);
+ return window.PROVIDERS.find(p=>p.id!=='manual'&&p.domains.some(item=>{
+  const base=item.toLowerCase();
+  return domain===base||(p.matchSubdomains&&domain.endsWith('.'+base));
+ }))||window.PROVIDERS.find(p=>p.id==='manual');
+};
 
-const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
- '&':'&amp;',
- '<':'&lt;',
- '>':'&gt;',
- '"':'&quot;',
- "'":'&#39;'
-}[c]));
-
-function saveAccounts(){
- localStorage.setItem('danke_accounts', JSON.stringify(accounts));
- localStorage.setItem('danke_active', activeId);
-}
-
+/* =========================================================
+   APP STATE
+========================================================= */
+const $=id=>document.getElementById(id);
+const state={
+ accounts:[],activeId:null,folders:[],currentFolder:'INBOX',
+ messages:[],selected:new Set(),searchMode:false,searchQuery:'',
+ currentMessage:null,theme:{mode:'light',accent:'#7257d8'}
+};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const activeAccount=()=>state.accounts.find(a=>a.id===state.activeId);
 function toast(message){
- $('toast').textContent = message;
- $('toast').classList.add('show');
- clearTimeout(toastTimer);
- toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2800);
+ $('toast').textContent=message;$('toast').classList.remove('hidden');
+ clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.add('hidden'),3500);
 }
-
-function status(message){
- $('status').textContent = message;
+function showLogin(){
+ $('loginPage').classList.remove('hidden');$('dashboard').classList.add('hidden');
 }
-
-// ========================================
-// THEME
-// ========================================
-
-function theme(mode, accent){
- document.documentElement.dataset.theme = mode;
- document.documentElement.dataset.accent = accent;
-
- localStorage.setItem('danke_theme', mode);
- localStorage.setItem('danke_accent', accent);
-
- document.querySelectorAll('[data-mode]').forEach(button => {
-  button.classList.toggle('active', button.dataset.mode === mode);
- });
-
- document.querySelectorAll('.theme-choice').forEach(button => {
-  button.classList.toggle('selected', button.dataset.accent === accent);
- });
+function showDashboard(){
+ $('loginPage').classList.add('hidden');$('dashboard').classList.remove('hidden');
 }
-
-theme(
- localStorage.getItem('danke_theme') || 'light',
- localStorage.getItem('danke_accent') || 'purple'
-);
-
-document.querySelectorAll('[data-mode]').forEach(button => {
- button.onclick = () => theme(
-  button.dataset.mode,
-  document.documentElement.dataset.accent
- );
-});
-
-document.querySelectorAll('.theme-choice').forEach(button => {
- button.onclick = () => theme(
-  document.documentElement.dataset.theme,
-  button.dataset.accent
- );
-});
-
-// ========================================
-// API
-// ========================================
-
-async function api(url, options = {}){
- const account = activeAccount();
-
- const headers = {
-  ...(options.headers || {})
- };
-
- if (!(options.body instanceof FormData)) {
-  headers['Content-Type'] = 'application/json';
- }
-
- if (account?.sessionId) {
-  headers['x-session-id'] = account.sessionId;
- }
-
- const response = await fetch(url, {
-  ...options,
-  headers
- });
-
- const data = await response.json().catch(() => ({}));
-
- if (!response.ok) {
-  if (response.status === 401) {
-   throw new Error('Session expired. Please remove and add the account again.');
-  }
-
-  throw new Error(
-   data.details?.message ||
-   data.error ||
-   data.message ||
-   'Request failed'
-  );
- }
-
+function saveAccounts(){
+ localStorage.setItem('danke_accounts',JSON.stringify(state.accounts));
+ localStorage.setItem('danke_active',state.activeId||'');
+}
+function loadSaved(){
+ try{
+  state.accounts=JSON.parse(localStorage.getItem('danke_accounts')||'[]');
+  state.activeId=localStorage.getItem('danke_active')||null;
+ }catch{state.accounts=[];state.activeId=null}
+ state.accounts=state.accounts.filter(a=>a.sessionId);
+ if(!activeAccount())state.activeId=state.accounts[0]?.id||null;
+}
+function apiHeaders(){
+ const a=activeAccount();
+ return a?.sessionId?{'X-Session-Id':a.sessionId}:{};
+}
+async function api(url,options={}){
+ const headers={...apiHeaders(),...(options.headers||{})};
+ if(options.body)headers['Content-Type']='application/json';
+ const response=await fetch(url,{...options,headers});
+ let data={};
+ try{data=await response.json()}catch{}
+ if(!response.ok)throw new Error(data.details?.message||data.error||data.message||`Request gagal (${response.status})`);
  return data;
 }
 
-// ========================================
-// ACCOUNT UI
-// ========================================
-
-function renderAccounts(){
- $('accountSelect').innerHTML = accounts.map(account =>
-  `<option value="${esc(account.id)}">${esc(account.email)}</option>`
- ).join('') || '<option value="">No account</option>';
-
- $('accountSelect').value = activeId;
+/* =========================================================
+   PROVIDER FORM
+========================================================= */
+function fillProviderSelect(){
+ $('provider').innerHTML=window.PROVIDERS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
 }
-
-function detectProvider(email){
- const domain = String(email).split('@').pop().toLowerCase();
-
- return providers.find(provider =>
-  provider.domains.some(item => item.toLowerCase() === domain)
- ) || providers.find(provider => provider.id === 'custom');
+function selectedProvider(){
+ return window.PROVIDERS.find(p=>p.id===$('provider').value)||window.PROVIDERS.at(-1);
 }
-
-// ========================================
-// FOLDER HELPERS
-// ========================================
-
-function folderLabel(item){
- const special = String(item.specialUse || '').toLowerCase();
- const path = String(item.path || item.name || '').toLowerCase();
-
- if (special.includes('inbox') || path === 'inbox') return 'Inbox';
- if (special.includes('sent') || /sent|send|outbox/.test(path)) return 'Sent';
- if (special.includes('draft') || /draft/.test(path)) return 'Drafts';
- if (special.includes('trash') || /trash|deleted|bin/.test(path)) return 'Trash';
- if (special.includes('junk') || /spam|junk/.test(path)) return 'Spam';
-
- return item.name || item.path || 'Folder';
+function applyProvider(p){
+ $('provider').value=p.id;
+ $('imapHost').value=p.imapHost||'';
+ $('imapPort').value=p.imapPort||993;
+ $('imapSecure').value=String(p.imapSecure!==false);
+ $('smtpHost').value=p.smtpHost||'';
+ $('smtpPort').value=p.smtpPort||465;
+ $('smtpSecure').value=String(p.smtpSecure!==false);
+ $('providerNote').textContent=p.notes|| (p.id==='manual'?'Isi host IMAP dan SMTP sesuai informasi provider email kamu.':'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu.');
 }
+function detectFromEmail(){
+ const p=window.detectProvider($('email').value);
+ applyProvider(p);
+}
+$('email').addEventListener('input',detectFromEmail);
+$('provider').addEventListener('change',()=>applyProvider(selectedProvider()));
+fillProviderSelect();
+applyProvider(window.PROVIDERS[0]);
 
-function folderIcon(label){
- const icons = {
-  Inbox:'📥',
-  Sent:'📤',
-  Drafts:'📝',
-  Spam:'⚠️',
-  Trash:'🗑️'
+/* =========================================================
+   LOGIN AND ADD ACCOUNT
+========================================================= */
+let addingAccount=false;
+$('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const email=$('email').value.trim();
+ const password=$('password').value;
+ const p=selectedProvider();
+ const host=$('imapHost').value.trim();
+ if(!host){toast('IMAP host belum diisi.');return}
+ if(!$('smtpHost').value.trim()){toast('SMTP host belum diisi.');return}
+ const payload={
+  host,port:Number($('imapPort').value)||993,
+  secure:$('imapSecure').value==='true',
+  username:email,password
  };
-
- return icons[label] || '📁';
-}
-
-async function loadFolders(){
- const account = activeAccount();
-
- if (!account) {
-  folders = [];
-  renderFolders();
-  updateSearchScopes();
-  return;
- }
-
- try {
-  const data = await api('/api/folders');
-
-  folders = Array.isArray(data) ? data : data.folders || [];
-
-  renderFolders();
-  updateSearchScopes();
-
- } catch(error) {
-  console.error('Folder loading:', error);
-  renderFolders();
- }
-}
-
-function renderFolders(){
- const defaultFolders = [
-  {path:'INBOX',name:'Inbox',specialUse:'\\Inbox'},
-  {path:'Sent',name:'Sent',specialUse:'\\Sent'},
-  {path:'Drafts',name:'Drafts',specialUse:'\\Drafts'},
-  {path:'Spam',name:'Spam',specialUse:'\\Junk'},
-  {path:'Trash',name:'Trash',specialUse:'\\Trash'}
- ];
-
- const list = folders.length ? folders : defaultFolders;
-
- const used = new Set();
-
- const items = list.filter(item => {
-  const key = item.path || item.name;
-  if (!key || used.has(key)) return false;
-  used.add(key);
-  return true;
- });
-
- $('folderNav').innerHTML = items.map(item => {
-  const path = item.path || item.name;
-  const label = folderLabel(item);
-  const active = !searchMode && folder === path;
-
-  return `
-   <button class="navitem ${active ? 'active' : ''}"
-    data-folder="${esc(path)}">
-    ${folderIcon(label)}
-    <span>${esc(label)}</span>
-   </button>
-  `;
- }).join('');
-
- $('folderNav').querySelectorAll('[data-folder]').forEach(button => {
-  button.onclick = () => selectFolder(button.dataset.folder);
- });
-}
-
-function updateSearchScopes(){
- const select = $('searchScope');
- const current = select.value || 'ALL';
-
- const options = [
-  '<option value="ALL">All Folders</option>',
-  ...folders.map(item => {
-   const path = item.path || item.name;
-   const label = folderLabel(item);
-   return `<option value="${esc(path)}">${esc(label)}</option>`;
-  })
- ];
-
- select.innerHTML = options.join('');
-
- if ([...select.options].some(option => option.value === current)) {
-  select.value = current;
- } else {
-  select.value = 'ALL';
- }
-}
-
-// ========================================
-// MESSAGE LIST
-// ========================================
-
-function isUnread(message){
- const flags = (message.flags || []).map(flag => String(flag).toLowerCase());
- return !flags.includes('\\seen') && !flags.includes('seen');
-}
-
-function formatDate(date){
- if (!date) return '';
-
- const parsed = new Date(date);
-
- if (Number.isNaN(parsed.getTime())) return '';
-
- return parsed.toLocaleDateString('id-ID', {
-  day:'2-digit',
-  month:'short',
-  year:'numeric'
- });
-}
-
-function renderList(){
- selected.clear();
- $('selectAll').checked = false;
- $('listToolbar').style.display = 'flex';
-
- if (!messages.length) {
-  $('mailList').innerHTML = '<div class="empty">No messages found.</div>';
- } else {
-  $('mailList').innerHTML = messages.map((message, index) => {
-   const from = message.from || message.sender || 'Unknown';
-   const subject = message.subject || '(No subject)';
-   const date = formatDate(message.date);
-   const unread = isUnread(message);
-
-   return `
-    <div class="mailrow ${unread ? 'unread' : ''}" data-index="${index}">
-     <input type="checkbox" class="msgcheck" data-index="${index}">
-     <div class="avatar">${esc(from.replace(/<.*?>/g,'').trim().slice(0,1).toUpperCase() || 'U')}</div>
-     <div class="sender">${esc(from)}</div>
-     <div class="subject">
-      ${esc(subject)}
-      <span class="snippet">— ${esc(message.snippet || '')}</span>
-     </div>
-     <div class="maildate">${esc(date)}</div>
-    </div>
-   `;
-  }).join('');
- }
-
- $('mailList').querySelectorAll('.mailrow').forEach(row => {
-  row.onclick = event => {
-   if (event.target.type === 'checkbox') return;
-
-   const message = messages[Number(row.dataset.index)];
-   if (message) openMessage(message);
-  };
- });
-
- $('mailList').querySelectorAll('.msgcheck').forEach(check => {
-  check.onchange = () => {
-   const index = Number(check.dataset.index);
-
-   if (check.checked) selected.add(index);
-   else selected.delete(index);
-
-   $('selectAll').checked =
-    messages.length > 0 && selected.size === messages.length;
-  };
- });
-
- $('panelTitle').textContent = searchMode ? 'Search results' : folderLabel(
-  folders.find(item => (item.path || item.name) === folder) || {path:folder,name:folder}
- );
-
- $('panelSub').textContent = searchMode
-  ? `Results for "${searchTerm}" · ${messages.length} messages`
-  : `${messages.length} messages`;
-}
-
-// ========================================
-// LOAD EMAILS
-// ========================================
-
-async function loadMessages(){
- if (!activeAccount()) {
-  messages = [];
-  renderList();
-  status('Add an account to start');
-  return;
- }
-
- status('Loading messages…');
- $('mailList').classList.add('loading');
-
- try {
-  let data;
-
-  if (searchMode) {
-   const scope = $('searchScope').value || 'ALL';
-
-   data = await api(
-    `/api/search?q=${encodeURIComponent(searchTerm)}&folder=${encodeURIComponent(scope)}&limit=100`
-   );
-  } else {
-   data = await api(
-    `/api/inbox?folder=${encodeURIComponent(folder)}&page=1&limit=50`
-   );
-  }
-
-  messages = data.messages || [];
-  renderList();
-
-  status(`${messages.length} messages loaded`);
-
- } catch(error) {
-  status('Load failed: ' + error.message);
-  $('mailList').innerHTML = `
-   <div class="empty">⚠ ${esc(error.message)}</div>
-  `;
- } finally {
-  $('mailList').classList.remove('loading');
- }
-}
-
-async function selectFolder(selectedFolder){
- folder = selectedFolder;
- searchMode = false;
- $('searchInput').value = '';
-
- renderFolders();
- await loadMessages();
-}
-
-async function doSearch(){
- searchTerm = $('searchInput').value.trim();
-
- if (!searchTerm) {
-  searchMode = false;
-  await loadMessages();
-  return;
- }
-
- searchMode = true;
- await loadMessages();
-}
-
-// ========================================
-// OPEN MESSAGE
-// ========================================
-
-async function openMessage(message){
- if (!activeAccount()) return;
-
- const uid = message.uid;
- const messageFolder = message.folder || folder;
-
- if (!uid) {
-  toast('Message UID is missing');
-  return;
- }
-
- status('Opening email…');
- $('mailList').classList.add('loading');
-
- try {
-  const data = await api(
-   `/api/message/${encodeURIComponent(uid)}?folder=${encodeURIComponent(messageFolder)}`
-  );
-
-  currentMessage = data.message || data;
-  currentMessageFolder = messageFolder;
-
-  $('listToolbar').style.display = 'none';
-
-  const bodyContent = currentMessage.text
-   ? `<pre>${esc(currentMessage.text)}</pre>`
-   : currentMessage.html
-    ? `<iframe class="messageframe" sandbox="" title="Email content"></iframe>`
-    : '<p>No message content.</p>';
-
-  $('mailList').innerHTML = `
-   <div class="view">
-    <button class="btn" id="backList">← Back</button>
-
-    <div class="messagehead">
-     <div class="head-actions" style="margin:0">
-      <button class="btn" id="replyBtn">↩ Reply</button>
-      <button class="btn" id="forwardBtn">↪ Forward</button>
-      <button class="btn danger" id="singleDelete">Delete</button>
-     </div>
-
-     <h2>${esc(currentMessage.subject || '(No subject)')}</h2>
-
-     <div class="messagemeta">
-      From: ${esc(currentMessage.from || '')}<br>
-      To: ${esc(currentMessage.to || '')}<br>
-      CC: ${esc(currentMessage.cc || '')}<br>
-      Date: ${esc(currentMessage.date || '')}
-     </div>
-    </div>
-
-    <div class="messagebody" id="messageContent">${bodyContent}</div>
-   </div>
-  `;
-
-  if (!currentMessage.text && currentMessage.html) {
-   const frame = $('messageContent').querySelector('iframe');
-
-   if (frame) {
-    frame.srcdoc = currentMessage.html;
-   }
-  }
-
-  $('backList').onclick = () => {
-   renderList();
-   status('Ready');
-  };
-
-  $('replyBtn').onclick = () => compose('reply');
-  $('forwardBtn').onclick = () => compose('forward');
-
-  $('singleDelete').onclick = async () => {
-   await performAction(
-    [{uid:String(uid),folder:messageFolder}],
-    'delete'
-   );
-
-   searchMode ? await doSearch() : await loadMessages();
-  };
-
-  status('Email opened');
-
- } catch(error) {
-  status('Open failed: ' + error.message);
-  toast(error.message);
- } finally {
-  $('mailList').classList.remove('loading');
- }
-}
-
-// ========================================
-// MESSAGE ACTIONS
-// ========================================
-
-async function performAction(items, action){
- if (!items.length) {
-  toast('Pilih email terlebih dahulu');
-  return;
- }
-
- const groups = {};
-
- items.forEach(item => {
-  const key = item.folder || folder;
-
-  if (!groups[key]) groups[key] = [];
-
-  groups[key].push(Number(item.uid));
- });
-
- try {
-  for (const [folderName, uids] of Object.entries(groups)) {
-   await api('/api/message/action', {
-    method:'POST',
-    body:JSON.stringify({
-     folder:folderName,
-     uids,
-     action
-    })
-   });
-  }
-
-  toast(
-   action === 'read' ? 'Email ditandai sudah dibaca' :
-   action === 'unread' ? 'Email ditandai belum dibaca' :
-   'Email berhasil dihapus'
-  );
-
-  await loadMessages();
-
- } catch(error) {
-  toast('Action failed: ' + error.message);
- }
-}
-
-function getSelectedItems(){
- return [...selected].map(index => {
-  const message = messages[index];
-
-  return {
-   uid:message.uid,
-   folder:message.folder || folder
-  };
- }).filter(item => item.uid);
-}
-
-$('selectAll').onchange = () => {
- selected.clear();
-
- document.querySelectorAll('.msgcheck').forEach(check => {
-  check.checked = $('selectAll').checked;
-
-  if (check.checked) {
-   selected.add(Number(check.dataset.index));
-  }
- });
-
-};
-
-$('markReadBtn').onclick = () => performAction(getSelectedItems(),'read');
-$('markUnreadBtn').onclick = () => performAction(getSelectedItems(),'unread');
-$('deleteBtn').onclick = () => performAction(getSelectedItems(),'delete');
-
-// ========================================
-// SEARCH / REFRESH
-// ========================================
-
-$('searchBtn').onclick = doSearch;
-
-$('searchInput').onkeydown = event => {
- if (event.key === 'Enter') doSearch();
-};
-
-$('searchScope').onchange = () => {
- if (searchTerm) doSearch();
-};
-
-$('refreshBtn').onclick = async () => {
- if (activeAccount()) {
-  await loadFolders();
-  await loadMessages();
- }
-};
-
-// ========================================
-// MODAL
-// ========================================
-
-function modal(content){
- $('modal').innerHTML = content;
- $('modalBack').classList.add('show');
-}
-
-function closeModal(){
- $('modalBack').classList.remove('show');
-}
-
-$('modalBack').onclick = event => {
- if (event.target === $('modalBack')) closeModal();
-};
-
-// ========================================
-// ADD ACCOUNT
-// ========================================
-
-function addAccount(){
- modal(`
-  <h2>Add account</h2>
-
-  <form id="accountForm">
-
-   <div class="field">
-    <label>Email address</label>
-    <input name="email" type="email" placeholder="name@example.com" required>
-   </div>
-
-   <div class="field">
-    <label>Password / App password</label>
-    <input name="password" type="password" required autocomplete="new-password">
-   </div>
-
-   <div class="field">
-    <label>Provider</label>
-    <select name="provider" id="providerSelect">
-     ${providers.map(provider =>
-      `<option value="${provider.id}">${provider.name}</option>`
-     ).join('')}
-    </select>
-   </div>
-
-   <div id="providerInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px">
-    Provider will be detected from your email domain.
-   </div>
-
-   <div id="customFields"></div>
-
-   <div class="modalfoot">
-    <button type="button" class="btn" id="cancelAccount">Cancel</button>
-    <button class="btn primary" id="connectAccount">Connect</button>
-   </div>
-
-  </form>
- `);
-
- const form = $('accountForm');
- const providerSelect = $('providerSelect');
- const customFields = $('customFields');
- const emailInput = form.email;
-
- function updateProvider(){
-  const provider = providers.find(item => item.id === providerSelect.value);
-
-  if (provider?.id === 'custom') {
-   customFields.innerHTML = `
-    <div class="field">
-     <label>IMAP host</label>
-     <input name="imapHost" required placeholder="imap.example.com">
-    </div>
-
-    <div class="field">
-     <label>IMAP port</label>
-     <input name="imapPort" type="number" value="993" required>
-    </div>
-
-    <div class="field">
-     <label>SMTP host</label>
-     <input name="smtpHost" required placeholder="smtp.example.com">
-    </div>
-
-    <div class="field">
-     <label>SMTP port</label>
-     <input name="smtpPort" type="number" value="465" required>
-    </div>
-   `;
-
-   $('providerInfo').textContent = 'Enter your own IMAP and SMTP server settings.';
-  } else {
-   customFields.innerHTML = '';
-
-   $('providerInfo').textContent =
-    `Detected provider: ${provider?.name || 'Custom'}. Please verify server settings if login fails.`;
-  }
- }
-
- function autoDetect(){
-  const provider = detectProvider(emailInput.value);
-
-  if (provider) {
-   providerSelect.value = provider.id;
-   updateProvider();
-  }
- }
-
- emailInput.onchange = autoDetect;
- emailInput.onblur = autoDetect;
- providerSelect.onchange = updateProvider;
-
- updateProvider();
-
- $('cancelAccount').onclick = closeModal;
-
- form.onsubmit = async event => {
-  event.preventDefault();
-
-  const fd = new FormData(form);
-  const email = String(fd.get('email')).trim();
-  const password = String(fd.get('password'));
-  const provider = providers.find(item => item.id === providerSelect.value);
-
-  let imapHost = provider.imapHost;
-  let imapPort = provider.imapPort;
-  let smtpHost = provider.smtpHost;
-  let smtpPort = provider.smtpPort;
-
-  if (provider.id === 'custom') {
-   imapHost = String(fd.get('imapHost')).trim();
-   imapPort = Number(fd.get('imapPort') || 993);
-   smtpHost = String(fd.get('smtpHost')).trim();
-   smtpPort = Number(fd.get('smtpPort') || 465);
-  }
-
-  if (!imapHost || !smtpHost) {
-   toast('IMAP and SMTP host are required');
-   return;
-  }
-
-  const button = $('connectAccount');
-  button.disabled = true;
-  button.textContent = 'Connecting…';
-
-  try {
-   const result = await api('/api/login', {
-    method:'POST',
-    body:JSON.stringify({
-     username:email,
-     password,
-     host:imapHost,
-     port:imapPort,
-     secure:true
-    })
-   });
-
-   if (!result.sessionId) {
-    throw new Error('Server did not return a session token');
-   }
-
-   const account = {
-    id:crypto.randomUUID(),
-    email,
-    sessionId:result.sessionId,
-    imapHost,
-    imapPort,
-    smtpHost,
-    smtpPort,
-    smtpSecure:true
-   };
-
-   accounts.push(account);
-   activeId = account.id;
-   folder = 'INBOX';
-   searchMode = false;
-
-   saveAccounts();
-   renderAccounts();
-   closeModal();
-
-   await loadFolders();
-   await loadMessages();
-
-   toast('Account connected successfully');
-
-  } catch(error) {
-   toast('Login failed: ' + error.message);
-  } finally {
-   if ($('connectAccount')) {
-    $('connectAccount').disabled = false;
-    $('connectAccount').textContent = 'Connect';
-   }
-  }
- };
-}
-
-// ========================================
-// COMPOSE / REPLY / FORWARD
-// ========================================
-
-function compose(type = 'new'){
- const message = currentMessage || {};
-
- let to = '';
- let subject = '';
- let body = '';
-
- if (type === 'reply') {
-  to = message.from || '';
-  subject = 'Re: ' + (message.subject || '');
-  body = `\n\nOn ${message.date || ''}, ${message.from || ''} wrote:\n> ${
-   (message.text || '').split('\n').join('\n> ')
-  }`;
- }
-
- if (type === 'forward') {
-  subject = 'Fwd: ' + (message.subject || '');
-
-  body = `
-
----------- Forwarded message ----------
-From: ${message.from || ''}
-To: ${message.to || ''}
-Subject: ${message.subject || ''}
-Date: ${message.date || ''}
-
-${message.text || ''}
-`;
- }
-
- modal(`
-  <h2>${type === 'reply' ? 'Reply' : type === 'forward' ? 'Forward' : 'Compose'}</h2>
-
-  <form id="composeForm">
-
-   <div class="field">
-    <label>To</label>
-    <input name="to" required value="${esc(to)}" placeholder="recipient@example.com">
-   </div>
-
-   <div class="field">
-    <label>CC</label>
-    <input name="cc" placeholder="Optional">
-   </div>
-
-   <div class="field">
-    <label>BCC</label>
-    <input name="bcc" placeholder="Optional">
-   </div>
-
-   <div class="field">
-    <label>Subject</label>
-    <input name="subject" value="${esc(subject)}">
-   </div>
-
-   <div class="field">
-    <label>Message</label>
-    <textarea name="text">${esc(body)}</textarea>
-   </div>
-
-   <div class="modalfoot">
-    <button type="button" class="btn" id="cancelCompose">Cancel</button>
-    <button class="btn primary" id="sendButton">Send</button>
-   </div>
-
-  </form>
- `);
-
- $('cancelCompose').onclick = closeModal;
-
- $('composeForm').onsubmit = async event => {
-  event.preventDefault();
-
-  const account = activeAccount();
-
-  if (!account) {
-   toast('No active account');
-   return;
-  }
-
-  const fd = new FormData(event.target);
-  const button = $('sendButton');
-
-  button.disabled = true;
-  button.textContent = 'Sending…';
-
-  try {
-   await api('/api/send', {
-    method:'POST',
-    body:JSON.stringify({
-     to:fd.get('to'),
-     cc:fd.get('cc'),
-     bcc:fd.get('bcc'),
-     subject:fd.get('subject'),
-     text:fd.get('text'),
-     smtpHost:account.smtpHost,
-     smtpPort:account.smtpPort,
-     smtpSecure:account.smtpSecure
-    })
-   });
-
-   closeModal();
-   toast('Email sent successfully');
-
-  } catch(error) {
-   toast('Send failed: ' + error.message);
-  } finally {
-   if ($('sendButton')) {
-    $('sendButton').disabled = false;
-    $('sendButton').textContent = 'Send';
-   }
-  }
- };
-}
-
-// ========================================
-// BUTTON EVENTS
-// ========================================
-
-$('composeBtn').onclick = () => compose();
-$('addAccountBtn').onclick = addAccount;
-$('manageAccountsBtn').onclick = addAccount;
-
-$('settingsBtn').onclick = () => {
- document.querySelector('.themebox').scrollIntoView({
-  behavior:'smooth',
-  block:'center'
- });
-};
-
-$('accountSelect').onchange = async () => {
- activeId = $('accountSelect').value;
- folder = 'INBOX';
- searchMode = false;
- searchTerm = '';
- $('searchInput').value = '';
-
- saveAccounts();
- renderFolders();
-
- await loadFolders();
- await loadMessages();
-};
-
-$('logoutBtn').onclick = async () => {
- const account = activeAccount();
-
- if (!account) {
-  toast('No active account');
-  return;
- }
-
- if (!confirm(`Remove ${account.email} from Danke Mail?`)) return;
-
- try {
-  await api('/api/logout', {
-   method:'POST',
-   body:JSON.stringify({})
+ const btn=$('connectBtn');btn.disabled=true;btn.textContent='Connecting...';
+ try{
+  const result=await fetch('/api/login',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify(payload)
   });
- } catch(error) {
-  console.warn(error);
- }
-
- accounts = accounts.filter(item => item.id !== activeId);
- activeId = accounts[0]?.id || '';
-
- saveAccounts();
- renderAccounts();
-
- folder = 'INBOX';
- searchMode = false;
-
- await loadFolders();
- await loadMessages();
-
- toast('Account removed');
-};
-
-// ========================================
-// INITIALIZE
-// ========================================
-
-async function initialize(){
- renderAccounts();
-
- if (activeAccount()) {
-  await loadFolders();
-  await loadMessages();
- } else {
-  renderFolders();
-  updateSearchScopes();
-  messages = [];
-  renderList();
-  status('Add an account to start');
- }
+  const data=await result.json().catch(()=>({}));
+  if(!result.ok||!data.sessionId)throw new Error(data.details?.message||data.error||'Login gagal. Periksa email, password, dan host IMAP.');
+  const account={
+   id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),
+   email,sessionId:data.sessionId,providerId:p.id,providerName:p.name,
+   imapHost:host,imapPort:Number($('imapPort').value)||993,
+   imapSecure:$('imapSecure').value==='true',
+   smtpHost:$('smtpHost').value.trim(),
+   smtpPort:Number($('smtpPort').value)||465,
+   smtpSecure:$('smtpSecure').value==='true'
+  };
+  if(addingAccount){
+   state.accounts.push(account);
+  }else{
+   state.accounts.push(account);
+  }
+  state.activeId=account.id;saveAccounts();
+  addingAccount=false;
+  $('password').value='';$('loginForm').reset();
+  applyProvider(window.PROVIDERS[0]);
+  showDashboard();renderAccount();await loadFolders();await loadInbox();
+  toast('Akun berhasil terhubung.');
+ }catch(err){toast(err.message||'Tidak dapat terhubung.')}
+ finally{btn.disabled=false;btn.textContent='Connect Account'}
+});
+function openAddAccount(){
+ addingAccount=true;
+ $('email').value='';$('password').value='';
+ applyProvider(window.PROVIDERS[0]);
+ showLogin();
+ $('email').focus();
+ $('sidebar').classList.remove('open');
 }
 
-initialize();
+/* =========================================================
+   ACCOUNT SWITCH / LOGOUT
+========================================================= */
+function renderAccount(){
+ const a=activeAccount();if(!a)return;
+ $('accountLabel').textContent=a.email;
+}
+$('accountSwitch').addEventListener('click',()=>{
+ if(state.accounts.length<=1){toast('Hanya ada satu akun yang terhubung.');return}
+ const options=state.accounts.map((a,i)=>`${i+1}. ${a.email}`).join('\n');
+ const choice=prompt('Pilih nomor akun:\n'+options);
+ const index=Number(choice)-1;
+ if(Number.isInteger(index)&&state.accounts[index]){
+  state.activeId=state.accounts[index].id;saveAccounts();
+  renderAccount();loadFolders().then(loadInbox).catch(e=>toast(e.message));
+ }
+});
+$('addAccountBtn').addEventListener('click',openAddAccount);
+$('logoutBtn').addEventListener('click',async()=>{
+ const a=activeAccount();
+ if(a){try{await api('/api/logout',{method:'POST',body:JSON.stringify({})})}catch{}}
+ state.accounts=state.accounts.filter(x=>x.id!==state.activeId);
+ state.activeId=state.accounts[0]?.id||null;saveAccounts();
+ if(state.activeId){
+  renderAccount();await loadFolders();await loadInbox();
+ }else{showLogin()}
+});
+
+/* =========================================================
+   FOLDERS
+========================================================= */
+function folderType(f){
+ const s=(f.specialUse||'').toLowerCase();
+ const n=(f.name||'').toLowerCase();
+ const p=(f.path||'').toLowerCase();
+ if(s.includes('inbox')||n==='inbox')return 'inbox';
+ if(s.includes('sent')||n.includes('sent')||n.includes('送信'))return 'sent';
+ if(s.includes('draft')||n.includes('draft')||n.includes('下書き'))return 'drafts';
+ if(s.includes('trash')||s.includes('deleted')||n.includes('trash')||n.includes('ゴミ箱'))return 'trash';
+ if(s.includes('junk')||s.includes('spam')||n.includes('spam')||n.includes('迷惑'))return 'spam';
+ if(n.includes('archive')||n.includes('all mail'))return 'archive';
+ return 'folder';
+}
+const folderIcons={inbox:'▣',sent:'➤',drafts:'▤',trash:'⌫',spam:'⚠',archive:'▣',folder:'▰'};
+async function loadFolders(){
+ const data=await api('/api/folders');
+ state.folders=Array.isArray(data)?data:(data.folders||[]);
+ if(!state.folders.length)state.folders=[{name:'INBOX',path:'INBOX',specialUse:'\\Inbox'}];
+ renderFolders();
+}
+function renderFolders(){
+ const list=$('folderList');
+ list.innerHTML=state.folders.map((f,i)=>{
+  const type=folderType(f);
+  const active=state.currentFolder===f.path&&!state.searchMode;
+  return `<button class="folder-btn ${active?'active':''}" data-folder-index="${i}">
+   <span>${folderIcons[type]||'▰'}</span><span>${esc(f.name||f.path)}</span>
+  </button>`;
+ }).join('');
+ list.querySelectorAll('[data-folder-index]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+   const f=state.folders[Number(btn.dataset.folderIndex)];
+   state.currentFolder=f.path;state.searchMode=false;state.searchQuery='';
+   $('searchInput').value='';$('clearSearchBtn').classList.add('hidden');
+   $('sidebar').classList.remove('open');loadInbox();
+  });
+ });
+}
+function titleForFolder(){
+ const f=state.folders.find(x=>x.path===state.currentFolder);
+ return f?.name||state.currentFolder;
+}
+
+/* =========================================================
+   MESSAGE LIST / SEARCH
+========================================================= */
+async function loadInbox(){
+ state.selected.clear();state.searchMode=false;
+ $('pageTitle').textContent=titleForFolder();
+ $('pageSubtitle').textContent=activeAccount()?.email||'';
+ $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
+ $('mailList').innerHTML='<div class="empty">Loading messages...</div>';
+ try{
+  const params=new URLSearchParams({folder:state.currentFolder,page:'1',limit:'50'});
+  const data=await api('/api/inbox?'+params.toString());
+  state.messages=data.messages||[];
+  renderMessages();
+ }catch(err){$('mailList').innerHTML=`<div class="empty">${esc(err.message)}</div>`}
+}
+function renderMessages(){
+ const list=$('mailList');
+ if(!state.messages.length){
+  list.innerHTML='<div class="empty"><div class="big">✉</div>No messages found.</div>';return;
+ }
+ list.innerHTML=state.messages.map((m,i)=>{
+  const uid=m.uid??m.id;
+  const folder=m.folder||state.currentFolder;
+  const key=folder+'::'+uid;
+  const from=m.from?.text||m.from||m.sender||'(Unknown sender)';
+  const subject=m.subject||'(No subject)';
+  const date=m.date?new Date(m.date).toLocaleString():'';
+  const preview=m.text?.replace(/\s+/g,' ').slice(0,130)||m.snippet||'';
+  const unread=!(m.flags||[]).includes('\\Seen')&&!m.seen;
+  return `<div class="mail-row ${unread?'unread':''}" data-message-index="${i}">
+   <input type="checkbox" data-select-key="${esc(key)}" ${state.selected.has(key)?'checked':''}>
+   <div class="mail-info">
+    <div class="sender">${esc(from)}</div>
+    <div class="subject">${esc(subject)}</div>
+    <div class="preview">${esc(preview)}</div>
+   </div>
+   <div class="mail-date">${esc(date)}</div>
+  </div>`;
+ }).join('');
+ list.querySelectorAll('.mail-row').forEach(row=>{
+  row.addEventListener('click',e=>{
+   if(e.target.type==='checkbox')return;
+   const m=state.messages[Number(row.dataset.messageIndex)];
+   openMessage(m.uid??m.id,m.folder||state.currentFolder);
+  });
+ });
+ list.querySelectorAll('[data-select-key]').forEach(cb=>{
+  cb.addEventListener('change',()=>{
+   if(cb.checked)state.selected.add(cb.dataset.selectKey);
+   else state.selected.delete(cb.dataset.selectKey);
+  });
+ });
+}
+async function doSearch(){
+ const q=$('searchInput').value.trim();
+ if(!q){loadInbox();return}
+ state.searchMode=true;state.searchQuery=q;state.selected.clear();
+ $('pageTitle').textContent='Search results';
+ $('pageSubtitle').textContent='All folders · '+q;
+ $('clearSearchBtn').classList.remove('hidden');
+ $('mailList').innerHTML='<div class="empty">Searching all folders...</div>';
+ $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
+ try{
+  const params=new URLSearchParams({q,limit:'100'});
+  const data=await api('/api/search?'+params.toString());
+  state.messages=data.messages||[];renderMessages();
+ }catch(err){$('mailList').innerHTML=`<div class="empty">${esc(err.message)}</div>`}
+}
+let searchTimer;
+$('searchInput').addEventListener('input',()=>{
+ clearTimeout(searchTimer);
+ searchTimer=setTimeout(()=>doSearch(),450);
+});
+$('clearSearchBtn').addEventListener('click',()=>{
+ $('searchInput').value='';$('clearSearchBtn').classList.add('hidden');loadInbox();
+});
+$('refreshBtn').addEventListener('click',()=>state.searchMode?doSearch():loadInbox());
+
+/* =========================================================
+   OPEN MESSAGE
+========================================================= */
+async function openMessage(uid,folder){
+ $('listView').classList.add('hidden');$('messageView').classList.remove('hidden');
+ $('messageView').innerHTML='<div class="empty">Opening message...</div>';
+ try{
+  const params=new URLSearchParams({folder:folder||state.currentFolder});
+  const msg=await api('/api/message/'+encodeURIComponent(uid)+'?'+params.toString());
+  state.currentMessage={...msg,uid,folder:folder||state.currentFolder};
+  renderMessage();
+ }catch(err){
+  $('messageView').innerHTML=`<div class="empty">${esc(err.message)}<br><br><button class="secondary" id="backToList">Back</button></div>`;
+  $('backToList')?.addEventListener('click',backToList);
+ }
+}
+function renderMessage(){
+ const m=state.currentMessage;
+ const from=m.from?.text||m.from||m.sender||'';
+ const to=m.to?.text||m.to||'';
+ const date=m.date?new Date(m.date).toLocaleString():'';
+ const html=m.html||'';
+ $('messageView').innerHTML=`
+  <div class="message-toolbar">
+   <button id="backMessage">← Back</button>
+   <button id="replyMessage">↩ Reply</button>
+   <button id="deleteMessage" class="danger">Delete</button>
+  </div>
+  <h2 style="font-size:21px;margin:0 0 14px">${esc(m.subject||'(No subject)')}</h2>
+  <div class="message-meta">
+   <div><strong>${esc(from)}</strong></div>
+   <div class="small muted">To: ${esc(to)}</div>
+   <div class="small muted">${esc(date)}</div>
+  </div>
+  <div class="message-body" id="messageBody"></div>`;
+ $('backMessage').onclick=backToList;
+ $('deleteMessage').onclick=()=>actionMessages('delete',[{uid:m.uid,folder:m.folder}]).then(backToList);
+ $('replyMessage').onclick=()=>{
+  $('composeTo').value=(m.replyTo?.text||m.from?.text||m.from||'').match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0]||'';
+  $('composeSubject').value='Re: '+(m.subject||'');
+  $('composeText').value='\n\n--- Original message ---\n'+(m.text||'');
+  openCompose();
+ };
+ const body=$('messageBody');
+ if(html){
+  const iframe=document.createElement('iframe');
+  iframe.setAttribute('sandbox','');
+  iframe.srcdoc='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:14px Arial,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+html+'</body></html>';
+  body.appendChild(iframe);
+ }else{
+  const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=m.text||'(No message content)';
+  body.appendChild(pre);
+ }
+}
+function backToList(){
+ $('messageView').classList.add('hidden');$('listView').classList.remove('hidden');
+ if(state.searchMode)doSearch();else loadInbox();
+}
+
+/* =========================================================
+   BULK ACTIONS
+========================================================= */
+$('selectAllBtn').addEventListener('click',()=>{
+ if(state.selected.size===state.messages.length)state.selected.clear();
+ else state.messages.forEach(m=>state.selected.add((m.folder||state.currentFolder)+'::'+(m.uid??m.id)));
+ renderMessages();
+});
+async function actionMessages(action,items){
+ if(!items.length){toast('Pilih email terlebih dahulu.');return}
+ const groups={};
+ items.forEach(item=>{
+  const f=item.folder||state.currentFolder;
+  (groups[f]||(groups[f]=[])).push(item.uid);
+ });
+ try{
+  for(const [folder,uids] of Object.entries(groups)){
+   await api('/api/message/action',{method:'POST',body:JSON.stringify({folder,uids,action})});
+  }
+  toast('Aksi berhasil dilakukan.');
+  if(state.searchMode)await doSearch();else await loadInbox();
+ }catch(err){toast(err.message)}
+}
+function selectedItems(){
+ return [...state.selected].map(key=>{
+  const split=key.lastIndexOf('::');
+  return {folder:key.slice(0,split),uid:key.slice(split+2)};
+ });
+}
+$('readBtn').onclick=()=>actionMessages('read',selectedItems());
+$('unreadBtn').onclick=()=>actionMessages('unread',selectedItems());
+$('deleteBtn').onclick=()=>{
+ if(confirm('Hapus email yang dipilih?'))actionMessages('delete',selectedItems());
+};
+
+/* =========================================================
+   COMPOSE / SEND
+========================================================= */
+function openCompose(){
+ const a=activeAccount();if(!a)return;
+ $('composeSmtpHost').value=a.smtpHost||'';
+ $('composeSmtpPort').value=a.smtpPort||465;
+ $('composeSmtpSecure').value=String(a.smtpSecure!==false);
+ $('composeModal').classList.remove('hidden');
+}
+$('composeBtn').onclick=openCompose;
+$('composeForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const a=activeAccount();if(!a)return;
+ const payload={
+  to:$('composeTo').value.trim(),
+  subject:$('composeSubject').value,
+  text:$('composeText').value,
+  smtpHost:$('composeSmtpHost').value.trim(),
+  smtpPort:Number($('composeSmtpPort').value)||465,
+  smtpSecure:$('composeSmtpSecure').value==='true'
+ };
+ try{
+  await api('/api/send',{method:'POST',body:JSON.stringify(payload)});
+  $('composeModal').classList.add('hidden');$('composeForm').reset();
+  toast('Email berhasil dikirim.');
+ }catch(err){toast(err.message)}
+});
+
+/* =========================================================
+   THEMES
+========================================================= */
+function applyTheme(){
+ document.documentElement.style.setProperty('--primary',state.theme.accent);
+ document.documentElement.style.setProperty('--primary2',state.theme.accent);
+ if(state.theme.mode==='dark'){
+  document.documentElement.style.setProperty('--bg','#171522');
+  document.documentElement.style.setProperty('--surface','#211f2e');
+  document.documentElement.style.setProperty('--surface2','#302c42');
+  document.documentElement.style.setProperty('--text','#f2effb');
+  document.documentElement.style.setProperty('--muted','#aaa4bd');
+  document.documentElement.style.setProperty('--line','#393448');
+ }else{
+  document.documentElement.style.setProperty('--bg','#f5f3fb');
+  document.documentElement.style.setProperty('--surface','#fff');
+  document.documentElement.style.setProperty('--surface2','#f0edfa');
+  document.documentElement.style.setProperty('--text','#211d32');
+  document.documentElement.style.setProperty('--muted','#89849b');
+  document.documentElement.style.setProperty('--line','#e9e5f1');
+ }
+ localStorage.setItem('danke_theme',JSON.stringify(state.theme));
+}
+try{state.theme={...state.theme,...JSON.parse(localStorage.getItem('danke_theme')||'{}')}}catch{}
+applyTheme();
+$('themeBtn').onclick=()=>{
+ $('modeSelect').value=state.theme.mode;
+ $('themeModal').classList.remove('hidden');
+};
+document.querySelectorAll('[data-accent]').forEach(btn=>{
+ btn.onclick=()=>{state.theme.accent=btn.dataset.accent;applyTheme()}
+});
+$('saveThemeBtn').onclick=()=>{
+ state.theme.mode=$('modeSelect').value;applyTheme();
+ $('themeModal').classList.add('hidden');toast('Theme updated.');
+};
+
+/* =========================================================
+   MODALS / MOBILE
+========================================================= */
+document.querySelectorAll('[data-close]').forEach(btn=>{
+ btn.onclick=()=>$(btn.dataset.close).classList.add('hidden');
+});
+document.querySelectorAll('.modal-backdrop').forEach(bg=>{
+ bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.add('hidden')});
+});
+$('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+(async function init(){
+ loadSaved();
+ if(activeAccount()){
+  showDashboard();renderAccount();
+  try{await loadFolders();await loadInbox()}
+  catch(err){toast(err.message+' — Silakan login ulang jika sesi sudah berakhir.')}
+ }else{
+  showLogin();
+ }
+})();
 </script>
 </body>
 </html>
