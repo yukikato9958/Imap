@@ -14,6 +14,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const sessions = new Map();
 
+// TLS COMPATIBILITY FOR OLDER MAIL SERVERS
+const tlsOptions = {
+    rejectUnauthorized: true,
+    minDHSize: 512,
+    ciphers: 'DEFAULT@SECLEVEL=0'
+};
+
 // IMAP CLIENT
 function createImapClient(config) {
     const client = new ImapFlow({
@@ -28,17 +35,13 @@ function createImapClient(config) {
 
         logger: false,
 
-        // Connection timeout settings (milliseconds)
         connectionTimeout: 90000,
         greetingTimeout: 60000,
         socketTimeout: 120000,
 
-        tls: {
-            rejectUnauthorized: true
-        }
+        tls: { ...tlsOptions }
     });
 
-    // IMPORTANT: Prevent unhandled ImapFlow error events
     client.on('error', err => {
         console.error('IMAP connection error:', err.message);
     });
@@ -50,6 +53,7 @@ function createImapClient(config) {
     return client;
 }
 
+// SESSION
 function getSession(req) {
     const id = req.headers['x-session-id'] || req.body?.sessionId;
     return id ? sessions.get(id) : null;
@@ -77,6 +81,7 @@ async function withImap(config, callback) {
     }
 }
 
+// ADDRESS FORMAT
 function addressList(list = []) {
     return list.map(x => {
         if (x.name && x.address) {
@@ -87,6 +92,7 @@ function addressList(list = []) {
     }).filter(Boolean).join(', ');
 }
 
+// MESSAGE FORMAT
 function formatMessage(message, folder) {
     const envelope = message.envelope || {};
 
@@ -101,6 +107,7 @@ function formatMessage(message, folder) {
     };
 }
 
+// CHECK SELECTABLE FOLDER
 function isSelectable(mailbox) {
     const flags = Array.from(mailbox.flags || []);
 
@@ -109,11 +116,11 @@ function isSelectable(mailbox) {
     );
 }
 
+// ERROR HANDLER
 function sendError(res, err, operation) {
     console.error(operation + ':', err);
 
     const message = err.message || 'Unknown error';
-
     const timeout = /timeout|timed out|ETIMEDOUT/i.test(message);
 
     res.status(timeout ? 504 : 500).json({
@@ -467,34 +474,30 @@ app.post('/api/send', async (req, res) => {
         });
     }
 
+    const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(smtpPort || 465),
+        secure: smtpSecure !== false,
+
+        auth: {
+            user: config.username,
+            pass: config.password
+        },
+
+        connectionTimeout: 90000,
+        greetingTimeout: 60000,
+        socketTimeout: 120000,
+
+        tls: { ...tlsOptions }
+    });
+
     try {
-        const transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: Number(smtpPort || 465),
-            secure: smtpSecure !== false,
-
-            auth: {
-                user: config.username,
-                pass: config.password
-            },
-
-            connectionTimeout: 90000,
-            greetingTimeout: 60000,
-            socketTimeout: 120000,
-
-            tls: {
-                rejectUnauthorized: true
-            }
-        });
-
         const info = await transporter.sendMail({
             from: config.username,
             to,
             subject: subject || '',
             text: text || ''
         });
-
-        transporter.close();
 
         res.json({
             success: true,
@@ -503,6 +506,9 @@ app.post('/api/send', async (req, res) => {
 
     } catch (err) {
         sendError(res, err, 'Email sending');
+
+    } finally {
+        transporter.close();
     }
 });
 
