@@ -15,7 +15,7 @@ window.PROVIDERS = [
     id: 'biglobe',
     name: 'BIGLOBE',
     domains: ['biglobe.ne.jp'],
-    imapHost: 'imap.biglobe.ne.jp',
+    imapHost: 'mail.biglobe.ne.jp',
     imapPort: 993,
     imapSecure: true,
     smtpHost: 'mail.biglobe.ne.jp',
@@ -65,8 +65,7 @@ window.PROVIDERS = [
     imapSecure: true,
     smtpHost: 'hi-ho.mose-mail.jp',
     smtpPort: 465,
-    smtpSecure: true,
-    notes: 'Some legacy hi-ho accounts may use different server settings.'
+    smtpSecure: true
   },
   {
     id: 'katch',
@@ -196,23 +195,17 @@ window.PROVIDERS = [
 ];
 
 window.detectProvider = function(email) {
-  const d = (email || '')
-    .trim()
-    .toLowerCase()
-    .split('@')
-    .pop();
+  const d = (email || '').trim().toLowerCase().split('@').pop();
 
   if (!d || !d.includes('.')) {
     return window.PROVIDERS.find(p => p.id === 'manual');
   }
 
-  const found = window.PROVIDERS.find(p =>
+  return window.PROVIDERS.find(p =>
     p.id !== 'manual' &&
     p.domains.some(domain =>
       d === domain ||
       (p.matchSubdomains && d.endsWith('.' + domain))
     )
-  );
-
-  return found || window.PROVIDERS.find(p => p.id === 'manual');
+  ) || window.PROVIDERS.find(p => p.id === 'manual');
 };
