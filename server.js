@@ -31,3 +31,8 @@ app.post('/api/send',auth,async(req,res)=>{
 });
 app.post('/api/logout',auth,(req,res)=>{sessions.delete(req.headers.authorization);res.json({ok:true})});
 const port=process.env.PORT||3000;app.listen(port,()=>console.log('Japan Mail berjalan di port '+port));
+const port = process.env.PORT || 3000;
+
+app.listen(port, '0.0.0.0', () => {
+  console.log('Japan Mail berjalan di port ' + port);
+});
