@@ -1,62 +1,365 @@
+
 <!doctype html>
 <html lang="id">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Japan Mail</title>
 <style>
-*{box-sizing:border-box}body{font:15px system-ui;background:#f3f6fa;color:#182235;margin:0}.wrap{max-width:1050px;margin:auto;padding:16px}h1{color:#163e72;margin:4px 0}.muted{color:#68778c;font-size:13px}.card{background:#fff;border:1px solid #dce3ed;border-radius:15px;padding:16px;margin:14px 0;box-shadow:0 4px 16px #172b4d08}label{display:block;font-size:13px;font-weight:650;margin:12px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;background:#fff}button{padding:11px 14px;border:0;border-radius:9px;background:#1766bd;color:#fff;font-weight:700;margin:7px 5px 0 0;cursor:pointer}button.secondary{background:#e8eef7;color:#183b66}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hide{display:none!important}.layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px}.folders button{display:block;width:100%;text-align:left;margin:4px 0;background:#f0f4fa;color:#1d3557}.folders button.active{background:#1766bd;color:white}.msg{padding:13px;border-bottom:1px solid #e5eaf1;cursor:pointer}.msg:hover{background:#f6f9fd}.msg b{display:block}.msg small{color:#68778c}.reader{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}.status{font-size:13px;color:#b42318}@media(max-width:650px){.layout{grid-template-columns:1fr}.folders{display:grid;grid-template-columns:1fr 1fr;gap:5px}.folders button{margin:0}.row{grid-template-columns:1fr}}
+*{box-sizing:border-box}
+body{font:15px system-ui;background:#f3f6fa;color:#182235;margin:0}
+.wrap{max-width:1050px;margin:auto;padding:16px}
+h1{color:#163e72;margin:4px 0}
+.muted{color:#68778c;font-size:13px}
+.card{background:#fff;border:1px solid #dce3ed;border-radius:15px;padding:16px;margin:14px 0;box-shadow:0 4px 16px #172b4d08}
+label{display:block;font-size:13px;font-weight:650;margin:12px 0 5px}
+input,select,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;background:#fff}
+button{padding:11px 14px;border:0;border-radius:9px;background:#1766bd;color:#fff;font-weight:700;margin:7px 5px 0 0;cursor:pointer}
+button.secondary{background:#e8eef7;color:#183b66}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hide{display:none!important}
+.layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px}
+.folders button{display:block;width:100%;text-align:left;margin:4px 0;background:#f0f4fa;color:#1d3557}
+.folders button.active{background:#1766bd;color:white}
+.msg{padding:13px;border-bottom:1px solid #e5eaf1;cursor:pointer}
+.msg:hover{background:#f6f9fd}
+.msg b{display:block}
+.msg small{color:#68778c}
+.reader{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.status{font-size:13px;color:#b42318}
+@media(max-width:650px){.layout{grid-template-columns:1fr}.folders{display:grid;grid-template-columns:1fr 1fr;gap:5px}.folders button{margin:0}.row{grid-template-columns:1fr}}
 </style>
 </head>
-<body><div class="wrap">
-<h1>Japan Mail</h1><p class="muted">Web IMAP/SMTP client • Provider preset & auto-detection</p>
+<body>
+<div class="wrap">
+<h1>Japan Mail</h1>
+<p class="muted">Web IMAP/SMTP client • Provider preset & auto-detection</p>
+
 <section class="card" id="loginCard">
 <h2>Login email</h2>
-<label>Alamat email</label><input id="email" type="email" placeholder="nama@provider.jp">
-<label>Provider (otomatis dari domain)</label><select id="provider"></select><p class="muted" id="providerNote"></p>
-<div class="row"><div><label>IMAP Host</label><input id="imapHost" placeholder="imap.example.jp"></div><div><label>IMAP Port</label><input id="imapPort" value="993" type="number"></div></div>
+<label>Alamat email</label>
+<input id="email" type="email" placeholder="nama@provider.jp">
+
+<label>Provider (otomatis dari domain)</label>
+<select id="provider">
+<option value="">Memuat provider...</option>
+</select>
+<p class="muted" id="providerNote">Memuat daftar provider...</p>
+
+<div class="row">
+<div><label>IMAP Host</label><input id="imapHost" placeholder="imap.example.jp"></div>
+<div><label>IMAP Port</label><input id="imapPort" value="993" type="number"></div>
+</div>
 <label><input id="imapSecure" type="checkbox" checked style="width:auto"> IMAP SSL/TLS</label>
-<div class="row"><div><label>SMTP Host</label><input id="smtpHost" placeholder="smtp.example.jp"></div><div><label>SMTP Port</label><input id="smtpPort" value="465" type="number"></div></div>
+
+<div class="row">
+<div><label>SMTP Host</label><input id="smtpHost" placeholder="smtp.example.jp"></div>
+<div><label>SMTP Port</label><input id="smtpPort" value="465" type="number"></div>
+</div>
 <label><input id="smtpSecure" type="checkbox" checked style="width:auto"> SMTP SSL/TLS</label>
-<label>Password / App Password</label><input id="password" type="password" autocomplete="current-password">
-<button id="loginBtn">Login</button> <span id="loginStatus" class="status"></span>
+
+<label>Password / App Password</label>
+<input id="password" type="password" autocomplete="current-password">
+<button id="loginBtn">Login</button>
+<span id="loginStatus" class="status"></span>
 <p class="muted">Gunakan app password jika provider mewajibkannya. IMAP/SMTP harus diaktifkan oleh penyedia email.</p>
 </section>
 
 <section class="card hide" id="mailCard">
-<div class="topbar"><b id="accountLabel"></b><div><button class="secondary" id="refresh">Refresh</button><button class="secondary" id="composeBtn">Tulis email</button><button class="secondary" id="logout">Logout</button></div></div>
+<div class="topbar">
+<b id="accountLabel"></b>
+<div>
+<button class="secondary" id="refresh">Refresh</button>
+<button class="secondary" id="composeBtn">Tulis email</button>
+<button class="secondary" id="logout">Logout</button>
+</div>
+</div>
 <div class="layout">
 <nav class="folders" id="folders"><p class="muted">Memuat folder…</p></nav>
 <main>
-<div id="listPane"><h3 id="folderTitle">Inbox</h3><div id="inbox"></div></div>
+<div id="listPane">
+<h3 id="folderTitle">Inbox</h3>
+<div id="inbox"></div>
+</div>
 <div id="readerPane" class="hide">
 <button class="secondary" id="backBtn">← Kembali ke daftar</button>
-<h3 id="readSubject"></h3><p class="muted" id="readMeta"></p>
+<h3 id="readSubject"></h3>
+<p class="muted" id="readMeta"></p>
 <div class="reader" id="readBody"></div>
 <div id="attachments" class="muted"></div>
 </div>
-<div id="compose" class="card hide"><h3>Kirim email</h3><label>Ke</label><input id="to" type="email"><label>Subjek</label><input id="subject"><label>Pesan</label><textarea id="body" rows="6"></textarea><button id="send">Kirim</button><span id="sendStatus" class="muted"></span></div>
-</main>
-</div></section>
+<div id="compose" class="card hide">
+<h3>Kirim email</h3>
+<label>Ke</label><input id="to" type="email">
+<label>Subjek</label><input id="subject">
+<label>Pesan</label><textarea id="body" rows="6"></textarea>
+<button id="send">Kirim</button>
+<span id="sendStatus" class="muted"></span>
 </div>
-<script src="providers.js"></script>
+</main>
+</div>
+</section>
+</div>
+
+<script src="/providers.js?v=20261111" onerror="document.getElementById('providerNote').textContent='Gagal memuat providers.js. Periksa file public/providers.js.'"></script>
+
 <script>
-const $=id=>document.getElementById(id);
-let token='', currentFolder='INBOX';
-const fallbackProviders=[{id:'manual',name:'Manual',imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'Masukkan server dari penyedia email.'}];
-const providerList=Array.isArray(window.PROVIDERS)?PROVIDERS:fallbackProviders;
-providerList.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;$('provider').append(o)});
-function applyProvider(p){if(!p)return;$('imapHost').value=p.imapHost||'';$('imapPort').value=p.imapPort||993;$('imapSecure').checked=p.imapSecure!==false;$('smtpHost').value=p.smtpHost||'';$('smtpPort').value=p.smtpPort||465;$('smtpSecure').checked=p.smtpSecure!==false;$('providerNote').textContent=p.notes||''}
-$('provider').addEventListener('change',()=>applyProvider(providerList.find(p=>p.id===$('provider').value)));
-$('email').addEventListener('input',()=>{if(typeof window.detectProvider==='function'){const p=window.detectProvider($('email').value);if(p){$('provider').value=p.id;applyProvider(p)}}});
-if(providerList.length){const initial=providerList.find(p=>p.id==='dti')||providerList[0];$('provider').value=initial.id;applyProvider(initial)}
-async function api(path,opt={}){opt.headers={...(opt.headers||{}),'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})};const r=await fetch(path,opt);const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||r.statusText);return j}
-$('loginBtn').onclick=async()=>{$('loginStatus').textContent='Menghubungkan…';try{const j=await api('/api/login',{method:'POST',body:JSON.stringify({email:$('email').value,password:$('password').value,imapHost:$('imapHost').value,imapPort:$('imapPort').value,imapSecure:$('imapSecure').checked,smtpHost:$('smtpHost').value,smtpPort:$('smtpPort').value,smtpSecure:$('smtpSecure').checked})});token=j.token;$('accountLabel').textContent=j.email;$('loginCard').classList.add('hide');$('mailCard').classList.remove('hide');$('loginStatus').textContent='';await loadFolders()}catch(e){$('loginStatus').textContent=e.message}};
-function folderLabel(f){const s=String(f.specialUse||'').toLowerCase(),p=String(f.path||'').toLowerCase(),n=String(f.name||'').toLowerCase();if(s.includes('inbox')||p==='inbox')return 'Inbox';if(s.includes('sent')||/sent|送信/.test(p+' '+n))return 'Sent';if(s.includes('draft')||/draft|下書き/.test(p+' '+n))return 'Drafts';if(s.includes('trash')||/trash|deleted|ゴミ箱/.test(p+' '+n))return 'Trash';if(s.includes('junk')||/spam|junk|迷惑/.test(p+' '+n))return 'Spam';if(s.includes('archive')||/archive|アーカイブ/.test(p+' '+n))return 'Archive';return f.name||f.path}
-async function loadFolders(){try{const j=await api('/api/folders');const fs=j.folders||[];$('folders').innerHTML='';fs.forEach(f=>{const b=document.createElement('button');b.textContent=folderLabel(f);b.className=f.path===currentFolder?'active':'';b.onclick=()=>{currentFolder=f.path;loadFolders();loadInbox()};$('folders').append(b)});if(!fs.some(f=>f.path===currentFolder))currentFolder=fs.find(f=>String(f.path).toUpperCase()==='INBOX')?.path||fs[0]?.path||'INBOX';await loadInbox()}catch(e){$('folders').textContent=e.message}}
-async function loadInbox(){ $('listPane').classList.remove('hide');$('readerPane').classList.add('hide');$('compose').classList.add('hide');$('folderTitle').textContent=folderLabel({path:currentFolder,name:currentFolder});$('inbox').textContent='Memuat email…';try{const j=await api('/api/inbox?folder='+encodeURIComponent(currentFolder));$('folderTitle').textContent=folderLabel({path:currentFolder,name:currentFolder})+' ('+j.messages.length+')';$('inbox').innerHTML='';if(!j.messages.length){$('inbox').textContent='Folder ini belum memiliki email.';return}j.messages.forEach(m=>{const d=document.createElement('div');d.className='msg';const b=document.createElement('b');b.textContent=m.subject;const small=document.createElement('small');small.textContent=m.from+' · '+(m.date?new Date(m.date).toLocaleString():'');d.append(b,small);d.onclick=()=>readMail(m.uid);$('inbox').append(d)})}catch(e){$('inbox').textContent=e.message}}
-async function readMail(uid){$('listPane').classList.add('hide');$('readerPane').classList.remove('hide');$('readSubject').textContent='Memuat pesan…';$('readMeta').textContent='';$('readBody').textContent='';$('attachments').textContent='';try{const m=await api('/api/message/'+uid+'?folder='+encodeURIComponent(currentFolder));$('readSubject').textContent=m.subject;$('readMeta').textContent='Dari: '+m.from+' | Kepada: '+m.to+' | '+(m.date?new Date(m.date).toLocaleString():'');$('readBody').textContent=m.text;$('attachments').textContent=m.attachments?.length?'Lampiran: '+m.attachments.map(a=>a.filename+' ('+a.size+' byte)').join(', '):''}catch(e){$('readSubject').textContent='Gagal membuka email';$('readBody').textContent=e.message}}
-$('refresh').onclick=()=>{loadFolders()};$('backBtn').onclick=()=>{$('readerPane').classList.add('hide');$('listPane').classList.remove('hide')};
-$('composeBtn').onclick=()=>$('compose').classList.toggle('hide');
-$('send').onclick=async()=>{ $('sendStatus').textContent='Mengirim…';try{await api('/api/send',{method:'POST',body:JSON.stringify({to:$('to').value,subject:$('subject').value,text:$('body').value})});$('sendStatus').textContent='Email terkirim.';$('to').value='';$('subject').value='';$('body').value=''}catch(e){$('sendStatus').textContent=e.message}};
-$('logout').onclick=async()=>{try{await api('/api/logout',{method:'POST'})}catch{}token='';$('mailCard').classList.add('hide');$('loginCard').classList.remove('hide')};
-</script></body></html>
+const $ = id => document.getElementById(id);
+let token = '';
+let currentFolder = 'INBOX';
+let providerList = [];
+
+function applyProvider(p) {
+  if (!p) return;
+  $('imapHost').value = p.imapHost || '';
+  $('imapPort').value = p.imapPort || 993;
+  $('imapSecure').checked = p.imapSecure !== false;
+  $('smtpHost').value = p.smtpHost || '';
+  $('smtpPort').value = p.smtpPort || 465;
+  $('smtpSecure').checked = p.smtpSecure !== false;
+  $('providerNote').textContent = p.notes || '';
+}
+
+function initProviders() {
+  const select = $('provider');
+
+  if (!Array.isArray(window.PROVIDERS) || !window.PROVIDERS.length) {
+    select.innerHTML = '<option value="manual">Lainnya / isi manual</option>';
+    $('providerNote').textContent =
+      'Daftar provider tidak terbaca. Pastikan public/providers.js menggunakan window.PROVIDERS.';
+    return;
+  }
+
+  providerList = window.PROVIDERS;
+  select.innerHTML = '';
+
+  providerList.forEach(p => {
+    const option = document.createElement('option');
+    option.value = p.id;
+    option.textContent = p.name;
+    select.appendChild(option);
+  });
+
+  const initial = providerList.find(p => p.id === 'dti') || providerList[0];
+  select.value = initial.id;
+  applyProvider(initial);
+
+  $('providerNote').textContent =
+    'Berhasil memuat ' + providerList.length + ' provider.';
+
+  $('email').addEventListener('input', () => {
+    const email = $('email').value.trim().toLowerCase();
+    const detected = typeof window.detectProvider === 'function'
+      ? window.detectProvider(email)
+      : providerList.find(p => p.domains && p.domains.includes(email.split('@')[1]))
+        || providerList.find(p => p.id === 'manual');
+
+    if (detected) {
+      select.value = detected.id;
+      applyProvider(detected);
+    }
+  });
+
+  select.addEventListener('change', () => {
+    applyProvider(providerList.find(p => p.id === select.value));
+  });
+}
+
+initProviders();
+
+async function api(path, opt = {}) {
+  opt.headers = {
+    ...(opt.headers || {}),
+    'Content-Type': 'application/json',
+    ...(token ? {Authorization: 'Bearer ' + token} : {})
+  };
+
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Error(j.error || r.statusText);
+  return j;
+}
+
+$('loginBtn').onclick = async () => {
+  $('loginStatus').textContent = 'Menghubungkan…';
+
+  try {
+    const j = await api('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: $('email').value,
+        password: $('password').value,
+        imapHost: $('imapHost').value,
+        imapPort: $('imapPort').value,
+        imapSecure: $('imapSecure').checked,
+        smtpHost: $('smtpHost').value,
+        smtpPort: $('smtpPort').value,
+        smtpSecure: $('smtpSecure').checked
+      })
+    });
+
+    token = j.token;
+    $('accountLabel').textContent = j.email;
+    $('loginCard').classList.add('hide');
+    $('mailCard').classList.remove('hide');
+    $('loginStatus').textContent = '';
+    await loadFolders();
+  } catch (e) {
+    $('loginStatus').textContent = e.message;
+  }
+};
+
+function folderLabel(f) {
+  const s = String(f.specialUse || '').toLowerCase();
+  const p = String(f.path || '').toLowerCase();
+  const n = String(f.name || '').toLowerCase();
+
+  if (s.includes('inbox') || p === 'inbox') return 'Inbox';
+  if (s.includes('sent') || /sent|送信/.test(p+' '+n)) return 'Sent';
+  if (s.includes('draft') || /draft|下書き/.test(p+' '+n)) return 'Drafts';
+  if (s.includes('trash') || /trash|deleted|ゴミ箱/.test(p+' '+n)) return 'Trash';
+  if (s.includes('junk') || /spam|junk|迷惑/.test(p+' '+n)) return 'Spam';
+  if (s.includes('archive') || /archive|アーカイブ/.test(p+' '+n)) return 'Archive';
+  return f.name || f.path;
+}
+
+async function loadFolders() {
+  try {
+    const j = await api('/api/folders');
+    const fs = j.folders || [];
+    $('folders').innerHTML = '';
+
+    fs.forEach(f => {
+      const b = document.createElement('button');
+      b.textContent = folderLabel(f);
+      b.className = f.path === currentFolder ? 'active' : '';
+      b.onclick = () => {
+        currentFolder = f.path;
+        loadFolders();
+        loadInbox();
+      };
+      $('folders').append(b);
+    });
+
+    if (!fs.some(f => f.path === currentFolder)) {
+      currentFolder = fs.find(f => String(f.path).toUpperCase() === 'INBOX')?.path
+        || fs[0]?.path || 'INBOX';
+    }
+
+    await loadInbox();
+  } catch (e) {
+    $('folders').textContent = e.message;
+  }
+}
+
+async function loadInbox() {
+  $('listPane').classList.remove('hide');
+  $('readerPane').classList.add('hide');
+  $('compose').classList.add('hide');
+  $('folderTitle').textContent = folderLabel({path: currentFolder, name: currentFolder});
+  $('inbox').textContent = 'Memuat email…';
+
+  try {
+    const j = await api('/api/inbox?folder=' + encodeURIComponent(currentFolder));
+    $('folderTitle').textContent =
+      folderLabel({path: currentFolder, name: currentFolder}) +
+      ' (' + j.messages.length + ')';
+
+    $('inbox').innerHTML = '';
+
+    if (!j.messages.length) {
+      $('inbox').textContent = 'Folder ini belum memiliki email.';
+      return;
+    }
+
+    j.messages.forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'msg';
+      const b = document.createElement('b');
+      b.textContent = m.subject;
+      const small = document.createElement('small');
+      small.textContent = m.from + ' · ' +
+        (m.date ? new Date(m.date).toLocaleString() : '');
+      d.append(b, small);
+      d.onclick = () => readMail(m.uid);
+      $('inbox').append(d);
+    });
+  } catch (e) {
+    $('inbox').textContent = e.message;
+  }
+}
+
+async function readMail(uid) {
+  $('listPane').classList.add('hide');
+  $('readerPane').classList.remove('hide');
+  $('readSubject').textContent = 'Memuat pesan…';
+  $('readMeta').textContent = '';
+  $('readBody').textContent = '';
+  $('attachments').textContent = '';
+
+  try {
+    const m = await api('/api/message/' + uid + '?folder=' +
+      encodeURIComponent(currentFolder));
+
+    $('readSubject').textContent = m.subject || '(Tanpa subjek)';
+    $('readMeta').textContent =
+      'Dari: ' + (m.from || '') +
+      ' | Kepada: ' + (m.to || '') +
+      ' | ' + (m.date ? new Date(m.date).toLocaleString() : '');
+
+    $('readBody').textContent = m.text || '(Pesan kosong)';
+
+    $('attachments').textContent = m.attachments?.length
+      ? 'Lampiran: ' + m.attachments.map(a =>
+          a.filename + ' (' + a.size + ' byte)').join(', ')
+      : '';
+  } catch (e) {
+    $('readSubject').textContent = 'Gagal membuka email';
+    $('readBody').textContent = e.message;
+  }
+}
+
+$('refresh').onclick = loadFolders;
+
+$('backBtn').onclick = () => {
+  $('readerPane').classList.add('hide');
+  $('listPane').classList.remove('hide');
+};
+
+$('composeBtn').onclick = () => $('compose').classList.toggle('hide');
+
+$('send').onclick = async () => {
+  $('sendStatus').textContent = 'Mengirim…';
+
+  try {
+    await api('/api/send', {
+      method: 'POST',
+      body: JSON.stringify({
+        to: $('to').value,
+        subject: $('subject').value,
+        text: $('body').value
+      })
+    });
+
+    $('sendStatus').textContent = 'Email terkirim.';
+    $('to').value = '';
+    $('subject').value = '';
+    $('body').value = '';
+  } catch (e) {
+    $('sendStatus').textContent = e.message;
+  }
+};
+
+$('logout').onclick = async () => {
+  try {
+    await api('/api/logout', {method: 'POST'});
+  } catch {}
+
+  token = '';
+  $('mailCard').classList.add('hide');
+  $('loginCard').classList.remove('hide');
+};
+</script>
+</body>
+</html>
