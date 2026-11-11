@@ -806,13 +806,20 @@ function updatePagination(){
 }
 
 function setPaginationData(data){
- state.totalMessages=Number(data.total)||0;
- state.totalPages=Number(
-  data.totalPages??Math.ceil(state.totalMessages/state.pageSize)
- )||0;
+  state.totalMessages = Number(data.total) || 0;
 
- state.page=Number(data.page)||state.page;
- updatePagination();
+  state.totalPages = Number(
+    data.totalPages ?? Math.ceil(state.totalMessages / state.pageSize)
+  ) || 0;
+
+  const maxPage = Math.max(1, state.totalPages);
+
+  state.page = Math.min(
+    Math.max(1, Number(data.page) || state.page),
+    maxPage
+  );
+
+  updatePagination();
 }
 
 /* MESSAGE LIST / INBOX */
