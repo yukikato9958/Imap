@@ -1,6 +1,17 @@
 
 window.PROVIDERS = [
   {
+    id: 'ttcn',
+    name: 'TTCN / DTI',
+    domains: ['mx3.ttcn.ne.jp'],
+    imapHost: 'imap2.cm.dream.jp',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'vsmtp2.cm.dream.jp',
+    smtpPort: 465,
+    smtpSecure: true
+  },
+  {
     id: 'dti',
     name: 'DTI',
     domains: ['dti.ne.jp'],
@@ -65,8 +76,7 @@ window.PROVIDERS = [
     imapSecure: true,
     smtpHost: 'hi-ho.mose-mail.jp',
     smtpPort: 465,
-    smtpSecure: true,
-    notes: 'Use your full email address as username. If authentication fails, check the provider account settings.'
+    smtpSecure: true
   },
   {
     id: 'katch',
@@ -100,6 +110,78 @@ window.PROVIDERS = [
     smtpHost: 'smtps.mineo.jp',
     smtpPort: 465,
     smtpSecure: true
+  },
+  {
+    id: 't-online',
+    name: 'T-Online / Telekom',
+    domains: ['t-online.de', 'magenta.de'],
+    imapHost: 'secureimap.t-online.de',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'securesmtp.t-online.de',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'Use your email program password, not your normal Telekom login password.'
+  },
+  {
+    id: 'web-de',
+    name: 'WEB.DE',
+    domains: ['web.de'],
+    imapHost: 'imap.web.de',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'smtp.web.de',
+    smtpPort: 587,
+    smtpSecure: false,
+    notes: 'Enable IMAP access in WEB.DE account settings.'
+  },
+  {
+    id: 'web-de-com',
+    name: 'WEB.DE (web.de.com)',
+    domains: ['web.de.com'],
+    imapHost: 'imap.web.de',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'smtp.web.de',
+    smtpPort: 587,
+    smtpSecure: false,
+    notes: 'Server mapping is unverified. Confirm that this domain is hosted by WEB.DE.'
+  },
+  {
+    id: 'gmx-de',
+    name: 'GMX Germany',
+    domains: ['gmx.de', 'gmx.net'],
+    imapHost: 'imap.gmx.net',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'mail.gmx.net',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'Enable IMAP access in GMX account settings.'
+  },
+  {
+    id: 'gmx-com',
+    name: 'GMX International',
+    domains: ['gmx.com'],
+    imapHost: 'imap.gmx.com',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'mail.gmx.com',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'Enable IMAP access in GMX account settings.'
+  },
+  {
+    id: 'online-de',
+    name: 'online.de',
+    domains: ['online.de'],
+    imapHost: '',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'Server settings need confirmation from the email provider.'
   },
   {
     id: 'yahoo-jp',
@@ -167,8 +249,7 @@ window.PROVIDERS = [
     imapSecure: true,
     smtpHost: '',
     smtpPort: 465,
-    smtpSecure: true,
-    notes: 'Please confirm server settings with the provider.'
+    smtpSecure: true
   },
   {
     id: 'kanto',
@@ -179,8 +260,7 @@ window.PROVIDERS = [
     imapSecure: true,
     smtpHost: '',
     smtpPort: 465,
-    smtpSecure: true,
-    notes: 'Please confirm server settings with the provider.'
+    smtpSecure: true
   },
   {
     id: 'manual',
