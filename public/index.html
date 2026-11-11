@@ -90,6 +90,27 @@ button{cursor:pointer}
 .subject{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .preview{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
 .mail-date{font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* SENDER LOGO */
+.sender-line{display:flex;align-items:center;gap:10px;min-width:0}
+.sender-avatar{
+ width:38px;height:38px;min-width:38px;border-radius:50%;
+ overflow:hidden;display:grid;place-items:center;
+ background:var(--surface2);color:var(--text);
+ font-weight:800;font-size:14px;border:1px solid var(--line)
+}
+.sender-avatar img{
+ width:100%;height:100%;object-fit:contain;
+ padding:5px;background:#fff;border-radius:50%
+}
+.sender-avatar .avatar-fallback{
+ display:grid;place-items:center;width:100%;height:100%
+}
+.sender-name{
+ min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.message-sender-avatar{width:46px;height:46px;min-width:46px}
+
 .empty{padding:65px 20px;text-align:center;color:var(--muted)}
 .empty .big{font-size:40px;margin-bottom:10px}
 #messageView{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
@@ -125,7 +146,6 @@ button{cursor:pointer}
 </head>
 <body>
 
-<!-- LOGIN PAGE: TERPISAH DARI DASHBOARD -->
 <section id="loginPage">
  <div class="login-wrap">
   <div class="login-brand">
@@ -135,7 +155,6 @@ button{cursor:pointer}
   <div class="login-card">
    <h1>Connect your email</h1>
    <p class="subtitle">Masuk menggunakan akun email kamu.</p>
-
    <form id="loginForm">
     <div class="field">
      <label>EMAIL ADDRESS</label>
@@ -149,9 +168,7 @@ button{cursor:pointer}
      <label>EMAIL PROVIDER</label>
      <select id="provider"></select>
     </div>
-    <div class="provider-note" id="providerNote">
-     Provider akan terdeteksi otomatis berdasarkan domain email.
-    </div>
+    <div class="provider-note" id="providerNote">Provider akan terdeteksi otomatis berdasarkan domain email.</div>
     <div class="field">
      <label>IMAP HOST</label>
      <input id="imapHost" placeholder="imap.example.com" required>
@@ -193,7 +210,6 @@ button{cursor:pointer}
  </div>
 </section>
 
-<!-- DASHBOARD: HANYA MUNCUL SETELAH LOGIN -->
 <section id="dashboard" class="hidden">
  <aside class="sidebar" id="sidebar">
   <div class="side-brand">
@@ -213,7 +229,6 @@ button{cursor:pointer}
    <button id="logoutBtn" class="danger">↪ Logout</button>
   </div>
  </aside>
-
  <main class="main">
   <header class="topbar">
    <button class="icon-btn mobile-menu" id="menuBtn">☰</button>
@@ -226,7 +241,6 @@ button{cursor:pointer}
     <button class="primary" id="composeBtn">＋ Compose</button>
    </div>
   </header>
-
   <div class="content">
    <div class="content-head">
     <div>
@@ -251,7 +265,6 @@ button{cursor:pointer}
  </main>
 </section>
 
-<!-- COMPOSE MODAL -->
 <div class="modal-backdrop hidden" id="composeModal">
  <div class="modal">
   <div class="modal-head">
@@ -274,7 +287,6 @@ button{cursor:pointer}
  </div>
 </div>
 
-<!-- THEME MODAL -->
 <div class="modal-backdrop hidden" id="themeModal">
  <div class="modal">
   <div class="modal-head"><h3>Appearance & Theme</h3><button class="close" data-close="themeModal">✕</button></div>
@@ -293,15 +305,9 @@ button{cursor:pointer}
   <button class="primary" id="saveThemeBtn" style="width:100%">Apply Theme</button>
  </div>
 </div>
-
 <div id="toast" class="toast hidden"></div>
 
 <script>
-/* =========================================================
-   DANKE MAIL PROVIDERS
-   Host dan port dipertahankan dari daftar provider pengguna.
-   Host kosong berarti perlu diisi sesuai informasi provider.
-========================================================= */
 window.PROVIDERS = [
 {id:'ttcn',name:'TTCN',domains:['mx3.ttcn.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true},
 {id:'dti',name:'DTI',domains:['dti.ne.jp','dti2.ne.jp','fides.dti.ne.jp','mars.dti.ne.jp','zephyr.dti.ne.jp','river.dti.ne.jp','aurora.dti.ne.jp','mica.dti.ne.jp','vesta.dti.ne.jp','saturn.dti.ne.jp','sky.dti2.ne.jp','snow.dti2.ne.jp'],matchSubdomains:true,imapHost:'imap.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp.cm.dream.jp',smtpPort:465,smtpSecure:true},
@@ -360,9 +366,7 @@ window.detectProvider=function(email){
  }))||window.PROVIDERS.find(p=>p.id==='manual');
 };
 
-/* =========================================================
-   APP STATE
-========================================================= */
+/* APP STATE */
 const $=id=>document.getElementById(id);
 const state={
  accounts:[],activeId:null,folders:[],currentFolder:'INBOX',
@@ -370,6 +374,48 @@ const state={
  currentMessage:null,theme:{mode:'light',accent:'#7257d8'}
 };
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* SENDER LOGO DETECTOR */
+function senderAvatar(sender,large=false){
+ const raw=String(sender||'').trim();
+ const emailMatch=raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+ const email=emailMatch?emailMatch[0]:'';
+ const domain=(email.split('@')[1]||'').toLowerCase();
+
+ const known=[
+  [/^(gmail\.com|googlemail\.com)$/,'google.com'],
+  [/^(amazon\.com|amazon\.co\.jp|amazonaws\.com)$/,'amazon.com'],
+  [/^(yahoo\.com|yahoo\.co\.jp)$/,'yahoo.com'],
+  [/^(outlook\.com|hotmail\.com|live\.com|microsoft\.com)$/,'microsoft.com'],
+  [/^(icloud\.com|me\.com|mac\.com)$/,'apple.com'],
+  [/^youtube\.com$/,'youtube.com'],
+  [/^(shopee\.co\.id|shopee\.com)$/,'shopee.co.id'],
+  [/^netflix\.com$/,'netflix.com'],
+  [/^rakuten\.co\.jp$/,'rakuten.co.jp'],
+  [/^biglobe\.ne\.jp$/,'biglobe.ne.jp'],
+  [/^ocn\.ne\.jp$/,'ocn.ne.jp'],
+  [/^so-net\.ne\.jp$/,'so-net.ne.jp'],
+  [/^mineo\.jp$/,'mineo.jp'],
+  [/^spotify\.com$/,'spotify.com'],
+  [/^paypal\.com$/,'paypal.com'],
+  [/^adobe\.com$/,'adobe.com'],
+  [/^discord\.com$/,'discord.com'],
+  [/^steampowered\.com$/,'steampowered.com']
+ ];
+
+ const match=known.find(([pattern])=>pattern.test(domain));
+ const logoDomain=match?match[1]:domain;
+ const displayName=raw.replace(/<[^>]*>/g,'').replace(/["']/g,'').trim();
+ const seed=displayName||email||'?';
+ const initials=seed.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase()||'?';
+ const src=logoDomain?'https://www.google.com/s2/favicons?domain='+encodeURIComponent(logoDomain)+'&sz=128':'';
+
+ return `<div class="sender-avatar ${large?'message-sender-avatar':''}">
+  ${src?`<img src="${esc(src)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`:''}
+  <span class="avatar-fallback" style="${src?'display:none':''}">${esc(initials)}</span>
+ </div>`;
+}
+
 const activeAccount=()=>state.accounts.find(a=>a.id===state.activeId);
 function toast(message){
  $('toast').textContent=message;$('toast').classList.remove('hidden');
@@ -407,9 +453,7 @@ async function api(url,options={}){
  return data;
 }
 
-/* =========================================================
-   PROVIDER FORM
-========================================================= */
+/* PROVIDER FORM */
 function fillProviderSelect(){
  $('provider').innerHTML=window.PROVIDERS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
 }
@@ -424,7 +468,7 @@ function applyProvider(p){
  $('smtpHost').value=p.smtpHost||'';
  $('smtpPort').value=p.smtpPort||465;
  $('smtpSecure').value=String(p.smtpSecure!==false);
- $('providerNote').textContent=p.notes|| (p.id==='manual'?'Isi host IMAP dan SMTP sesuai informasi provider email kamu.':'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu.');
+ $('providerNote').textContent=p.notes||(p.id==='manual'?'Isi host IMAP dan SMTP sesuai informasi provider email kamu.':'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu.');
 }
 function detectFromEmail(){
  const p=window.detectProvider($('email').value);
@@ -435,9 +479,7 @@ $('provider').addEventListener('change',()=>applyProvider(selectedProvider()));
 fillProviderSelect();
 applyProvider(window.PROVIDERS[0]);
 
-/* =========================================================
-   LOGIN AND ADD ACCOUNT
-========================================================= */
+/* LOGIN AND ADD ACCOUNT */
 let addingAccount=false;
 $('loginForm').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -469,11 +511,7 @@ $('loginForm').addEventListener('submit',async e=>{
    smtpPort:Number($('smtpPort').value)||465,
    smtpSecure:$('smtpSecure').value==='true'
   };
-  if(addingAccount){
-   state.accounts.push(account);
-  }else{
-   state.accounts.push(account);
-  }
+  state.accounts.push(account);
   state.activeId=account.id;saveAccounts();
   addingAccount=false;
   $('password').value='';$('loginForm').reset();
@@ -488,13 +526,11 @@ function openAddAccount(){
  $('email').value='';$('password').value='';
  applyProvider(window.PROVIDERS[0]);
  showLogin();
- $('email').focus();
  $('sidebar').classList.remove('open');
+ $('email').focus();
 }
 
-/* =========================================================
-   ACCOUNT SWITCH / LOGOUT
-========================================================= */
+/* ACCOUNT SWITCH / LOGOUT */
 function renderAccount(){
  const a=activeAccount();if(!a)return;
  $('accountLabel').textContent=a.email;
@@ -520,13 +556,10 @@ $('logoutBtn').addEventListener('click',async()=>{
  }else{showLogin()}
 });
 
-/* =========================================================
-   FOLDERS
-========================================================= */
+/* FOLDERS */
 function folderType(f){
  const s=(f.specialUse||'').toLowerCase();
  const n=(f.name||'').toLowerCase();
- const p=(f.path||'').toLowerCase();
  if(s.includes('inbox')||n==='inbox')return 'inbox';
  if(s.includes('sent')||n.includes('sent')||n.includes('送信'))return 'sent';
  if(s.includes('draft')||n.includes('draft')||n.includes('下書き'))return 'drafts';
@@ -565,9 +598,7 @@ function titleForFolder(){
  return f?.name||state.currentFolder;
 }
 
-/* =========================================================
-   MESSAGE LIST / SEARCH
-========================================================= */
+/* MESSAGE LIST / SEARCH */
 async function loadInbox(){
  state.selected.clear();state.searchMode=false;
  $('pageTitle').textContent=titleForFolder();
@@ -598,7 +629,10 @@ function renderMessages(){
   return `<div class="mail-row ${unread?'unread':''}" data-message-index="${i}">
    <input type="checkbox" data-select-key="${esc(key)}" ${state.selected.has(key)?'checked':''}>
    <div class="mail-info">
-    <div class="sender">${esc(from)}</div>
+    <div class="sender-line">
+     ${senderAvatar(from)}
+     <div class="sender sender-name">${esc(from)}</div>
+    </div>
     <div class="subject">${esc(subject)}</div>
     <div class="preview">${esc(preview)}</div>
    </div>
@@ -644,9 +678,7 @@ $('clearSearchBtn').addEventListener('click',()=>{
 });
 $('refreshBtn').addEventListener('click',()=>state.searchMode?doSearch():loadInbox());
 
-/* =========================================================
-   OPEN MESSAGE
-========================================================= */
+/* OPEN MESSAGE */
 async function openMessage(uid,folder){
  $('listView').classList.add('hidden');$('messageView').classList.remove('hidden');
  $('messageView').innerHTML='<div class="empty">Opening message...</div>';
@@ -674,7 +706,10 @@ function renderMessage(){
   </div>
   <h2 style="font-size:21px;margin:0 0 14px">${esc(m.subject||'(No subject)')}</h2>
   <div class="message-meta">
-   <div><strong>${esc(from)}</strong></div>
+   <div class="sender-line" style="margin-bottom:12px">
+    ${senderAvatar(from,true)}
+    <strong class="sender-name">${esc(from)}</strong>
+   </div>
    <div class="small muted">To: ${esc(to)}</div>
    <div class="small muted">${esc(date)}</div>
   </div>
@@ -703,9 +738,7 @@ function backToList(){
  if(state.searchMode)doSearch();else loadInbox();
 }
 
-/* =========================================================
-   BULK ACTIONS
-========================================================= */
+/* BULK ACTIONS */
 $('selectAllBtn').addEventListener('click',()=>{
  if(state.selected.size===state.messages.length)state.selected.clear();
  else state.messages.forEach(m=>state.selected.add((m.folder||state.currentFolder)+'::'+(m.uid??m.id)));
@@ -738,9 +771,7 @@ $('deleteBtn').onclick=()=>{
  if(confirm('Hapus email yang dipilih?'))actionMessages('delete',selectedItems());
 };
 
-/* =========================================================
-   COMPOSE / SEND
-========================================================= */
+/* COMPOSE / SEND */
 function openCompose(){
  const a=activeAccount();if(!a)return;
  $('composeSmtpHost').value=a.smtpHost||'';
@@ -767,9 +798,7 @@ $('composeForm').addEventListener('submit',async e=>{
  }catch(err){toast(err.message)}
 });
 
-/* =========================================================
-   THEMES
-========================================================= */
+/* THEMES */
 function applyTheme(){
  document.documentElement.style.setProperty('--primary',state.theme.accent);
  document.documentElement.style.setProperty('--primary2',state.theme.accent);
@@ -804,9 +833,7 @@ $('saveThemeBtn').onclick=()=>{
  $('themeModal').classList.add('hidden');toast('Theme updated.');
 };
 
-/* =========================================================
-   MODALS / MOBILE
-========================================================= */
+/* MODALS / MOBILE */
 document.querySelectorAll('[data-close]').forEach(btn=>{
  btn.onclick=()=>$(btn.dataset.close).classList.add('hidden');
 });
@@ -815,9 +842,7 @@ document.querySelectorAll('.modal-backdrop').forEach(bg=>{
 });
 $('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');
 
-/* =========================================================
-   INITIALIZE
-========================================================= */
+/* INITIALIZE */
 (async function init(){
  loadSaved();
  if(activeAccount()){
