@@ -59,7 +59,6 @@ function getCachedMessage(key) {
         return null;
     }
 
-    // Refresh position in cache
     MESSAGE_CACHE.delete(key);
     MESSAGE_CACHE.set(key, item);
 
@@ -286,6 +285,19 @@ function sendError(res, err, operation) {
             : operation + ' failed',
         details: { message }
     });
+}
+
+function clearMessageCache(config, folder, uids) {
+    for (const uid of uids) {
+        const key = [
+            config.username,
+            config.host,
+            folder,
+            uid
+        ].join(':');
+
+        MESSAGE_CACHE.delete(key);
+    }
 }
 
 // ========================================
@@ -637,6 +649,102 @@ app.get('/api/message/:uid', async (req, res) => {
 
     } catch (err) {
         sendError(res, err, 'Message loading');
+    }
+});
+
+// ========================================
+// MARK READ / UNREAD / DELETE
+// ========================================
+
+app.post('/api/message/action', async (req, res) => {
+    const config = getSession(req);
+
+    if (!config) {
+        return res.status(401).json({
+            error: 'Session expired. Please sign in again.'
+        });
+    }
+
+    const {
+        folder = 'INBOX',
+        uids = [],
+        action
+    } = req.body || {};
+
+    if (!Array.isArray(uids) || !uids.length) {
+        return res.status(400).json({
+            error: 'Select at least one email.'
+        });
+    }
+
+    if (!['read', 'unread', 'delete'].includes(action)) {
+        return res.status(400).json({
+            error: 'Invalid action.'
+        });
+    }
+
+    const validUIDs = [...new Set(
+        uids.map(Number).filter(
+            uid => Number.isSafeInteger(uid) && uid > 0
+        )
+    )];
+
+    if (!validUIDs.length) {
+        return res.status(400).json({
+            error: 'Invalid email UID.'
+        });
+    }
+
+    try {
+        await withImap(config, async client => {
+            const lock = await client.getMailboxLock(folder);
+
+            try {
+                for (const uid of validUIDs) {
+                    if (action === 'read') {
+                        await client.messageFlagsAdd(
+                            uid,
+                            ['\\Seen'],
+                            { uid: true }
+                        );
+                    }
+
+                    if (action === 'unread') {
+                        await client.messageFlagsRemove(
+                            uid,
+                            ['\\Seen'],
+                            { uid: true }
+                        );
+                    }
+
+                    if (action === 'delete') {
+                        await client.messageDelete(
+                            uid,
+                            { uid: true }
+                        );
+                    }
+                }
+            } finally {
+                lock.release();
+            }
+        });
+
+        clearMessageCache(config, folder, validUIDs);
+
+        res.json({
+            success: true,
+            action,
+            count: validUIDs.length,
+            message:
+                action === 'read'
+                    ? 'Emails marked as read'
+                    : action === 'unread'
+                    ? 'Emails marked as unread'
+                    : 'Emails deleted'
+        });
+
+    } catch (err) {
+        sendError(res, err, 'Message action');
     }
 });
 
