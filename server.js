@@ -1,3 +1,4 @@
+
 const express = require('express');
 const { ImapFlow } = require('imapflow');
 const nodemailer = require('nodemailer');
@@ -13,7 +14,7 @@ const sessions = new Map();
 function auth(req, res, next) {
   const key = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const session = sessions.get(key);
-  if (!session) return res.status(401).json({ error: 'Sesi tidak valid. Login ulang.' });
+  if (!session) return res.status(401).json({ error: 'Session invalid. Please log in again.' });
   req.mail = session;
   next();
 }
@@ -41,6 +42,7 @@ function safeFolder(value) {
 async function withImap(session, work) {
   const client = createImapClient(session);
   let connected = false;
+
   try {
     await client.connect();
     connected = true;
@@ -52,23 +54,65 @@ async function withImap(session, work) {
   }
 }
 
+function embedInlineImages(html, attachments) {
+  if (!html) return '';
+
+  const cidMap = new Map();
+
+  for (const attachment of attachments || []) {
+    if (!attachment.contentId || !attachment.content) continue;
+
+    const cid = attachment.contentId
+      .replace(/^<|>$/g, '')
+      .trim()
+      .toLowerCase();
+
+    const mime = attachment.contentType || 'application/octet-stream';
+    const base64 = attachment.content.toString('base64');
+
+    cidMap.set(cid, `data:${mime};base64,${base64}`);
+  }
+
+  return html.replace(
+    /cid:([^"'()\s<>]+)/gi,
+    (match, cid) =>
+      cidMap.get(cid.replace(/^<|>$/g, '').toLowerCase()) || match
+  );
+}
+
 app.get('/health', (req, res) => res.send('OK'));
-app.get('/api/providers', (req, res) => res.json({ message: 'Provider preset tersedia di frontend.' }));
+
+app.get('/api/providers', (req, res) => {
+  res.json({ message: 'Provider presets are available in the frontend.' });
+});
 
 app.post('/api/login', async (req, res) => {
   const {
-    email, password, imapHost, imapPort = 993, imapSecure = true,
-    smtpHost, smtpPort = 465, smtpSecure = true
+    email,
+    password,
+    imapHost,
+    imapPort = 993,
+    imapSecure = true,
+    smtpHost,
+    smtpPort = 465,
+    smtpSecure = true
   } = req.body || {};
 
   if (!email || !password || !imapHost || !smtpHost) {
-    return res.status(400).json({ error: 'Email, password, IMAP dan SMTP wajib diisi.' });
+    return res.status(400).json({
+      error: 'Email, password, IMAP and SMTP are required.'
+    });
   }
 
   const session = {
-    email, password, imapHost, imapPort: Number(imapPort),
-    imapSecure: Boolean(imapSecure), smtpHost,
-    smtpPort: Number(smtpPort), smtpSecure: Boolean(smtpSecure)
+    email,
+    password,
+    imapHost,
+    imapPort: Number(imapPort),
+    imapSecure: Boolean(imapSecure),
+    smtpHost,
+    smtpPort: Number(smtpPort),
+    smtpSecure: Boolean(smtpSecure)
   };
 
   try {
@@ -79,9 +123,12 @@ app.post('/api/login', async (req, res) => {
 
     const token = crypto.randomBytes(32).toString('hex');
     sessions.set(token, session);
+
     res.json({ token, email });
   } catch (e) {
-    res.status(400).json({ error: 'Login IMAP gagal: ' + (e.message || 'periksa server, password, dan akses IMAP') });
+    res.status(400).json({
+      error: 'IMAP login failed: ' + (e.message || 'Check server, password and IMAP access.')
+    });
   }
 });
 
@@ -89,6 +136,7 @@ app.get('/api/folders', auth, async (req, res) => {
   try {
     const folders = await withImap(req.mail, async client => {
       const list = await client.list();
+
       return list.map(folder => ({
         path: folder.path,
         name: folder.name || folder.path,
@@ -96,29 +144,37 @@ app.get('/api/folders', auth, async (req, res) => {
         delimiter: folder.delimiter || '/'
       }));
     });
+
     res.json({ folders });
   } catch (e) {
-    res.status(500).json({ error: 'Gagal membaca folder: ' + e.message });
+    res.status(500).json({ error: 'Unable to load folders: ' + e.message });
   }
 });
 
 app.get('/api/inbox', auth, async (req, res) => {
   const folder = safeFolder(req.query.folder);
+
   try {
     const messages = await withImap(req.mail, async client => {
       const lock = await client.getMailboxLock(folder);
       const output = [];
+
       try {
         const status = await client.status(folder, { messages: true });
         const total = Number(status.messages || 0);
+
         if (total > 0) {
           const start = Math.max(1, total - 49);
+
           for await (const m of client.fetch(`${start}:*`, {
-            uid: true, envelope: true, flags: true, internalDate: true
+            uid: true,
+            envelope: true,
+            flags: true,
+            internalDate: true
           })) {
             output.push({
               uid: m.uid,
-              subject: m.envelope?.subject || '(Tanpa subjek)',
+              subject: m.envelope?.subject || '(No subject)',
               from: m.envelope?.from?.map(x => x.name || x.address).join(', ') || '',
               date: m.internalDate,
               flags: [...(m.flags || [])]
@@ -128,39 +184,62 @@ app.get('/api/inbox', auth, async (req, res) => {
       } finally {
         lock.release();
       }
+
       return output.reverse();
     });
+
     res.json({ folder, messages });
   } catch (e) {
-    res.status(500).json({ error: 'Gagal membaca folder ' + folder + ': ' + e.message });
+    res.status(500).json({
+      error: 'Unable to read folder ' + folder + ': ' + e.message
+    });
   }
 });
 
 app.get('/api/message/:uid', auth, async (req, res) => {
   const folder = safeFolder(req.query.folder);
   const uid = Number(req.params.uid);
-  if (!Number.isSafeInteger(uid) || uid < 1) return res.status(400).json({ error: 'UID email tidak valid.' });
+
+  if (!Number.isSafeInteger(uid) || uid < 1) {
+    return res.status(400).json({ error: 'Invalid email UID.' });
+  }
 
   try {
     const message = await withImap(req.mail, async client => {
       const lock = await client.getMailboxLock(folder);
+
       try {
-        const raw = await client.fetchOne(String(uid), { uid: true, source: true }, { uid: true });
+        const raw = await client.fetchOne(
+          String(uid),
+          { uid: true, source: true },
+          { uid: true }
+        );
+
         if (!raw || !raw.source) return null;
+
         const parsed = await simpleParser(raw.source);
+
+        const html = embedInlineImages(
+          typeof parsed.html === 'string' ? parsed.html : '',
+          parsed.attachments || []
+        );
+
         return {
           uid,
           folder,
-          subject: parsed.subject || '(Tanpa subjek)',
+          subject: parsed.subject || '(No subject)',
           from: parsed.from?.text || '',
           to: parsed.to?.text || '',
           date: parsed.date || null,
-          text: parsed.text || '(Pesan ini tidak memiliki versi teks.)',
-          htmlAvailable: Boolean(parsed.html),
+          text: parsed.text || '',
+          html,
+          htmlAvailable: Boolean(html),
           attachments: (parsed.attachments || []).map(a => ({
-            filename: a.filename || 'lampiran',
+            filename: a.filename || 'attachment',
             contentType: a.contentType,
-            size: a.size
+            size: a.size,
+            contentId: a.contentId || null,
+            inline: Boolean(a.contentId)
           }))
         };
       } finally {
@@ -168,27 +247,42 @@ app.get('/api/message/:uid', auth, async (req, res) => {
       }
     });
 
-    if (!message) return res.status(404).json({ error: 'Email tidak ditemukan.' });
+    if (!message) {
+      return res.status(404).json({ error: 'Email not found.' });
+    }
+
     res.json(message);
   } catch (e) {
-    res.status(500).json({ error: 'Gagal membuka email: ' + e.message });
+    res.status(500).json({ error: 'Unable to open email: ' + e.message });
   }
 });
 
 app.post('/api/send', auth, async (req, res) => {
   const s = req.mail;
   const { to, subject = '', text = '' } = req.body || {};
-  if (!to) return res.status(400).json({ error: 'Alamat penerima wajib diisi.' });
+
+  if (!to) {
+    return res.status(400).json({ error: 'Recipient address is required.' });
+  }
 
   try {
     const transporter = nodemailer.createTransport({
-      host: s.smtpHost, port: s.smtpPort, secure: s.smtpSecure,
+      host: s.smtpHost,
+      port: s.smtpPort,
+      secure: s.smtpSecure,
       auth: { user: s.email, pass: s.password }
     });
-    const info = await transporter.sendMail({ from: s.email, to, subject, text });
+
+    const info = await transporter.sendMail({
+      from: s.email,
+      to,
+      subject,
+      text
+    });
+
     res.json({ ok: true, messageId: info.messageId });
   } catch (e) {
-    res.status(500).json({ error: 'SMTP gagal: ' + e.message });
+    res.status(500).json({ error: 'SMTP failed: ' + e.message });
   }
 });
 
@@ -199,5 +293,7 @@ app.post('/api/logout', auth, (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, '0.0.0.0', () => console.log('Japan Mail berjalan di port ' + port));
-    
+
+app.listen(port, '0.0.0.0', () => {
+  console.log('Japan Mail running on port ' + port);
+});
