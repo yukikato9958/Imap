@@ -8,189 +8,589 @@
 <style>
 :root{--bg:#f6f8fc;--surface:#fff;--text:#202124;--muted:#667085;--line:#e5e7eb;--accent:#1769e0;--soft:#e8f0fe;--danger:#b42318}
 [data-theme="dark"]{--bg:#111318;--surface:#1b1e25;--text:#e8eaed;--muted:#a0a7b4;--line:#303540;--accent:#8ab4f8;--soft:#26364f;--danger:#ff8a80}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Arial,sans-serif}
-button,input,textarea,select{font:inherit}button{cursor:pointer}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Arial,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
 .top{height:64px;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
-.logo{font-size:21px;font-weight:700;color:var(--accent);white-space:nowrap}.search{flex:1;max-width:650px;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:0 14px}.search input{border:0;background:transparent;outline:none;width:100%;padding:11px;color:var(--text)}
-.iconbtn,.btn{border:0;border-radius:10px;padding:9px 13px;background:var(--soft);color:var(--text)}.btn.primary{background:var(--accent);color:white}.btn:disabled{opacity:.5;cursor:not-allowed}
-.layout{display:flex;min-height:calc(100vh - 64px)}.sidebar{width:235px;flex-shrink:0;padding:18px 12px;background:var(--bg);border-right:1px solid var(--line)}
+.logo{font-size:21px;font-weight:700;color:var(--accent);white-space:nowrap}
+.search{flex:1;max-width:650px;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:0 14px}
+.search input{border:0;background:transparent;outline:none;width:100%;padding:11px;color:var(--text)}
+.iconbtn,.btn{border:0;border-radius:10px;padding:9px 13px;background:var(--soft);color:var(--text)}
+.btn.primary{background:var(--accent);color:white}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.layout{display:flex;min-height:calc(100vh - 64px)}
+.sidebar{width:235px;flex-shrink:0;padding:18px 12px;background:var(--bg);border-right:1px solid var(--line)}
 .compose{width:100%;padding:13px;margin:0 0 18px;border-radius:16px;border:0;background:var(--soft);color:var(--text);font-weight:700;text-align:left}
-.nav{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:0 22px 22px 0;margin:3px 0;color:var(--text);cursor:pointer}.nav.active{background:var(--soft);font-weight:700;color:var(--accent)}.nav:hover{background:var(--soft)}
-.main{flex:1;min-width:0;padding:20px}.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}.heading{font-size:20px;font-weight:700;margin-right:auto}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}.message{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}.message:last-child{border-bottom:0}.message:hover{background:var(--soft)}.message.unread .sender,.message.unread .subject{font-weight:700}.sender{width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.subject{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.date{color:var(--muted);white-space:nowrap;font-size:12px}
-.status{padding:16px;color:var(--muted)}.error{color:var(--danger);white-space:pre-wrap}.loginwrap{min-height:100vh;display:grid;place-items:center;padding:20px}.login{width:min(440px,100%);background:var(--surface);padding:28px;border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 35px #00000010}.login h1{margin:0 0 6px;color:var(--accent)}.login p{color:var(--muted);margin:0 0 22px}.field{display:grid;gap:6px;margin:13px 0}.field label{font-weight:600}.field input,.field select,.field textarea{padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);width:100%;outline-color:var(--accent)}.login .btn{width:100%;padding:12px}.small{font-size:12px;color:var(--muted)}.mailview{padding:24px}.mailview h2{margin:0 0 12px;overflow-wrap:anywhere}.mailmeta{color:var(--muted);margin-bottom:20px}.mailbody{overflow-wrap:anywhere;white-space:pre-wrap}.mailbody iframe{max-width:100%}
-.modal{position:fixed;inset:0;background:#0007;display:none;place-items:center;z-index:10;padding:18px}.modal.show{display:grid}.dialog{width:min(650px,100%);max-height:90vh;overflow:auto;background:var(--surface);border-radius:16px;padding:22px}.dialoghead{display:flex;align-items:center;justify-content:space-between}.dialoghead h2{margin:0}.footerrow{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-@media(max-width:720px){.sidebar{width:72px;padding:12px 5px}.compose{font-size:0;text-align:center;padding:12px}.compose:before{content:"＋";font-size:22px}.nav{justify-content:center;padding:12px 5px;font-size:0}.nav span{font-size:18px}.main{padding:12px}.sender{width:95px}.date{display:none}.top{padding:0 10px;gap:8px}.logo{font-size:17px}}
+.nav{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:0 22px 22px 0;margin:3px 0;color:var(--text);cursor:pointer}
+.nav.active{background:var(--soft);font-weight:700;color:var(--accent)}
+.nav:hover{background:var(--soft)}
+.main{flex:1;min-width:0;padding:20px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.heading{font-size:20px;font-weight:700;margin-right:auto}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.message{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+.message:last-child{border-bottom:0}
+.message:hover{background:var(--soft)}
+.message.unread .sender,.message.unread .subject{font-weight:700}
+.sender{width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.subject{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.date{color:var(--muted);white-space:nowrap;font-size:12px}
+.status{padding:16px;color:var(--muted)}
+.error{color:var(--danger);white-space:pre-wrap}
+.loginwrap{min-height:100vh;display:grid;place-items:center;padding:20px}
+.login{width:min(440px,100%);background:var(--surface);padding:28px;border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 35px #00000010}
+.login h1{margin:0 0 6px;color:var(--accent)}
+.login p{color:var(--muted);margin:0 0 22px}
+.field{display:grid;gap:6px;margin:13px 0}
+.field label{font-weight:600}
+.field input,.field select,.field textarea{padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);width:100%;outline-color:var(--accent)}
+.login .btn{width:100%;padding:12px}
+.small{font-size:12px;color:var(--muted)}
+.mailview{padding:24px}
+.mailview h2{margin:0 0 12px;overflow-wrap:anywhere}
+.mailmeta{color:var(--muted);margin-bottom:20px}
+.mailbody{overflow-wrap:anywhere;white-space:pre-wrap}
+.mailbody iframe{max-width:100%}
+.modal{position:fixed;inset:0;background:#0007;display:none;place-items:center;z-index:10;padding:18px}
+.modal.show{display:grid}
+.dialog{width:min(650px,100%);max-height:90vh;overflow:auto;background:var(--surface);border-radius:16px;padding:22px}
+.dialoghead{display:flex;align-items:center;justify-content:space-between}
+.dialoghead h2{margin:0}
+.footerrow{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+@media(max-width:720px){
+.sidebar{width:72px;padding:12px 5px}
+.compose{font-size:0;text-align:center;padding:12px}
+.compose:before{content:"＋";font-size:22px}
+.nav{justify-content:center;padding:12px 5px;font-size:0}
+.nav span{font-size:18px}
+.main{padding:12px}
+.sender{width:95px}
+.date{display:none}
+.top{padding:0 10px;gap:8px}
+.logo{font-size:17px}
+}
 </style>
 </head>
 <body>
+
 <div id="app"></div>
 
 <div class="modal" id="composeModal">
 <div class="dialog">
-<div class="dialoghead"><h2>Compose</h2><button class="iconbtn" onclick="closeCompose()">✕</button></div>
+<div class="dialoghead">
+<h2>Compose</h2>
+<button class="iconbtn" onclick="closeCompose()">✕</button>
+</div>
 <form id="composeForm">
 <div class="field"><label>To</label><input id="to" type="email" required placeholder="recipient@example.com"></div>
 <div class="field"><label>Subject</label><input id="subject" placeholder="Subject"></div>
 <div class="field"><label>Message</label><textarea id="bodyText" rows="10" placeholder="Write your message…"></textarea></div>
-<div class="footerrow"><button type="button" class="btn" onclick="closeCompose()">Cancel</button><button class="btn primary" type="submit">Send</button></div>
+<div class="footerrow">
+<button type="button" class="btn" onclick="closeCompose()">Cancel</button>
+<button class="btn primary" type="submit">Send</button>
+</div>
 </form>
 </div>
 </div>
 
 <script src="/providers.js"></script>
 <script>
-const $=id=>document.getElementById(id);
-let sessionId=null,currentFolder='INBOX',currentPage=1,currentMessages=[];
-let account={email:'',password:'',smtpHost:'',smtpPort:465,smtpSecure:true};
-let folders=[];
+const $ = id => document.getElementById(id);
 
-function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function theme(){document.documentElement.dataset.theme=localStorage.getItem('dankeTheme')||'light';}
-function toggleTheme(){let t=document.documentElement.dataset.theme==='dark'?'light':'dark';localStorage.setItem('dankeTheme',t);theme();}
+let sessionId = null;
+let currentFolder = 'INBOX';
+let currentPage = 1;
+let currentMessages = [];
+let account = {
+ email:'',
+ password:'',
+ smtpHost:'',
+ smtpPort:465,
+ smtpSecure:true
+};
+let folders = [];
+
+function esc(s=''){
+ return String(s).replace(/[&<>"']/g,c=>({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;',
+  "'":'&#39;'
+ }[c]));
+}
+
+function theme(){
+ document.documentElement.dataset.theme =
+ localStorage.getItem('dankeTheme') || 'light';
+}
+
+function toggleTheme(){
+ let t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+ localStorage.setItem('dankeTheme',t);
+ theme();
+}
+
 theme();
 
 function loginScreen(error=''){
-$('app').innerHTML=`<div class="loginwrap"><div class="login"><h1>Danke Mail</h1><p>Sign in to your email account</p>
-<form id="loginForm">
-<div class="field"><label>Email address / Username</label><input id="email" autocomplete="username" required placeholder="name@example.jp"></div>
-<div class="field"><label>Provider</label><select id="providerSelect"><option value="manual">Other / Manual</option></select><div class="small" id="providerStatus">Auto Detect berdasarkan domain email</div></div>
-<div class="field"><label>Email password</label><input id="password" type="password" autocomplete="current-password" required></div>
-<div class="field"><label>IMAP host</label><input id="imapHost" required placeholder="imap.example.jp"></div>
-<div class="field"><label>IMAP port</label><input id="imapPort" type="number" value="993" required></div>
-<div class="field"><label>Connection</label><select id="imapSecure"><option value="true">SSL/TLS (usually port 993)</option><option value="false">STARTTLS / plain (usually port 143)</option></select></div>
-<div class="field"><label>SMTP host (for sending)</label><input id="smtpHost" placeholder="smtp.example.jp"></div>
-<div class="field"><label>SMTP port</label><input id="smtpPort" type="number" value="465"></div>
-<div class="field"><label>SMTP connection</label><select id="smtpSecure"><option value="true">SSL/TLS</option><option value="false">STARTTLS</option></select></div>
-<button class="btn primary" id="loginBtn">Sign in</button><div class="status error" id="loginError">${esc(error)}</div>
-</form><p class="small">Use the IMAP/SMTP settings supplied by your email provider.</p></div></div>`;
-$('loginForm').addEventListener('submit',doLogin);
-setupProviderDetection();
+ $('app').innerHTML = `
+ <div class="loginwrap">
+ <div class="login">
+ <h1>Danke Mail</h1>
+ <p>Sign in to your email account</p>
+
+ <form id="loginForm">
+ <div class="field">
+ <label>Email address / Username</label>
+ <input id="email" autocomplete="username" required placeholder="name@example.jp">
+ </div>
+
+ <div class="field">
+ <label>Provider</label>
+ <select id="providerSelect">
+ <option value="manual">Other / Manual</option>
+ </select>
+ <div class="small" id="providerStatus">Auto Detect berdasarkan domain email</div>
+ </div>
+
+ <div class="field">
+ <label>Email password</label>
+ <input id="password" type="password" autocomplete="current-password" required>
+ </div>
+
+ <div class="field">
+ <label>IMAP host</label>
+ <input id="imapHost" required placeholder="imap.example.jp">
+ </div>
+
+ <div class="field">
+ <label>IMAP port</label>
+ <input id="imapPort" type="number" value="993" required>
+ </div>
+
+ <div class="field">
+ <label>Connection</label>
+ <select id="imapSecure">
+ <option value="true">SSL/TLS (usually port 993)</option>
+ <option value="false">STARTTLS / plain (usually port 143)</option>
+ </select>
+ </div>
+
+ <div class="field">
+ <label>SMTP host (for sending)</label>
+ <input id="smtpHost" placeholder="smtp.example.jp">
+ </div>
+
+ <div class="field">
+ <label>SMTP port</label>
+ <input id="smtpPort" type="number" value="465">
+ </div>
+
+ <div class="field">
+ <label>SMTP connection</label>
+ <select id="smtpSecure">
+ <option value="true">SSL/TLS</option>
+ <option value="false">STARTTLS</option>
+ </select>
+ </div>
+
+ <button class="btn primary" id="loginBtn">Sign in</button>
+ <div class="status error" id="loginError">${esc(error)}</div>
+ </form>
+
+ <p class="small">Use the IMAP/SMTP settings supplied by your email provider.</p>
+ </div>
+ </div>`;
+
+ $('loginForm').addEventListener('submit',doLogin);
+ setupProviderDetection();
 }
 
 function setupProviderDetection(){
- const select=$('providerSelect'),email=$('email');
- if(!select||!email||!window.PROVIDERS)return;
- select.innerHTML=window.PROVIDERS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+ const select = $('providerSelect');
+ const email = $('email');
+
+ if(!select || !email || !window.PROVIDERS) return;
+
+ select.innerHTML = window.PROVIDERS.map(p =>
+ `<option value="${esc(p.id)}">${esc(p.name)}</option>`
+ ).join('');
+
  function applyProvider(p){
-  if(!p)return;
-  select.value=p.id;
-  $('imapHost').value=p.imapHost||'';
-  $('imapPort').value=p.imapPort||993;
-  $('imapSecure').value=String(p.imapSecure!==false);
-  $('smtpHost').value=p.smtpHost||'';
-  $('smtpPort').value=p.smtpPort||465;
-  $('smtpSecure').value=String(p.smtpSecure!==false);
-  $('providerStatus').textContent=p.id==='manual'?'Provider tidak terdeteksi. Isi server manual.':'Provider terdeteksi: '+p.name;
+  if(!p) return;
+
+  select.value = p.id;
+  $('imapHost').value = p.imapHost || '';
+  $('imapPort').value = p.imapPort || 993;
+  $('imapSecure').value = String(p.imapSecure !== false);
+  $('smtpHost').value = p.smtpHost || '';
+  $('smtpPort').value = p.smtpPort || 465;
+  $('smtpSecure').value = String(p.smtpSecure !== false);
+
+  $('providerStatus').textContent =
+   p.id === 'manual'
+   ? 'Provider tidak terdeteksi. Isi server manual.'
+   : 'Provider terdeteksi: ' + p.name;
  }
- email.addEventListener('input',()=>applyProvider(window.detectProvider?window.detectProvider(email.value):window.PROVIDERS.find(p=>p.id==='manual')));
- select.addEventListener('change',()=>applyProvider(window.PROVIDERS.find(p=>p.id===select.value)));
- applyProvider(window.detectProvider?window.detectProvider(email.value):window.PROVIDERS.find(p=>p.id==='manual'));
+
+ email.addEventListener('input',()=>{
+  const p = window.detectProvider
+   ? window.detectProvider(email.value)
+   : window.PROVIDERS.find(p=>p.id==='manual');
+
+  applyProvider(p);
+ });
+
+ select.addEventListener('change',()=>{
+  applyProvider(window.PROVIDERS.find(p=>p.id===select.value));
+ });
+
+ applyProvider(
+  window.detectProvider
+  ? window.detectProvider(email.value)
+  : window.PROVIDERS.find(p=>p.id==='manual')
+ );
 }
 
 async function api(path,options={}){
-let headers={...(options.headers||{})};
-if(sessionId)headers['x-session-id']=sessionId;
-if(options.body)headers['Content-Type']='application/json';
-let r=await fetch(path,{...options,headers});
-let data;try{data=await r.json()}catch{data={}};
-if(!r.ok)throw new Error(data.details?.message||data.error||`HTTP ${r.status}`);
-return data;
+ let headers = {...(options.headers || {})};
+
+ if(sessionId) headers['x-session-id'] = sessionId;
+ if(options.body) headers['Content-Type'] = 'application/json';
+
+ let r = await fetch(path,{...options,headers});
+ let data;
+
+ try{
+  data = await r.json();
+ }catch{
+  data = {};
+ }
+
+ if(!r.ok){
+  throw new Error(data.details?.message || data.error || `HTTP ${r.status}`);
+ }
+
+ return data;
 }
 
 async function doLogin(e){
-e.preventDefault();
-let btn=$('loginBtn');btn.disabled=true;btn.textContent='Connecting…';$('loginError').textContent='';
-const email=$('email').value.trim(),password=$('password').value,host=$('imapHost').value.trim();
-account={email,password,smtpHost:$('smtpHost').value.trim(),smtpPort:Number($('smtpPort').value||465),smtpSecure:$('smtpSecure').value==='true'};
-try{
-let data=await api('/api/login',{method:'POST',body:JSON.stringify({host,port:Number($('imapPort').value||993),secure:$('imapSecure').value==='true',username:email,password})});
-sessionId=data.sessionId;localStorage.setItem('dankeEmail',email);await loadFolders();await showMail();
-}catch(err){$('loginError').textContent=err.message;btn.disabled=false;btn.textContent='Sign in';}
+ e.preventDefault();
+
+ const btn = $('loginBtn');
+ btn.disabled = true;
+ btn.textContent = 'Connecting…';
+ $('loginError').textContent = '';
+
+ const email = $('email').value.trim();
+ const password = $('password').value;
+ const host = $('imapHost').value.trim();
+
+ account = {
+  email,
+  password,
+  smtpHost:$('smtpHost').value.trim(),
+  smtpPort:Number($('smtpPort').value || 465),
+  smtpSecure:$('smtpSecure').value === 'true'
+ };
+
+ try{
+  const data = await api('/api/login',{
+   method:'POST',
+   body:JSON.stringify({
+    host,
+    port:Number($('imapPort').value || 993),
+    secure:$('imapSecure').value === 'true',
+    username:email,
+    password
+   })
+  });
+
+  sessionId = data.sessionId;
+  localStorage.setItem('dankeEmail',email);
+
+  // PENTING: Buat tampilan utama sebelum memuat folder dan email.
+  shell();
+
+  await loadFolders();
+  await showMail();
+
+ }catch(err){
+  $('loginError').textContent = err.message;
+  btn.disabled = false;
+  btn.textContent = 'Sign in';
+ }
 }
 
 function shell(){
-$('app').innerHTML=`<header class="top"><div class="logo">✉ Danke Mail</div><div class="search"><span style="padding:10px">⌕</span><input id="searchInput" placeholder="Search mail (subject / sender)"><button class="iconbtn" onclick="searchMail()">Search</button></div><button class="iconbtn" onclick="toggleTheme()" title="Theme">◐</button><button class="iconbtn" onclick="logout()">Sign out</button></header>
-<div class="layout"><aside class="sidebar"><button class="compose" onclick="openCompose()">✎ Compose</button><div id="folderNav"></div></aside><main class="main"><div class="toolbar"><div class="heading" id="pageTitle">Inbox</div><button class="btn" onclick="showMail()">↻ Refresh</button><button class="btn" onclick="changePage(-1)">←</button><span id="pageLabel">Page 1</span><button class="btn" onclick="changePage(1)">→</button></div><div class="panel" id="mailPanel"><div class="status">Loading…</div></div></main></div>`;
+ $('app').innerHTML = `
+ <header class="top">
+ <div class="logo">✉ Danke Mail</div>
+
+ <div class="search">
+ <span style="padding:10px">⌕</span>
+ <input id="searchInput" placeholder="Search mail (subject / sender)">
+ <button class="iconbtn" onclick="searchMail()">Search</button>
+ </div>
+
+ <button class="iconbtn" onclick="toggleTheme()" title="Theme">◐</button>
+ <button class="iconbtn" onclick="logout()">Sign out</button>
+ </header>
+
+ <div class="layout">
+ <aside class="sidebar">
+ <button class="compose" onclick="openCompose()">✎ Compose</button>
+ <div id="folderNav"></div>
+ </aside>
+
+ <main class="main">
+ <div class="toolbar">
+ <div class="heading" id="pageTitle">Inbox</div>
+ <button class="btn" onclick="showMail()">↻ Refresh</button>
+ <button class="btn" onclick="changePage(-1)">←</button>
+ <span id="pageLabel">Page 1</span>
+ <button class="btn" onclick="changePage(1)">→</button>
+ </div>
+
+ <div class="panel" id="mailPanel">
+ <div class="status">Loading…</div>
+ </div>
+ </main>
+ </div>`;
 }
 
 function folderLabel(f){
-let s=(f.specialUse||f.name||f.path||'').toLowerCase();
-if(s.includes('inbox'))return 'Inbox';
-if(s.includes('sent'))return 'Sent';
-if(s.includes('trash')||s.includes('deleted'))return 'Trash';
-if(s.includes('draft'))return 'Drafts';
-if(s.includes('junk')||s.includes('spam'))return 'Spam';
-if(s.includes('archive'))return 'Archive';
-return f.name||f.path;
+ let s = (f.specialUse || f.name || f.path || '').toLowerCase();
+
+ if(s.includes('inbox')) return 'Inbox';
+ if(s.includes('sent')) return 'Sent';
+ if(s.includes('trash') || s.includes('deleted')) return 'Trash';
+ if(s.includes('draft')) return 'Drafts';
+ if(s.includes('junk') || s.includes('spam')) return 'Spam';
+ if(s.includes('archive')) return 'Archive';
+
+ return f.name || f.path;
 }
 
 async function loadFolders(){
-let data=await api('/api/folders');folders=data;
-if(!folders.some(f=>(f.path||f.name).toLowerCase()==='inbox'))folders.unshift({name:'INBOX',path:'INBOX',specialUse:'\\Inbox'});
+ let data = await api('/api/folders');
+ folders = data;
+
+ if(!folders.some(f=>(f.path || f.name).toLowerCase()==='inbox')){
+  folders.unshift({
+   name:'INBOX',
+   path:'INBOX',
+   specialUse:'\\Inbox'
+  });
+ }
 }
 
 function renderFolders(){
-$('folderNav').innerHTML=folders.map(f=>{
-let path=f.path||f.name;
-return `<div class="nav ${path===currentFolder?'active':''}" onclick="selectFolder('${esc(path).replace(/'/g,"\\'")}')"><span>${folderIcon(f)}</span><span>${esc(folderLabel(f))}</span></div>`;
-}).join('');
+ const nav = $('folderNav');
+ if(!nav) return;
+
+ nav.innerHTML = folders.map(f=>{
+  let path = f.path || f.name;
+
+  return `
+  <div class="nav ${path===currentFolder?'active':''}"
+  onclick="selectFolder('${esc(path).replace(/'/g,"\\'")}')">
+  <span>${folderIcon(f)}</span>
+  <span>${esc(folderLabel(f))}</span>
+  </div>`;
+ }).join('');
 }
 
 function folderIcon(f){
-let n=folderLabel(f).toLowerCase();
-return n==='inbox'?'▣':n==='sent'?'➤':n==='drafts'?'▤':n==='trash'?'♲':n==='spam'?'⚠':'▰';
+ let n = folderLabel(f).toLowerCase();
+
+ return n==='inbox'?'▣':
+ n==='sent'?'➤':
+ n==='drafts'?'▤':
+ n==='trash'?'♲':
+ n==='spam'?'⚠':'▰';
 }
 
 async function showMail(){
-if(!sessionId)return;
-renderFolders();
-$('pageTitle').textContent=folderLabel(folders.find(f=>(f.path||f.name)===currentFolder)||{name:currentFolder});
-$('mailPanel').innerHTML='<div class="status">Loading messages…</div>';
-try{
-let data=await api(`/api/inbox?folder=${encodeURIComponent(currentFolder)}&page=${currentPage}&limit=25`);
-currentMessages=data.messages||[];$('pageLabel').textContent=`Page ${currentPage}`;
-$('mailPanel').innerHTML=currentMessages.length?currentMessages.map(m=>`<div class="message ${(m.flags||[]).includes('\\Seen')?'':'unread'}" onclick="openMessage(${m.uid})"><div class="sender">${esc(m.from||'(Unknown sender)')}</div><div class="subject">${esc(m.subject||'(No subject)')}</div><div class="date">${m.date?new Date(m.date).toLocaleDateString():''}</div></div>`).join(''):'<div class="status">No messages in this folder.</div>';
-}catch(err){$('mailPanel').innerHTML=`<div class="status error">${esc(err.message)}</div>`;}
+ if(!sessionId) return;
+
+ const panel = $('mailPanel');
+ if(!panel) return;
+
+ renderFolders();
+
+ const title = $('pageTitle');
+ if(title){
+  title.textContent = folderLabel(
+   folders.find(f=>(f.path || f.name)===currentFolder) || {name:currentFolder}
+  );
+ }
+
+ panel.innerHTML = '<div class="status">Loading messages…</div>';
+
+ try{
+  let data = await api(
+   `/api/inbox?folder=${encodeURIComponent(currentFolder)}&page=${currentPage}&limit=25`
+  );
+
+  currentMessages = data.messages || [];
+
+  const pageLabel = $('pageLabel');
+  if(pageLabel) pageLabel.textContent = `Page ${currentPage}`;
+
+  panel.innerHTML = currentMessages.length
+   ? currentMessages.map(m=>`
+    <div class="message ${(m.flags||[]).includes('\\Seen')?'':'unread'}"
+    onclick="openMessage(${m.uid})">
+    <div class="sender">${esc(m.from || '(Unknown sender)')}</div>
+    <div class="subject">${esc(m.subject || '(No subject)')}</div>
+    <div class="date">${m.date ? new Date(m.date).toLocaleDateString() : ''}</div>
+    </div>
+   `).join('')
+   : '<div class="status">No messages in this folder.</div>';
+
+ }catch(err){
+  panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
+ }
 }
 
-async function selectFolder(path){currentFolder=path;currentPage=1;await showMail();}
-async function changePage(d){currentPage=Math.max(1,currentPage+d);await showMail();}
+async function selectFolder(path){
+ currentFolder = path;
+ currentPage = 1;
+ await showMail();
+}
+
+async function changePage(d){
+ currentPage = Math.max(1,currentPage+d);
+ await showMail();
+}
 
 async function openMessage(uid){
-$('mailPanel').innerHTML='<div class="status">Opening message…</div>';
-try{
-let m=await api(`/api/message/${uid}?folder=${encodeURIComponent(currentFolder)}`);
-$('mailPanel').innerHTML=`<div class="mailview"><button class="btn" onclick="showMail()">← Back</button><h2>${esc(m.subject)}</h2><div class="mailmeta">From: ${esc(m.from)}<br>To: ${esc(m.to)}<br>${esc(m.date?new Date(m.date).toLocaleString():'')}</div><hr><div class="mailbody">${m.html?sanitizeHtml(m.html):esc(m.text)}</div></div>`;
-}catch(err){$('mailPanel').innerHTML=`<div class="status error">${esc(err.message)}</div>`;}
+ const panel = $('mailPanel');
+ if(!panel) return;
+
+ panel.innerHTML = '<div class="status">Opening message…</div>';
+
+ try{
+  let m = await api(
+   `/api/message/${uid}?folder=${encodeURIComponent(currentFolder)}`
+  );
+
+  panel.innerHTML = `
+  <div class="mailview">
+  <button class="btn" onclick="showMail()">← Back</button>
+  <h2>${esc(m.subject)}</h2>
+  <div class="mailmeta">
+  From: ${esc(m.from)}<br>
+  To: ${esc(m.to)}<br>
+  ${esc(m.date ? new Date(m.date).toLocaleString() : '')}
+  </div>
+  <hr>
+  <div class="mailbody">${m.html ? sanitizeHtml(m.html) : esc(m.text)}</div>
+  </div>`;
+
+ }catch(err){
+  panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
+ }
 }
 
 function sanitizeHtml(html){
-return html.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'').replace(/javascript:/gi,'');
+ return html
+ .replace(/<script[\s\S]*?<\/script>/gi,'')
+ .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+ .replace(/javascript:/gi,'');
 }
 
 async function searchMail(){
-let q=$('searchInput').value.trim().toLowerCase();if(!q)return showMail();
-$('mailPanel').innerHTML='<div class="status">Searching current page…</div>';
-let found=currentMessages.filter(m=>(m.subject+' '+m.from).toLowerCase().includes(q));
-$('mailPanel').innerHTML=found.length?found.map(m=>`<div class="message" onclick="openMessage(${m.uid})"><div class="sender">${esc(m.from)}</div><div class="subject">${esc(m.subject)}</div></div>`).join(''):'<div class="status">No matches on this page. Use another page or folder.</div>';
+ const input = $('searchInput');
+ const panel = $('mailPanel');
+
+ if(!input || !panel) return;
+
+ let q = input.value.trim().toLowerCase();
+
+ if(!q) return showMail();
+
+ panel.innerHTML = '<div class="status">Searching current page…</div>';
+
+ let found = currentMessages.filter(m=>
+  ((m.subject || '')+' '+(m.from || '')).toLowerCase().includes(q)
+ );
+
+ panel.innerHTML = found.length
+ ? found.map(m=>`
+  <div class="message" onclick="openMessage(${m.uid})">
+  <div class="sender">${esc(m.from)}</div>
+  <div class="subject">${esc(m.subject)}</div>
+  </div>
+ `).join('')
+ : '<div class="status">No matches on this page. Use another page or folder.</div>';
 }
 
-function openCompose(){$('composeModal').classList.add('show');}
-function closeCompose(){$('composeModal').classList.remove('show');}
+function openCompose(){
+ const modal = $('composeModal');
+ if(modal) modal.classList.add('show');
+}
 
-$('composeForm').addEventListener('submit',async e=>{
-e.preventDefault();let btn=e.submitter;btn.disabled=true;btn.textContent='Sending…';
-try{
-await api('/api/send',{method:'POST',body:JSON.stringify({to:$('to').value,subject:$('subject').value,text:$('bodyText').value,smtpHost:account.smtpHost,smtpPort:account.smtpPort,smtpSecure:account.smtpSecure,password:account.password})});
-closeCompose();alert('Message sent.');
-}catch(err){alert('Send failed: '+err.message);}
-finally{btn.disabled=false;btn.textContent='Send';}
-});
+function closeCompose(){
+ const modal = $('composeModal');
+ if(modal) modal.classList.remove('show');
+}
+
+const composeForm = $('composeForm');
+
+if(composeForm){
+ composeForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+
+  let btn = e.submitter;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try{
+   await api('/api/send',{
+    method:'POST',
+    body:JSON.stringify({
+     to:$('to').value,
+     subject:$('subject').value,
+     text:$('bodyText').value,
+     smtpHost:account.smtpHost,
+     smtpPort:account.smtpPort,
+     smtpSecure:account.smtpSecure,
+     password:account.password
+    })
+   });
+
+   closeCompose();
+   alert('Message sent.');
+
+  }catch(err){
+   alert('Send failed: '+err.message);
+
+  }finally{
+   btn.disabled = false;
+   btn.textContent = 'Send';
+  }
+ });
+}
 
 async function logout(){
-try{await api('/api/logout',{method:'POST',body:JSON.stringify({sessionId})});}catch{}
-sessionId=null;currentFolder='INBOX';loginScreen();
+ try{
+  await api('/api/logout',{
+   method:'POST',
+   body:JSON.stringify({sessionId})
+  });
+ }catch{}
+
+ sessionId = null;
+ currentFolder = 'INBOX';
+ currentPage = 1;
+ currentMessages = [];
+ folders = [];
+
+ loginScreen();
 }
 
 loginScreen();
