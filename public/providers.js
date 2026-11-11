@@ -40,37 +40,35 @@ window.PROVIDERS = [
     id: 'jcom',
     name: 'J:COM / ZAQ',
     domains: ['jcom.zaq.ne.jp'],
-    imapHost: '',
+    imapHost: 'imap.jcom.zaq.ne.jp',
     imapPort: 993,
     imapSecure: true,
-    smtpHost: '',
+    smtpHost: 'smtpa.jcom.zaq.ne.jp',
     smtpPort: 465,
-    smtpSecure: true,
-    notes: 'IMAP and SMTP server settings need verification.'
+    smtpSecure: true
   },
   {
     id: 'dream',
     name: 'Dream.jp',
     domains: ['dream.jp'],
-    imapHost: '',
+    imapHost: 'imap.cm.dream.jp',
     imapPort: 993,
     imapSecure: true,
-    smtpHost: '',
+    smtpHost: 'vsmtp.cm.dream.jp',
     smtpPort: 465,
-    smtpSecure: true,
-    notes: 'IMAP and SMTP server settings need verification.'
+    smtpSecure: true
   },
   {
     id: 'mb-point',
     name: 'MB Point',
     domains: ['mb.point.ne.jp'],
-    imapHost: '',
+    imapHost: 'imap2.cm.dream.jp',
     imapPort: 993,
     imapSecure: true,
-    smtpHost: '',
+    smtpHost: 'vsmtp2.cm.dream.jp',
     smtpPort: 465,
     smtpSecure: true,
-    notes: 'IMAP and SMTP server settings need verification.'
+    notes: 'Server mapping needs confirmation with MB Point.'
   },
   {
     id: 'biglobe',
