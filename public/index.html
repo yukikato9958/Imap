@@ -11,22 +11,23 @@
 
 body{
   font:15px system-ui;
-  background:#f3f6fa;
-  color:#182235;
+  background:#f6f8fc;
+  color:#202124;
   margin:0
 }
 
-.wrap{max-width:1050px;margin:auto;padding:16px}
-h1{color:#163e72;margin:4px 0}
+.wrap{max-width:1250px;margin:auto;padding:18px}
+h1{color:#174ea6;margin:4px 0}
+h2,h3{color:#202124}
 .muted{color:#68778c;font-size:13px}
 
 .card{
   background:#fff;
-  border:1px solid #dce3ed;
-  border-radius:15px;
+  border:1px solid #e1e5eb;
+  border-radius:14px;
   padding:16px;
   margin:14px 0;
-  box-shadow:0 4px 16px #172b4d08
+  box-shadow:0 2px 8px #172b4d08
 }
 
 label{
@@ -46,17 +47,20 @@ input,select,textarea{
 }
 
 button{
-  padding:11px 14px;
+  padding:10px 15px;
   border:0;
   border-radius:9px;
   background:#1766bd;
   color:#fff;
-  font-weight:700;
+  font-weight:650;
   margin:7px 5px 0 0;
   cursor:pointer
 }
 
-button.secondary{background:#e8eef7;color:#183b66}
+button.secondary{
+  background:#e8eef7;
+  color:#183b66
+}
 
 .row{
   display:grid;
@@ -66,71 +70,148 @@ button.secondary{background:#e8eef7;color:#183b66}
 
 .hide{display:none!important}
 
-/* Horizontal folder menu */
-.layout{display:block}
-
-.folders{
-  display:flex;
-  flex-direction:row;
-  align-items:center;
-  gap:7px;
-  width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
-  white-space:nowrap;
-  padding:5px 0 12px;
-  margin-bottom:12px;
-  border-bottom:1px solid #e5eaf1;
-  scrollbar-width:thin
-}
-
-.folders button{
-  display:inline-flex;
-  flex:0 0 auto;
-  width:auto;
-  text-align:center;
-  white-space:nowrap;
-  margin:0;
-  background:#f0f4fa;
-  color:#1d3557;
-  padding:10px 16px
-}
-
-.folders button.active{
-  background:#1766bd;
-  color:white
-}
-
-.msg{
-  padding:13px;
-  border-bottom:1px solid #e5eaf1;
-  cursor:pointer
-}
-
-.msg:hover{background:#f6f9fd}
-.msg b{display:block}
-.msg small{color:#68778c}
-
-.reader{
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  line-height:1.6
-}
-
 .topbar{
   display:flex;
   flex-wrap:wrap;
   align-items:center;
   justify-content:space-between;
-  gap:8px
+  gap:8px;
+  padding-bottom:12px;
+  border-bottom:1px solid #e5eaf1
 }
 
 .status{font-size:13px;color:#b42318}
 
-@media(max-width:650px){
-  .row{grid-template-columns:1fr}
+/* Gmail-style layout */
+.layout{
+  display:grid;
+  grid-template-columns:205px minmax(0,1fr);
+  gap:18px;
+  margin-top:15px
+}
+
+.folders{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  padding-right:8px
+}
+
+.folders button{
+  display:flex;
+  align-items:center;
+  width:100%;
+  text-align:left;
+  margin:0;
+  padding:11px 17px;
+  border-radius:0 22px 22px 0;
+  background:transparent;
+  color:#3c4043;
+  font-size:14px
+}
+
+.folders button:hover{
+  background:#edf2fa
+}
+
+.folders button.active{
+  background:#d3e3fd;
+  color:#174ea6;
+  font-weight:750
+}
+
+main{min-width:0}
+
+#listPane h3{margin:5px 0 12px}
+
+.search-bar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin:12px 0 18px
+}
+
+.search-bar input{
+  flex:1;
+  min-width:0;
+  border:0;
+  border-radius:25px;
+  background:#f1f3f4;
+  padding:13px 18px
+}
+
+.search-bar button{
+  margin:0;
+  white-space:nowrap
+}
+
+.msg{
+  padding:13px 12px;
+  border-bottom:1px solid #edf0f3;
+  cursor:pointer;
+  display:block
+}
+
+.msg:hover{background:#f3f6fc}
+
+.msg b{
+  display:block;
+  font-size:14px;
+  margin-bottom:4px
+}
+
+.msg small{
+  color:#68778c;
+  font-size:12px
+}
+
+.reader{
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  line-height:1.7;
+  padding:12px 0
+}
+
+#readMeta{
+  border-bottom:1px solid #e5eaf1;
+  padding-bottom:12px
+}
+
+.compose-card{
+  margin-top:18px;
+  border:1px solid #dce3ed;
+  border-radius:12px;
+  padding:15px
+}
+
+@media(max-width:700px){
   .wrap{padding:10px}
-  .folders button{padding:10px 13px}
+
+  .layout{
+    grid-template-columns:1fr;
+    gap:10px
+  }
+
+  .folders{
+    flex-direction:row;
+    overflow-x:auto;
+    white-space:nowrap;
+    padding:4px 0 12px;
+    border-bottom:1px solid #e5eaf1
+  }
+
+  .folders button{
+    width:auto;
+    flex:0 0 auto;
+    border-radius:22px;
+    padding:10px 15px
+  }
+
+  .row{grid-template-columns:1fr}
+
+  .search-bar{flex-wrap:wrap}
+
+  .search-bar input{flex-basis:100%}
 }
 </style>
 </head>
@@ -148,7 +229,7 @@ button.secondary{background:#e8eef7;color:#183b66}
 <label>Email Address</label>
 <input id="email" type="email" placeholder="name@provider.jp">
 
-<label>Email Provider (Auto-detected)</label>
+<label>Email Provider</label>
 <select id="provider">
 <option value="">Loading providers...</option>
 </select>
@@ -160,7 +241,6 @@ button.secondary{background:#e8eef7;color:#183b66}
 <label>IMAP Host</label>
 <input id="imapHost" placeholder="imap.example.jp">
 </div>
-
 <div>
 <label>IMAP Port</label>
 <input id="imapPort" value="993" type="number">
@@ -177,7 +257,6 @@ button.secondary{background:#e8eef7;color:#183b66}
 <label>SMTP Host</label>
 <input id="smtpHost" placeholder="smtp.example.jp">
 </div>
-
 <div>
 <label>SMTP Port</label>
 <input id="smtpPort" value="465" type="number">
@@ -223,8 +302,21 @@ IMAP/SMTP access must be enabled by your email provider.
 <main>
 
 <div id="listPane">
+
 <h3 id="folderTitle">Inbox</h3>
+
+<div class="search-bar">
+<input
+  id="searchInput"
+  type="search"
+  placeholder="Search emails..."
+>
+<button id="searchBtn">Search</button>
+<button class="secondary" id="clearSearch">Clear</button>
+</div>
+
 <div id="inbox"></div>
+
 </div>
 
 <div id="readerPane" class="hide">
@@ -239,18 +331,18 @@ IMAP/SMTP access must be enabled by your email provider.
 
 </div>
 
-<div id="compose" class="card hide">
+<div id="compose" class="compose-card hide">
 
 <h3>Compose Email</h3>
 
 <label>To</label>
-<input id="to" type="email">
+<input id="to" type="email" placeholder="recipient@example.com">
 
 <label>Subject</label>
-<input id="subject">
+<input id="subject" placeholder="Enter subject">
 
 <label>Message</label>
-<textarea id="body" rows="6"></textarea>
+<textarea id="body" rows="7" placeholder="Write your message..."></textarea>
 
 <button id="send">Send Email</button>
 <span id="sendStatus" class="muted"></span>
@@ -272,6 +364,7 @@ const $ = id => document.getElementById(id);
 let token = '';
 let currentFolder = 'INBOX';
 let providerList = [];
+let currentMessages = [];
 
 function applyProvider(p) {
   if (!p) return;
@@ -422,7 +515,6 @@ async function loadFolders() {
       b.onclick = () => {
         currentFolder = f.path;
         loadFolders();
-        loadInbox();
       };
 
       $('folders').append(b);
@@ -435,6 +527,14 @@ async function loadFolders() {
         || 'INBOX';
     }
 
+    // Update active folder after selecting the default folder
+    [...$('folders').children].forEach((button, index) => {
+      button.classList.toggle(
+        'active',
+        fs[index]?.path === currentFolder
+      );
+    });
+
     await loadInbox();
 
   } catch (e) {
@@ -442,10 +542,39 @@ async function loadFolders() {
   }
 }
 
+function renderMessages(messages) {
+  $('inbox').innerHTML = '';
+
+  if (!messages.length) {
+    $('inbox').textContent = 'No messages found.';
+    return;
+  }
+
+  messages.forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'msg';
+
+    const b = document.createElement('b');
+    b.textContent = m.subject || '(No subject)';
+
+    const small = document.createElement('small');
+    small.textContent =
+      'From: ' + (m.from || 'Unknown sender') + ' · ' +
+      (m.date ? new Date(m.date).toLocaleString() : '');
+
+    d.append(b, small);
+    d.onclick = () => readMail(m.uid);
+
+    $('inbox').append(d);
+  });
+}
+
 async function loadInbox() {
   $('listPane').classList.remove('hide');
   $('readerPane').classList.add('hide');
   $('compose').classList.add('hide');
+
+  $('searchInput').value = '';
 
   $('folderTitle').textContent =
     folderLabel({path: currentFolder, name: currentFolder});
@@ -457,38 +586,58 @@ async function loadInbox() {
       '/api/inbox?folder=' + encodeURIComponent(currentFolder)
     );
 
+    currentMessages = j.messages || [];
+
     $('folderTitle').textContent =
       folderLabel({path: currentFolder, name: currentFolder}) +
-      ' (' + j.messages.length + ')';
+      ' (' + currentMessages.length + ')';
 
-    $('inbox').innerHTML = '';
-
-    if (!j.messages.length) {
-      $('inbox').textContent = 'This folder has no messages.';
-      return;
-    }
-
-    j.messages.forEach(m => {
-      const d = document.createElement('div');
-      d.className = 'msg';
-
-      const b = document.createElement('b');
-      b.textContent = m.subject;
-
-      const small = document.createElement('small');
-      small.textContent = m.from + ' · ' +
-        (m.date ? new Date(m.date).toLocaleString() : '');
-
-      d.append(b, small);
-      d.onclick = () => readMail(m.uid);
-
-      $('inbox').append(d);
-    });
+    renderMessages(currentMessages);
 
   } catch (e) {
     $('inbox').textContent = e.message;
   }
 }
+
+/* Search loaded messages */
+function searchEmails() {
+  const query = $('searchInput').value.trim().toLowerCase();
+
+  if (!query) {
+    renderMessages(currentMessages);
+    return;
+  }
+
+  const filtered = currentMessages.filter(m => {
+    const text = [
+      m.subject || '',
+      m.from || '',
+      m.to || '',
+      m.text || ''
+    ].join(' ').toLowerCase();
+
+    return text.includes(query);
+  });
+
+  renderMessages(filtered);
+
+  if (!filtered.length) {
+    $('inbox').textContent = 'No matching emails found.';
+  }
+}
+
+$('searchBtn').onclick = searchEmails;
+
+$('searchInput').addEventListener('input', searchEmails);
+
+$('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchEmails();
+});
+
+$('clearSearch').onclick = () => {
+  $('searchInput').value = '';
+  renderMessages(currentMessages);
+};
 
 async function readMail(uid) {
   $('listPane').classList.add('hide');
