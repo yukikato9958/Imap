@@ -12,25 +12,23 @@
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Arial,sans-serif}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
-.top{height:64px;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+.top{min-height:64px;display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
 .logo{font-size:21px;font-weight:700;color:var(--accent);white-space:nowrap}
-.search{flex:1;max-width:650px;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:0 14px}
+.search{flex:1;max-width:700px;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:0 12px}
 .search input{border:0;background:transparent;outline:none;width:100%;padding:11px;color:var(--text)}
 .iconbtn,.btn{border:0;border-radius:10px;padding:9px 13px;background:var(--soft);color:var(--text)}
 .btn.primary{background:var(--accent);color:white}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .layout{display:flex;min-height:calc(100vh - 64px)}
-.sidebar{width:235px;flex-shrink:0;padding:18px 12px;background:var(--bg);border-right:1px solid var(--line)}
+.sidebar{width:235px;flex-shrink:0;padding:18px 12px;border-right:1px solid var(--line)}
 .compose{width:100%;padding:13px;margin:0 0 18px;border-radius:16px;border:0;background:var(--soft);color:var(--text);font-weight:700;text-align:left}
-.nav{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:0 22px 22px 0;margin:3px 0;color:var(--text);cursor:pointer}
-.nav.active{background:var(--soft);font-weight:700;color:var(--accent)}
-.nav:hover{background:var(--soft)}
+.nav{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:0 22px 22px 0;margin:3px 0;cursor:pointer}
+.nav.active,.nav:hover{background:var(--soft);color:var(--accent)}
 .main{flex:1;min-width:0;padding:20px}
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .heading{font-size:20px;font-weight:700;margin-right:auto}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .message{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
-.message:last-child{border-bottom:0}
 .message:hover{background:var(--soft)}
 .message.unread .sender,.message.unread .subject{font-weight:700}
 .sender{width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -48,9 +46,10 @@ button{cursor:pointer}
 .login .btn{width:100%;padding:12px}
 .small{font-size:12px;color:var(--muted)}
 .mailview{padding:24px}
-.mailview h2{margin:0 0 12px;overflow-wrap:anywhere}
+.mailview h2{margin:16px 0 12px;overflow-wrap:anywhere}
 .mailmeta{color:var(--muted);margin-bottom:20px}
 .mailbody{overflow-wrap:anywhere;white-space:pre-wrap}
+.mailbody img{max-width:100%;height:auto}
 .mailbody iframe{max-width:100%}
 .modal{position:fixed;inset:0;background:#0007;display:none;place-items:center;z-index:10;padding:18px}
 .modal.show{display:grid}
@@ -67,8 +66,9 @@ button{cursor:pointer}
 .main{padding:12px}
 .sender{width:95px}
 .date{display:none}
-.top{padding:0 10px;gap:8px}
+.top{padding:10px;gap:8px;flex-wrap:wrap}
 .logo{font-size:17px}
+.search{order:3;flex-basis:100%;max-width:none}
 }
 </style>
 </head>
@@ -102,6 +102,8 @@ let sessionId = null;
 let currentFolder = 'INBOX';
 let currentPage = 1;
 let currentMessages = [];
+let searchResults = null;
+
 let account = {
  email:'',
  password:'',
@@ -109,6 +111,7 @@ let account = {
  smtpPort:465,
  smtpSecure:true
 };
+
 let folders = [];
 
 function esc(s=''){
@@ -127,7 +130,7 @@ function theme(){
 }
 
 function toggleTheme(){
- let t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+ const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
  localStorage.setItem('dankeTheme',t);
  theme();
 }
@@ -142,6 +145,7 @@ function loginScreen(error=''){
  <p>Sign in to your email account</p>
 
  <form id="loginForm">
+
  <div class="field">
  <label>Email address / Username</label>
  <input id="email" autocomplete="username" required placeholder="name@example.jp">
@@ -198,8 +202,8 @@ function loginScreen(error=''){
 
  <button class="btn primary" id="loginBtn">Sign in</button>
  <div class="status error" id="loginError">${esc(error)}</div>
- </form>
 
+ </form>
  <p class="small">Use the IMAP/SMTP settings supplied by your email provider.</p>
  </div>
  </div>`;
@@ -215,7 +219,7 @@ function setupProviderDetection(){
  if(!select || !email || !window.PROVIDERS) return;
 
  select.innerHTML = window.PROVIDERS.map(p =>
- `<option value="${esc(p.id)}">${esc(p.name)}</option>`
+  `<option value="${esc(p.id)}">${esc(p.name)}</option>`
  ).join('');
 
  function applyProvider(p){
@@ -255,22 +259,22 @@ function setupProviderDetection(){
 }
 
 async function api(path,options={}){
- let headers = {...(options.headers || {})};
+ const headers = {...(options.headers || {})};
 
  if(sessionId) headers['x-session-id'] = sessionId;
  if(options.body) headers['Content-Type'] = 'application/json';
 
- let r = await fetch(path,{...options,headers});
- let data;
+ const response = await fetch(path,{...options,headers});
 
+ let data;
  try{
-  data = await r.json();
+  data = await response.json();
  }catch{
   data = {};
  }
 
- if(!r.ok){
-  throw new Error(data.details?.message || data.error || `HTTP ${r.status}`);
+ if(!response.ok){
+  throw new Error(data.details?.message || data.error || `HTTP ${response.status}`);
  }
 
  return data;
@@ -311,7 +315,6 @@ async function doLogin(e){
   sessionId = data.sessionId;
   localStorage.setItem('dankeEmail',email);
 
-  // PENTING: Buat tampilan utama sebelum memuat folder dan email.
   shell();
 
   await loadFolders();
@@ -330,8 +333,7 @@ function shell(){
  <div class="logo">✉ Danke Mail</div>
 
  <div class="search">
- <span style="padding:10px">⌕</span>
- <input id="searchInput" placeholder="Search mail (subject / sender)">
+ <input id="searchInput" placeholder="Search all mail (example: Amazon)">
  <button class="iconbtn" onclick="searchMail()">Search</button>
  </div>
 
@@ -348,6 +350,7 @@ function shell(){
  <main class="main">
  <div class="toolbar">
  <div class="heading" id="pageTitle">Inbox</div>
+ <button class="btn" onclick="clearSearch()">Clear Search</button>
  <button class="btn" onclick="showMail()">↻ Refresh</button>
  <button class="btn" onclick="changePage(-1)">←</button>
  <span id="pageLabel">Page 1</span>
@@ -359,10 +362,14 @@ function shell(){
  </div>
  </main>
  </div>`;
+
+ $('searchInput').addEventListener('keydown',e=>{
+  if(e.key === 'Enter') searchMail();
+ });
 }
 
 function folderLabel(f){
- let s = (f.specialUse || f.name || f.path || '').toLowerCase();
+ const s = (f.specialUse || f.name || f.path || '').toLowerCase();
 
  if(s.includes('inbox')) return 'Inbox';
  if(s.includes('sent')) return 'Sent';
@@ -375,7 +382,7 @@ function folderLabel(f){
 }
 
 async function loadFolders(){
- let data = await api('/api/folders');
+ const data = await api('/api/folders');
  folders = data;
 
  if(!folders.some(f=>(f.path || f.name).toLowerCase()==='inbox')){
@@ -392,7 +399,7 @@ function renderFolders(){
  if(!nav) return;
 
  nav.innerHTML = folders.map(f=>{
-  let path = f.path || f.name;
+  const path = f.path || f.name;
 
   return `
   <div class="nav ${path===currentFolder?'active':''}"
@@ -404,7 +411,7 @@ function renderFolders(){
 }
 
 function folderIcon(f){
- let n = folderLabel(f).toLowerCase();
+ const n = folderLabel(f).toLowerCase();
 
  return n==='inbox'?'▣':
  n==='sent'?'➤':
@@ -413,47 +420,97 @@ function folderIcon(f){
  n==='spam'?'⚠':'▰';
 }
 
+function renderMessages(messages){
+ const panel = $('mailPanel');
+ if(!panel) return;
+
+ if(!messages || !messages.length){
+  panel.innerHTML = '<div class="status">No messages found.</div>';
+  return;
+ }
+
+ panel.innerHTML = messages.map(m=>`
+ <div class="message ${(m.flags||[]).includes('\\Seen')?'':'unread'}"
+ onclick="openMessage(${Number(m.uid)},'${esc(m.folder || currentFolder).replace(/'/g,"\\'")}')">
+ <div class="sender">${esc(m.from || '(Unknown sender)')}</div>
+ <div class="subject">${esc(m.subject || '(No subject)')}
+ ${m.folder ? `<span class="small"> · ${esc(m.folder)}</span>` : ''}
+ </div>
+ <div class="date">${m.date ? new Date(m.date).toLocaleDateString() : ''}</div>
+ </div>
+ `).join('');
+}
+
 async function showMail(){
  if(!sessionId) return;
+
+ searchResults = null;
+ renderFolders();
 
  const panel = $('mailPanel');
  if(!panel) return;
 
- renderFolders();
-
- const title = $('pageTitle');
- if(title){
-  title.textContent = folderLabel(
-   folders.find(f=>(f.path || f.name)===currentFolder) || {name:currentFolder}
-  );
- }
+ $('pageTitle').textContent = folderLabel(
+  folders.find(f=>(f.path || f.name)===currentFolder) || {name:currentFolder}
+ );
 
  panel.innerHTML = '<div class="status">Loading messages…</div>';
 
  try{
-  let data = await api(
+  const data = await api(
    `/api/inbox?folder=${encodeURIComponent(currentFolder)}&page=${currentPage}&limit=25`
   );
 
   currentMessages = data.messages || [];
+  $('pageLabel').textContent = `Page ${currentPage}`;
 
-  const pageLabel = $('pageLabel');
-  if(pageLabel) pageLabel.textContent = `Page ${currentPage}`;
-
-  panel.innerHTML = currentMessages.length
-   ? currentMessages.map(m=>`
-    <div class="message ${(m.flags||[]).includes('\\Seen')?'':'unread'}"
-    onclick="openMessage(${m.uid})">
-    <div class="sender">${esc(m.from || '(Unknown sender)')}</div>
-    <div class="subject">${esc(m.subject || '(No subject)')}</div>
-    <div class="date">${m.date ? new Date(m.date).toLocaleDateString() : ''}</div>
-    </div>
-   `).join('')
-   : '<div class="status">No messages in this folder.</div>';
+  renderMessages(currentMessages);
 
  }catch(err){
   panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
  }
+}
+
+// SEARCH ALL FOLDERS ON IMAP SERVER
+async function searchMail(){
+ const input = $('searchInput');
+ const panel = $('mailPanel');
+
+ if(!input || !panel) return;
+
+ const query = input.value.trim();
+
+ if(!query){
+  return showMail();
+ }
+
+ panel.innerHTML = '<div class="status">Searching all folders for "'+esc(query)+'"…</div>';
+ $('pageTitle').textContent = 'Search Results';
+
+ try{
+  const data = await api(
+   `/api/search?q=${encodeURIComponent(query)}&limit=200`
+  );
+
+  searchResults = data.messages || [];
+
+  $('pageLabel').textContent =
+   `${data.total} result(s)`;
+
+  renderMessages(searchResults);
+
+ }catch(err){
+  panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
+ }
+}
+
+function clearSearch(){
+ const input = $('searchInput');
+ if(input) input.value = '';
+
+ searchResults = null;
+ currentPage = 1;
+ showMail();
 }
 
 async function selectFolder(path){
@@ -463,32 +520,41 @@ async function selectFolder(path){
 }
 
 async function changePage(d){
+ if(searchResults) return;
+
  currentPage = Math.max(1,currentPage+d);
  await showMail();
 }
 
-async function openMessage(uid){
+async function openMessage(uid,folder=currentFolder){
  const panel = $('mailPanel');
  if(!panel) return;
 
  panel.innerHTML = '<div class="status">Opening message…</div>';
 
  try{
-  let m = await api(
-   `/api/message/${uid}?folder=${encodeURIComponent(currentFolder)}`
+  const m = await api(
+   `/api/message/${uid}?folder=${encodeURIComponent(folder)}`
   );
 
   panel.innerHTML = `
   <div class="mailview">
-  <button class="btn" onclick="showMail()">← Back</button>
+  <button class="btn" onclick="backFromMessage()">← Back</button>
+
   <h2>${esc(m.subject)}</h2>
+
   <div class="mailmeta">
   From: ${esc(m.from)}<br>
   To: ${esc(m.to)}<br>
+  ${m.cc ? 'Cc: '+esc(m.cc)+'<br>' : ''}
   ${esc(m.date ? new Date(m.date).toLocaleString() : '')}
   </div>
+
   <hr>
-  <div class="mailbody">${m.html ? sanitizeHtml(m.html) : esc(m.text)}</div>
+
+  <div class="mailbody">
+  ${m.html ? sanitizeHtml(m.html) : esc(m.text)}
+  </div>
   </div>`;
 
  }catch(err){
@@ -496,85 +562,61 @@ async function openMessage(uid){
  }
 }
 
+function backFromMessage(){
+ if(searchResults){
+  renderMessages(searchResults);
+ }else{
+  showMail();
+ }
+}
+
 function sanitizeHtml(html){
- return html
+ return String(html)
  .replace(/<script[\s\S]*?<\/script>/gi,'')
  .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
  .replace(/javascript:/gi,'');
 }
 
-async function searchMail(){
- const input = $('searchInput');
- const panel = $('mailPanel');
-
- if(!input || !panel) return;
-
- let q = input.value.trim().toLowerCase();
-
- if(!q) return showMail();
-
- panel.innerHTML = '<div class="status">Searching current page…</div>';
-
- let found = currentMessages.filter(m=>
-  ((m.subject || '')+' '+(m.from || '')).toLowerCase().includes(q)
- );
-
- panel.innerHTML = found.length
- ? found.map(m=>`
-  <div class="message" onclick="openMessage(${m.uid})">
-  <div class="sender">${esc(m.from)}</div>
-  <div class="subject">${esc(m.subject)}</div>
-  </div>
- `).join('')
- : '<div class="status">No matches on this page. Use another page or folder.</div>';
-}
-
 function openCompose(){
- const modal = $('composeModal');
- if(modal) modal.classList.add('show');
+ $('composeModal').classList.add('show');
 }
 
 function closeCompose(){
- const modal = $('composeModal');
- if(modal) modal.classList.remove('show');
+ $('composeModal').classList.remove('show');
 }
 
-const composeForm = $('composeForm');
+$('composeForm').addEventListener('submit',async e=>{
+ e.preventDefault();
 
-if(composeForm){
- composeForm.addEventListener('submit',async e=>{
-  e.preventDefault();
+ const btn = e.submitter;
+ btn.disabled = true;
+ btn.textContent = 'Sending…';
 
-  let btn = e.submitter;
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
+ try{
+  await api('/api/send',{
+   method:'POST',
+   body:JSON.stringify({
+    to:$('to').value,
+    subject:$('subject').value,
+    text:$('bodyText').value,
+    smtpHost:account.smtpHost,
+    smtpPort:account.smtpPort,
+    smtpSecure:account.smtpSecure
+   })
+  });
 
-  try{
-   await api('/api/send',{
-    method:'POST',
-    body:JSON.stringify({
-     to:$('to').value,
-     subject:$('subject').value,
-     text:$('bodyText').value,
-     smtpHost:account.smtpHost,
-     smtpPort:account.smtpPort,
-     smtpSecure:account.smtpSecure,
-     password:account.password
-    })
-   });
+  closeCompose();
+  $('composeForm').reset();
+  alert('Message sent.');
 
-   closeCompose();
-   alert('Message sent.');
+ }catch(err){
+  alert('Send failed: '+err.message);
 
-  }catch(err){
-   alert('Send failed: '+err.message);
-
-  }finally{
-   btn.disabled = false;
-   btn.textContent = 'Send';
-  }
- });
-}
+ }finally{
+  btn.disabled = false;
+  btn.textContent = 'Send';
+ }
+});
 
 async function logout(){
  try{
@@ -588,6 +630,7 @@ async function logout(){
  currentFolder = 'INBOX';
  currentPage = 1;
  currentMessages = [];
+ searchResults = null;
  folders = [];
 
  loginScreen();
