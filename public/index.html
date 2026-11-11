@@ -3,13 +3,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#f6f8fc">
 <title>Danke Mail</title>
 
 <style>
 :root{
  --bg:#f6f8fc;
- --surface:#ffffff;
+ --surface:#fff;
  --surface2:#eef2f8;
  --text:#202124;
  --muted:#667085;
@@ -35,7 +36,7 @@
 
 [data-theme="pink"]{
  --bg:#fff0f6;
- --surface:#ffffff;
+ --surface:#fff;
  --surface2:#ffe4ef;
  --text:#54243b;
  --muted:#a46b84;
@@ -48,7 +49,7 @@
 
 [data-theme="blue"]{
  --bg:#eaf4ff;
- --surface:#ffffff;
+ --surface:#fff;
  --surface2:#dcecff;
  --text:#193453;
  --muted:#6683a4;
@@ -61,7 +62,7 @@
 
 [data-theme="green"]{
  --bg:#edf8f0;
- --surface:#ffffff;
+ --surface:#fff;
  --surface2:#ddf1e3;
  --text:#204a30;
  --muted:#668b72;
@@ -74,7 +75,7 @@
 
 [data-theme="orange"]{
  --bg:#fff5e9;
- --surface:#ffffff;
+ --surface:#fff;
  --surface2:#ffead2;
  --text:#58391e;
  --muted:#9a7959;
@@ -87,7 +88,7 @@
 
 [data-theme="purple"]{
  --bg:#f4efff;
- --surface:#ffffff;
+ --surface:#fff;
  --surface2:#e9ddff;
  --text:#382653;
  --muted:#84709e;
@@ -98,18 +99,40 @@
  --shadow:0 8px 35px #8754d612;
 }
 
-*{box-sizing:border-box}
+*{
+ box-sizing:border-box;
+}
+
+html,body{
+ margin:0;
+ padding:0;
+ width:100%;
+ min-width:320px;
+ min-height:100%;
+ overflow-x:hidden;
+}
 
 body{
- margin:0;
  background:var(--bg);
  color:var(--text);
  font:14px/1.5 Arial,sans-serif;
  transition:background .2s,color .2s;
 }
 
-button,input,textarea,select{font:inherit}
-button{cursor:pointer}
+button,input,textarea,select{
+ font:inherit;
+}
+
+button{
+ cursor:pointer;
+}
+
+button:disabled{
+ opacity:.5;
+ cursor:not-allowed;
+}
+
+/* HEADER */
 
 .top{
  min-height:64px;
@@ -121,7 +144,8 @@ button{cursor:pointer}
  border-bottom:1px solid var(--line);
  position:sticky;
  top:0;
- z-index:3;
+ z-index:5;
+ width:100%;
 }
 
 .logo{
@@ -129,10 +153,12 @@ button{cursor:pointer}
  font-weight:700;
  color:var(--accent);
  white-space:nowrap;
+ flex-shrink:0;
 }
 
 .search{
  flex:1;
+ min-width:0;
  max-width:700px;
  display:flex;
  background:var(--bg);
@@ -146,6 +172,7 @@ button{cursor:pointer}
  background:transparent;
  outline:none;
  width:100%;
+ min-width:0;
  padding:11px;
  color:var(--text);
 }
@@ -163,11 +190,6 @@ button{cursor:pointer}
  color:white;
 }
 
-.btn:disabled{
- opacity:.5;
- cursor:not-allowed;
-}
-
 .theme-select{
  border:1px solid var(--line);
  border-radius:10px;
@@ -176,11 +198,16 @@ button{cursor:pointer}
  color:var(--text);
  outline-color:var(--accent);
  cursor:pointer;
+ max-width:150px;
 }
+
+/* LAYOUT */
 
 .layout{
  display:flex;
+ width:100%;
  min-height:calc(100vh - 64px);
+ min-width:0;
 }
 
 .sidebar{
@@ -188,6 +215,7 @@ button{cursor:pointer}
  flex-shrink:0;
  padding:18px 12px;
  border-right:1px solid var(--line);
+ background:var(--bg);
 }
 
 .compose{
@@ -220,8 +248,12 @@ button{cursor:pointer}
 .main{
  flex:1;
  min-width:0;
+ width:100%;
  padding:20px;
+ overflow-x:hidden;
 }
+
+/* TOOLBAR */
 
 .toolbar{
  display:flex;
@@ -237,11 +269,15 @@ button{cursor:pointer}
  margin-right:auto;
 }
 
+/* MESSAGE LIST */
+
 .panel{
  background:var(--surface);
  border:1px solid var(--line);
  border-radius:14px;
  overflow:hidden;
+ width:100%;
+ min-width:0;
 }
 
 .message{
@@ -251,13 +287,21 @@ button{cursor:pointer}
  border-bottom:1px solid var(--line);
  cursor:pointer;
  align-items:center;
+ min-width:0;
 }
 
-.message:hover{background:var(--soft)}
-.message.unread .sender,.message.unread .subject{font-weight:700}
+.message:hover{
+ background:var(--soft);
+}
+
+.message.unread .sender,
+.message.unread .subject{
+ font-weight:700;
+}
 
 .sender{
  width:190px;
+ min-width:0;
  overflow:hidden;
  text-overflow:ellipsis;
  white-space:nowrap;
@@ -265,6 +309,7 @@ button{cursor:pointer}
 
 .subject{
  flex:1;
+ min-width:0;
  overflow:hidden;
  text-overflow:ellipsis;
  white-space:nowrap;
@@ -286,15 +331,20 @@ button{cursor:pointer}
  white-space:pre-wrap;
 }
 
+/* LOGIN */
+
 .loginwrap{
  min-height:100vh;
+ min-height:100dvh;
  display:grid;
  place-items:center;
  padding:20px;
+ width:100%;
 }
 
 .login{
  width:min(440px,100%);
+ max-width:100%;
  background:var(--surface);
  padding:28px;
  border:1px solid var(--line);
@@ -328,17 +378,24 @@ button{cursor:pointer}
  display:grid;
  gap:6px;
  margin:13px 0;
+ min-width:0;
 }
 
-.field label{font-weight:600}
+.field label{
+ font-weight:600;
+}
 
-.field input,.field select,.field textarea{
+.field input,
+.field select,
+.field textarea{
  padding:11px 12px;
  border:1px solid var(--line);
  border-radius:9px;
  background:var(--bg);
  color:var(--text);
  width:100%;
+ min-width:0;
+ max-width:100%;
  outline-color:var(--accent);
 }
 
@@ -352,7 +409,13 @@ button{cursor:pointer}
  color:var(--muted);
 }
 
-.mailview{padding:24px}
+/* MAIL VIEW */
+
+.mailview{
+ padding:24px;
+ min-width:0;
+ overflow-wrap:anywhere;
+}
 
 .mailview h2{
  margin:16px 0 12px;
@@ -362,11 +425,13 @@ button{cursor:pointer}
 .mailmeta{
  color:var(--muted);
  margin-bottom:20px;
+ overflow-wrap:anywhere;
 }
 
 .mailbody{
  overflow-wrap:anywhere;
  white-space:pre-wrap;
+ max-width:100%;
 }
 
 .mailbody img{
@@ -374,7 +439,11 @@ button{cursor:pointer}
  height:auto;
 }
 
-.mailbody iframe{max-width:100%}
+.mailbody iframe{
+ max-width:100%;
+}
+
+/* MODAL */
 
 .modal{
  position:fixed;
@@ -386,11 +455,14 @@ button{cursor:pointer}
  padding:18px;
 }
 
-.modal.show{display:grid}
+.modal.show{
+ display:grid;
+}
 
 .dialog{
  width:min(650px,100%);
  max-height:90vh;
+ max-height:90dvh;
  overflow:auto;
  background:var(--surface);
  border-radius:16px;
@@ -403,9 +475,12 @@ button{cursor:pointer}
  display:flex;
  align-items:center;
  justify-content:space-between;
+ gap:10px;
 }
 
-.dialoghead h2{margin:0}
+.dialoghead h2{
+ margin:0;
+}
 
 .footerrow{
  display:flex;
@@ -414,51 +489,296 @@ button{cursor:pointer}
  margin-top:16px;
 }
 
-@media(max-width:720px){
+/* TABLET */
+
+@media(max-width:900px){
+
  .sidebar{
-  width:72px;
-  padding:12px 5px;
+  width:190px;
+ }
+
+ .main{
+  padding:14px;
+ }
+
+ .sender{
+  width:140px;
+ }
+}
+
+/* MOBILE */
+
+@media(max-width:600px){
+
+ html,body{
+  width:100%;
+  overflow-x:hidden;
+ }
+
+ /* HEADER MOBILE */
+
+ .top{
+  position:sticky;
+  top:0;
+  width:100%;
+  min-height:auto;
+  padding:10px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:9px;
+ }
+
+ .logo{
+  font-size:19px;
+  align-self:center;
+ }
+
+ .top > .iconbtn{
+  grid-column:2;
+  grid-row:1;
+ }
+
+ .top > .theme-select{
+  grid-column:2;
+  grid-row:2;
+  width:120px;
+  max-width:120px;
+  font-size:12px;
+ }
+
+ .search{
+  grid-column:1 / -1;
+  grid-row:2;
+  width:100%;
+  max-width:none;
+  min-width:0;
+ }
+
+ .top:has(.search) .theme-select{
+  grid-row:1;
+ }
+
+ .top:has(.search) .search{
+  grid-row:2;
+ }
+
+ /* LAYOUT MOBILE */
+
+ .layout{
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  min-height:calc(100dvh - 110px);
+ }
+
+ /* HORIZONTAL FOLDER BAR */
+
+ .sidebar{
+  width:100%;
+  flex-shrink:0;
+  padding:9px;
+  border-right:0;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  gap:7px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  white-space:nowrap;
+  background:var(--surface);
  }
 
  .compose{
-  font-size:0;
+  width:auto;
+  min-width:48px;
+  flex-shrink:0;
+  margin:0;
+  padding:10px 13px;
+  font-size:13px;
   text-align:center;
-  padding:12px;
+  border-radius:22px;
  }
 
- .compose:before{
-  content:"＋";
-  font-size:22px;
+ #folderNav{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:max-content;
  }
 
  .nav{
+  display:inline-flex;
+  align-items:center;
   justify-content:center;
-  padding:12px 5px;
-  font-size:0;
+  gap:7px;
+  padding:10px 13px;
+  margin:0;
+  border-radius:20px;
+  font-size:13px;
+  white-space:nowrap;
  }
 
- .nav span{font-size:18px}
- .main{padding:12px}
- .sender{width:95px}
- .date{display:none}
+ .nav span{
+  font-size:13px;
+ }
 
- .top{
-  padding:10px;
-  gap:8px;
+ /* MAIN MOBILE */
+
+ .main{
+  width:100%;
+  min-width:0;
+  padding:12px 9px;
+  overflow-x:hidden;
+ }
+
+ .toolbar{
+  gap:6px;
+ }
+
+ .heading{
+  width:100%;
+  flex-basis:100%;
+  font-size:19px;
+  margin-bottom:3px;
+ }
+
+ .toolbar .btn{
+  padding:8px 10px;
+  font-size:12px;
+ }
+
+ #pageLabel{
+  font-size:12px;
+ }
+
+ /* MESSAGE MOBILE */
+
+ .panel{
+  width:100%;
+  min-width:0;
+  border-radius:10px;
+ }
+
+ .message{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:3px 8px;
+  padding:12px;
+  width:100%;
+ }
+
+ .sender{
+  width:auto;
+  min-width:0;
+  grid-column:1;
+  font-size:13px;
+ }
+
+ .subject{
+  min-width:0;
+  grid-column:1;
+  font-size:13px;
+  white-space:normal;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+ }
+
+ .date{
+  display:block;
+  grid-column:2;
+  grid-row:1;
+  font-size:10px;
+  text-align:right;
+ }
+
+ /* MESSAGE VIEW MOBILE */
+
+ .mailview{
+  padding:15px;
+ }
+
+ .mailview h2{
+  font-size:19px;
+ }
+
+ .mailbody{
+  font-size:14px;
+  overflow-wrap:anywhere;
+ }
+
+ .mailbody img{
+  max-width:100%;
+  height:auto;
+ }
+
+ /* COMPOSE MOBILE */
+
+ .dialog{
+  width:100%;
+  max-width:100%;
+  max-height:92dvh;
+  padding:16px;
+  border-radius:14px;
+ }
+
+ .dialog .field input,
+ .dialog .field textarea{
+  font-size:16px;
+ }
+
+ .footerrow{
   flex-wrap:wrap;
  }
 
- .logo{font-size:17px}
+ .footerrow .btn{
+  flex:1;
+ }
+}
 
- .search{
-  order:3;
-  flex-basis:100%;
-  max-width:none;
+/* SMALL MOBILE */
+
+@media(max-width:380px){
+
+ .logo{
+  font-size:17px;
  }
 
- .theme-select{
-  max-width:115px;
+ .top > .theme-select{
+  max-width:105px;
+  width:105px;
+  font-size:11px;
+ }
+
+ .main{
+  padding:9px 6px;
+ }
+
+ .toolbar .btn{
+  padding:7px;
+  font-size:11px;
+ }
+
+ .message{
+  padding:10px;
+ }
+
+ .sender,.subject{
   font-size:12px;
+ }
+}
+
+/* LANDSCAPE MOBILE */
+
+@media(max-width:900px) and (orientation:landscape){
+
+ .sidebar{
+  max-height:75px;
+ }
+
+ .loginwrap{
+  padding:12px;
  }
 }
 </style>
@@ -470,15 +790,18 @@ button{cursor:pointer}
 
 <div class="modal" id="composeModal">
  <div class="dialog">
+
   <div class="dialoghead">
    <h2>Compose</h2>
    <button class="iconbtn" onclick="closeCompose()">✕</button>
   </div>
 
   <form id="composeForm">
+
    <div class="field">
     <label>To</label>
-    <input id="to" type="email" required placeholder="recipient@example.com">
+    <input id="to" type="email" required
+     placeholder="recipient@example.com">
    </div>
 
    <div class="field">
@@ -488,13 +811,17 @@ button{cursor:pointer}
 
    <div class="field">
     <label>Message</label>
-    <textarea id="bodyText" rows="10" placeholder="Write your message…"></textarea>
+    <textarea id="bodyText" rows="10"
+     placeholder="Write your message…"></textarea>
    </div>
 
    <div class="footerrow">
-    <button type="button" class="btn" onclick="closeCompose()">Cancel</button>
+    <button type="button" class="btn"
+     onclick="closeCompose()">Cancel</button>
+
     <button class="btn primary" type="submit">Send</button>
    </div>
+
   </form>
  </div>
 </div>
@@ -502,10 +829,6 @@ button{cursor:pointer}
 <script src="/providers.js"></script>
 
 <script>
-// ========================================
-// DANKE MAIL - SESSION RESTORE VERSION
-// ========================================
-
 const $ = id => document.getElementById(id);
 
 const STORAGE_SESSION = 'dankeSessionId';
@@ -540,7 +863,10 @@ const themes = [
  {id:'purple',name:'💜 Purple'}
 ];
 
-// ESCAPE HTML
+// ========================================
+// HTML ESCAPE
+// ========================================
+
 function esc(s=''){
  return String(s).replace(/[&<>"']/g,c=>({
   '&':'&amp;',
@@ -577,6 +903,7 @@ function setTheme(value){
   : 'light';
 
  localStorage.setItem('dankeTheme',valid);
+
  document.documentElement.dataset.theme = valid;
 
  const selector = $('themeSelect');
@@ -595,7 +922,7 @@ function themeOptions(){
 theme();
 
 // ========================================
-// SESSION STORAGE
+// SAVE SESSION
 // ========================================
 
 function saveSession(){
@@ -603,8 +930,15 @@ function saveSession(){
   localStorage.setItem(STORAGE_SESSION,sessionId);
  }
 
- localStorage.setItem(STORAGE_ACCOUNT,JSON.stringify(account));
- localStorage.setItem(STORAGE_FOLDER,currentFolder);
+ localStorage.setItem(
+  STORAGE_ACCOUNT,
+  JSON.stringify(account)
+ );
+
+ localStorage.setItem(
+  STORAGE_FOLDER,
+  currentFolder
+ );
 }
 
 function clearSavedSession(){
@@ -621,12 +955,14 @@ function loginScreen(error=''){
  $('app').innerHTML = `
  <div class="loginwrap">
   <div class="login">
+
    <h1>✉ Danke Mail</h1>
    <p>Sign in to your email account</p>
 
    <div class="login-theme">
     <strong>🎨 Appearance</strong>
-    <select id="loginThemeSelect" class="theme-select"
+    <select id="loginThemeSelect"
+     class="theme-select"
      onchange="setTheme(this.value)">
      ${themeOptions()}
     </select>
@@ -636,7 +972,9 @@ function loginScreen(error=''){
 
     <div class="field">
      <label>Email address / Username</label>
-     <input id="email" autocomplete="username" required
+     <input id="email"
+      autocomplete="username"
+      required
       placeholder="name@example.jp">
     </div>
 
@@ -645,6 +983,7 @@ function loginScreen(error=''){
      <select id="providerSelect">
       <option value="manual">Other / Manual</option>
      </select>
+
      <div class="small" id="providerStatus">
       Auto Detect berdasarkan domain email
      </div>
@@ -652,36 +991,46 @@ function loginScreen(error=''){
 
     <div class="field">
      <label>Email password</label>
-     <input id="password" type="password"
-      autocomplete="current-password" required>
+     <input id="password"
+      type="password"
+      autocomplete="current-password"
+      required>
     </div>
 
     <div class="field">
      <label>IMAP host</label>
-     <input id="imapHost" required placeholder="imap.example.jp">
+     <input id="imapHost"
+      required
+      placeholder="imap.example.jp">
     </div>
 
     <div class="field">
      <label>IMAP port</label>
-     <input id="imapPort" type="number" value="993" required>
+     <input id="imapPort"
+      type="number"
+      value="993"
+      required>
     </div>
 
     <div class="field">
-     <label>Connection</label>
+     <label>IMAP connection</label>
      <select id="imapSecure">
-      <option value="true">SSL/TLS (usually port 993)</option>
-      <option value="false">STARTTLS / plain (usually port 143)</option>
+      <option value="true">SSL/TLS</option>
+      <option value="false">STARTTLS / Plain</option>
      </select>
     </div>
 
     <div class="field">
-     <label>SMTP host (for sending)</label>
-     <input id="smtpHost" placeholder="smtp.example.jp">
+     <label>SMTP host</label>
+     <input id="smtpHost"
+      placeholder="smtp.example.jp">
     </div>
 
     <div class="field">
      <label>SMTP port</label>
-     <input id="smtpPort" type="number" value="465">
+     <input id="smtpPort"
+      type="number"
+      value="465">
     </div>
 
     <div class="field">
@@ -692,20 +1041,27 @@ function loginScreen(error=''){
      </select>
     </div>
 
-    <button class="btn primary" id="loginBtn">Sign in</button>
-    <div class="status error" id="loginError">${esc(error)}</div>
+    <button class="btn primary" id="loginBtn">
+     Sign in
+    </button>
+
+    <div class="status error" id="loginError">
+     ${esc(error)}
+    </div>
+
    </form>
 
    <p class="small">
     Use the IMAP/SMTP settings supplied by your email provider.
    </p>
+
   </div>
  </div>`;
 
  theme();
+ setupProviderDetection();
 
  $('loginForm').addEventListener('submit',doLogin);
- setupProviderDetection();
 }
 
 // ========================================
@@ -718,7 +1074,7 @@ function setupProviderDetection(){
 
  if(!select || !email || !window.PROVIDERS) return;
 
- select.innerHTML = window.PROVIDERS.map(p =>
+ select.innerHTML = window.PROVIDERS.map(p=>
   `<option value="${esc(p.id)}">${esc(p.name)}</option>`
  ).join('');
 
@@ -809,6 +1165,7 @@ async function doLogin(e){
  e.preventDefault();
 
  const btn = $('loginBtn');
+
  btn.disabled = true;
  btn.textContent = 'Connecting…';
 
@@ -855,13 +1212,14 @@ async function doLogin(e){
 
  }catch(err){
   $('loginError').textContent = err.message;
+
   btn.disabled = false;
   btn.textContent = 'Sign in';
  }
 }
 
 // ========================================
-// RESTORE SESSION AFTER REFRESH
+// RESTORE SESSION
 // ========================================
 
 async function restoreSession(){
@@ -884,7 +1242,6 @@ async function restoreSession(){
   currentFolder =
    localStorage.getItem(STORAGE_FOLDER) || 'INBOX';
 
-  // Check whether server still recognizes the session
   await loadFolders();
 
   shell();
@@ -912,41 +1269,65 @@ async function restoreSession(){
 function shell(){
  $('app').innerHTML = `
  <header class="top">
+
   <div class="logo">✉ Danke Mail</div>
 
   <div class="search">
    <input id="searchInput"
-    placeholder="Search all mail (example: Amazon)">
-   <button class="iconbtn" onclick="searchMail()">Search</button>
+    placeholder="Search all mail">
+   <button class="iconbtn"
+    onclick="searchMail()">Search</button>
   </div>
 
-  <select id="themeSelect" class="theme-select"
-   title="Change theme" onchange="setTheme(this.value)">
+  <select id="themeSelect"
+   class="theme-select"
+   title="Change theme"
+   onchange="setTheme(this.value)">
    ${themeOptions()}
   </select>
 
-  <button class="iconbtn" onclick="logout()">Sign out</button>
+  <button class="iconbtn"
+   onclick="logout()">Sign out</button>
+
  </header>
 
  <div class="layout">
+
   <aside class="sidebar">
-   <button class="compose" onclick="openCompose()">✎ Compose</button>
+
+   <button class="compose"
+    onclick="openCompose()">✎ Compose</button>
+
    <div id="folderNav"></div>
+
   </aside>
 
   <main class="main">
+
    <div class="toolbar">
+
     <div class="heading" id="pageTitle">Inbox</div>
-    <button class="btn" onclick="clearSearch()">Clear Search</button>
-    <button class="btn" onclick="showMail()">↻ Refresh</button>
-    <button class="btn" onclick="changePage(-1)">←</button>
+
+    <button class="btn"
+     onclick="clearSearch()">Clear Search</button>
+
+    <button class="btn"
+     onclick="showMail()">↻ Refresh</button>
+
+    <button class="btn"
+     onclick="changePage(-1)">←</button>
+
     <span id="pageLabel">Page 1</span>
-    <button class="btn" onclick="changePage(1)">→</button>
+
+    <button class="btn"
+     onclick="changePage(1)">→</button>
+
    </div>
 
    <div class="panel" id="mailPanel">
     <div class="status">Loading…</div>
    </div>
+
   </main>
  </div>`;
 
@@ -962,7 +1343,12 @@ function shell(){
 // ========================================
 
 function folderLabel(f){
- const s = (f.specialUse || f.name || f.path || '').toLowerCase();
+ const s = (
+  f.specialUse ||
+  f.name ||
+  f.path ||
+  ''
+ ).toLowerCase();
 
  if(s.includes('inbox')) return 'Inbox';
  if(s.includes('sent')) return 'Sent';
@@ -1027,44 +1413,54 @@ function renderMessages(messages){
  if(!panel) return;
 
  if(!messages || !messages.length){
-  panel.innerHTML = '<div class="status">No messages found.</div>';
+  panel.innerHTML =
+   '<div class="status">No messages found.</div>';
   return;
  }
 
  panel.innerHTML = messages.map(m=>`
   <div class="message ${(m.flags||[]).includes('\\Seen')?'':'unread'}"
    onclick="openMessage(${Number(m.uid)},'${esc(m.folder || currentFolder).replace(/'/g,"\\'")}')">
-   <div class="sender">${esc(m.from || '(Unknown sender)')}</div>
+
+   <div class="sender">
+    ${esc(m.from || '(Unknown sender)')}
+   </div>
+
    <div class="subject">
     ${esc(m.subject || '(No subject)')}
     ${m.folder ? `<span class="small"> · ${esc(m.folder)}</span>` : ''}
    </div>
+
    <div class="date">
     ${m.date ? new Date(m.date).toLocaleDateString() : ''}
    </div>
+
   </div>
  `).join('');
 }
 
 // ========================================
-// INBOX
+// SHOW MAIL
 // ========================================
 
 async function showMail(){
  if(!sessionId) return;
 
  searchResults = null;
+
  renderFolders();
 
  const panel = $('mailPanel');
  if(!panel) return;
 
  $('pageTitle').textContent = folderLabel(
-  folders.find(f=>(f.path || f.name)===currentFolder)
-   || {name:currentFolder}
+  folders.find(f=>
+   (f.path || f.name)===currentFolder
+  ) || {name:currentFolder}
  );
 
- panel.innerHTML = '<div class="status">Loading messages…</div>';
+ panel.innerHTML =
+  '<div class="status">Loading messages…</div>';
 
  try{
   const data = await api(
@@ -1078,7 +1474,8 @@ async function showMail(){
   renderMessages(currentMessages);
 
  }catch(err){
-  panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
+  panel.innerHTML =
+   `<div class="status error">${esc(err.message)}</div>`;
  }
 }
 
@@ -1094,7 +1491,9 @@ async function searchMail(){
 
  const query = input.value.trim();
 
- if(!query) return showMail();
+ if(!query){
+  return showMail();
+ }
 
  panel.innerHTML =
   `<div class="status">Searching all folders for "${esc(query)}"…</div>`;
@@ -1108,17 +1507,20 @@ async function searchMail(){
 
   searchResults = data.messages || [];
 
-  $('pageLabel').textContent = `${data.total} result(s)`;
+  $('pageLabel').textContent =
+   `${data.total} result(s)`;
 
   renderMessages(searchResults);
 
  }catch(err){
-  panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
+  panel.innerHTML =
+   `<div class="status error">${esc(err.message)}</div>`;
  }
 }
 
 function clearSearch(){
  const input = $('searchInput');
+
  if(input) input.value = '';
 
  searchResults = null;
@@ -1135,7 +1537,10 @@ async function selectFolder(path){
  currentFolder = path;
  currentPage = 1;
 
- localStorage.setItem(STORAGE_FOLDER,currentFolder);
+ localStorage.setItem(
+  STORAGE_FOLDER,
+  currentFolder
+ );
 
  await showMail();
 }
@@ -1154,9 +1559,11 @@ async function changePage(d){
 
 async function openMessage(uid,folder=currentFolder){
  const panel = $('mailPanel');
+
  if(!panel) return;
 
- panel.innerHTML = '<div class="status">Opening message…</div>';
+ panel.innerHTML =
+  '<div class="status">Opening message…</div>';
 
  try{
   const m = await api(
@@ -1165,7 +1572,9 @@ async function openMessage(uid,folder=currentFolder){
 
   panel.innerHTML = `
    <div class="mailview">
-    <button class="btn" onclick="backFromMessage()">← Back</button>
+
+    <button class="btn"
+     onclick="backFromMessage()">← Back</button>
 
     <h2>${esc(m.subject)}</h2>
 
@@ -1181,10 +1590,12 @@ async function openMessage(uid,folder=currentFolder){
     <div class="mailbody">
      ${m.html ? sanitizeHtml(m.html) : esc(m.text)}
     </div>
+
    </div>`;
 
  }catch(err){
-  panel.innerHTML = `<div class="status error">${esc(err.message)}</div>`;
+  panel.innerHTML =
+   `<div class="status error">${esc(err.message)}</div>`;
  }
 }
 
@@ -1197,7 +1608,7 @@ function backFromMessage(){
 }
 
 // ========================================
-// HTML SANITIZER
+// BASIC HTML SANITIZER
 // ========================================
 
 function sanitizeHtml(html){
@@ -1223,6 +1634,7 @@ $('composeForm').addEventListener('submit',async e=>{
  e.preventDefault();
 
  const btn = e.submitter;
+
  btn.disabled = true;
  btn.textContent = 'Sending…';
 
@@ -1240,6 +1652,7 @@ $('composeForm').addEventListener('submit',async e=>{
   });
 
   closeCompose();
+
   $('composeForm').reset();
 
   alert('Message sent.');
@@ -1263,6 +1676,7 @@ async function logout(){
    method:'POST',
    body:JSON.stringify({sessionId})
   });
+
  }catch(err){
   console.warn('Logout request failed:',err.message);
  }
@@ -1280,7 +1694,7 @@ async function logout(){
 }
 
 // ========================================
-// START
+// START APPLICATION
 // ========================================
 
 restoreSession();
