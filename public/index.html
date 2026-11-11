@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#f6f3ff">
 <title>Danke Mail</title>
+
 <style>
 :root{
  --bg:#f6f3ff;--surface:#fff;--surface2:#f0edff;
@@ -18,7 +19,8 @@
 html[data-theme="dark"]{
  --bg:#11111b;--surface:#191927;--surface2:#222235;
  --text:#f3f0ff;--muted:#aaa4c2;--line:#302d45;
- --accent-soft:#302344;--shadow:0 12px 36px rgba(0,0,0,.28);
+ --accent-soft:#302344;
+ --shadow:0 12px 36px rgba(0,0,0,.28);
 }
 html[data-accent="pink"]{--accent:#e11d8a;--accent2:#f472b6;--accent-soft:#3a2035}
 html[data-accent="blue"]{--accent:#2563eb;--accent2:#60a5fa;--accent-soft:#1d2d4c}
@@ -28,55 +30,114 @@ html[data-accent="green"]{--accent:#16a34a;--accent2:#4ade80;--accent-soft:#1d38
 html[data-accent="amber"]{--accent:#d97706;--accent2:#fbbf24;--accent-soft:#3a2e1d}
 html[data-accent="red"]{--accent:#dc2626;--accent2:#f87171;--accent-soft:#3b2225}
 html[data-accent="indigo"]{--accent:#4f46e5;--accent2:#818cf8;--accent-soft:#282746}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{
+ margin:0;background:var(--bg);color:var(--text);
+ font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif
+}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
 .app{min-height:100vh;display:flex;flex-direction:column}
-.topbar{height:72px;display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+
+.topbar{
+ height:72px;display:flex;align-items:center;gap:16px;
+ padding:0 24px;background:var(--surface);
+ border-bottom:1px solid var(--line);
+ position:sticky;top:0;z-index:5
+}
 .brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;min-width:205px}
-.logo{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:900}
-.searchbar{flex:1;max-width:760px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:7px 10px}
+.logo{
+ width:38px;height:38px;border-radius:13px;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+ display:grid;place-items:center;color:#fff;font-weight:900
+}
+.searchbar{
+ flex:1;max-width:760px;display:flex;align-items:center;gap:8px;
+ background:var(--bg);border:1px solid var(--line);
+ border-radius:14px;padding:7px 10px
+}
 .searchbar select,.searchbar input{border:0;outline:0;background:transparent;color:var(--text)}
-.searchbar select{max-width:145px;font-size:12px;font-weight:700}
+.searchbar select{max-width:155px;font-size:12px;font-weight:700}
 .searchbar input{flex:1;min-width:60px;padding:5px}
-.iconbtn,.btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:11px;padding:9px 12px}
+.iconbtn,.btn{
+ border:1px solid var(--line);background:var(--surface);
+ color:var(--text);border-radius:11px;padding:9px 12px
+}
 .iconbtn{width:40px;height:40px;display:grid;place-items:center;padding:0;font-size:17px}
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
 .btn.soft{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:700}
 .btn.danger{color:var(--danger)}
 .top-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;padding:18px;flex:1;min-height:0}
-.sidebar,.mainpanel{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+
+.layout{
+ display:grid;grid-template-columns:250px minmax(0,1fr);
+ gap:18px;padding:18px;flex:1;min-height:0
+}
+.sidebar,.mainpanel{
+ background:var(--surface);border:1px solid var(--line);
+ border-radius:18px;box-shadow:var(--shadow);min-width:0
+}
 .sidebar{padding:16px;display:flex;flex-direction:column;gap:14px}
 .compose{width:100%;padding:13px;border-radius:14px;font-size:14px}
 .accountbox{padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
-.accountbox label,.small-label{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.7px}
-.accountbox select{width:100%;margin-top:8px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text)}
+.accountbox label,.small-label{
+ font-size:11px;color:var(--muted);font-weight:800;
+ text-transform:uppercase;letter-spacing:.7px
+}
+.accountbox select{
+ width:100%;margin-top:8px;padding:9px;border:1px solid var(--line);
+ border-radius:10px;background:var(--surface);color:var(--text)
+}
 .nav{display:flex;flex-direction:column;gap:4px}
-.navitem{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;color:var(--muted);cursor:pointer;border:0;background:transparent;text-align:left;width:100%}
+.navitem{
+ display:flex;align-items:center;gap:11px;padding:10px 12px;
+ border-radius:11px;color:var(--muted);cursor:pointer;
+ border:0;background:transparent;text-align:left;width:100%
+}
 .navitem:hover,.navitem.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .sectionline{height:1px;background:var(--line);margin:4px 0}
 .themebox{margin-top:auto;padding:12px;border:1px solid var(--line);border-radius:14px}
 .theme-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
-.theme-choice{width:25px;height:25px;border-radius:50%;border:2px solid var(--surface);outline:1px solid var(--line);padding:0}
+.theme-choice{
+ width:25px;height:25px;border-radius:50%;border:2px solid var(--surface);
+ outline:1px solid var(--line);padding:0
+}
 .theme-choice.selected{outline:2px solid var(--text)}
 .theme-toggle{display:flex;gap:6px;margin-top:9px}
-.theme-toggle button{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.theme-toggle button{
+ flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);
+ background:var(--surface);color:var(--text)
+}
 .theme-toggle button.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+
 .mainpanel{display:flex;flex-direction:column;overflow:hidden}
-.panelhead{padding:20px 22px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.panelhead{
+ padding:20px 22px 14px;border-bottom:1px solid var(--line);
+ display:flex;align-items:center;gap:12px;flex-wrap:wrap
+}
 .panelhead h1{font-size:22px;margin:0;font-weight:800}
 .panelhead .sub{color:var(--muted);margin-top:3px;font-size:12px}
 .head-actions{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
-.toolbar{padding:12px 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.toolbar{
+ padding:12px 20px;display:flex;align-items:center;gap:8px;
+ border-bottom:1px solid var(--line);flex-wrap:wrap
+}
 .toolbar .spacer{flex:1}
-.mail-list{overflow:auto;flex:1}
-.mailrow{display:grid;grid-template-columns:28px 38px minmax(120px,190px) minmax(0,1fr) 100px;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);cursor:pointer}
+.mail-list{overflow:auto;flex:1;min-height:250px}
+.mailrow{
+ display:grid;grid-template-columns:28px 38px minmax(120px,190px) minmax(0,1fr) 100px;
+ gap:12px;align-items:center;padding:14px 20px;
+ border-bottom:1px solid var(--line);cursor:pointer
+}
 .mailrow:hover{background:var(--bg)}
 .mailrow.unread{background:color-mix(in srgb,var(--accent-soft) 35%,var(--surface));font-weight:700}
 .mailrow input{accent-color:var(--accent);width:16px;height:16px}
-.avatar{width:36px;height:36px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800}
+.avatar{
+ width:36px;height:36px;border-radius:12px;background:var(--accent-soft);
+ color:var(--accent);display:grid;place-items:center;font-weight:800
+}
 .sender,.subject{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .subject .snippet{font-weight:400;color:var(--muted)}
 .maildate{text-align:right;color:var(--muted);font-size:12px;white-space:nowrap}
@@ -88,45 +149,118 @@ button{cursor:pointer}
 .messagemeta{color:var(--muted);font-size:13px;line-height:1.8}
 .messagebody{line-height:1.7;overflow-wrap:anywhere}
 .messagebody img{max-width:100%}
-.modalback{position:fixed;inset:0;background:rgba(8,7,20,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
+.messagebody pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
+.messageframe{width:100%;min-height:300px;border:0;background:#fff;border-radius:10px}
+
+.modalback{
+ position:fixed;inset:0;background:rgba(8,7,20,.55);
+ display:none;align-items:center;justify-content:center;
+ padding:18px;z-index:20
+}
 .modalback.show{display:flex}
-.modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:22px}
+.modal{
+ width:min(620px,100%);max-height:90vh;overflow:auto;
+ background:var(--surface);border:1px solid var(--line);
+ border-radius:20px;box-shadow:var(--shadow);padding:22px
+}
 .modal h2{margin:0 0 18px}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
 .field label{font-size:12px;color:var(--muted);font-weight:700}
-.field input,.field select,.field textarea{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--text);width:100%}
+.field input,.field select,.field textarea{
+ padding:11px 12px;border:1px solid var(--line);
+ border-radius:11px;background:var(--bg);color:var(--text);width:100%
+}
 .field textarea{min-height:180px;resize:vertical}
 .modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:12px 18px;border-radius:12px;z-index:30;display:none}
+.toast{
+ position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+ background:var(--text);color:var(--surface);padding:12px 18px;
+ border-radius:12px;z-index:30;display:none;max-width:90%;text-align:center
+}
 .toast.show{display:block}
 .loading{opacity:.65;pointer-events:none}
-@media(max-width:900px){.layout{grid-template-columns:205px minmax(0,1fr);padding:12px;gap:12px}.brand{min-width:auto}.mailrow{grid-template-columns:25px 34px minmax(90px,140px) minmax(0,1fr);gap:8px;padding:12px}.maildate{display:none}.topbar{padding:0 12px;gap:10px}}
-@media(max-width:650px){.topbar{height:auto;min-height:62px;flex-wrap:wrap;padding:10px}.brand{display:none}.searchbar{order:2;flex-basis:100%;max-width:none}.layout{display:flex;flex-direction:column;padding:10px}.sidebar{padding:10px}.compose{padding:10px}.accountbox{display:none}.nav{flex-direction:row;overflow:auto}.navitem{width:auto;white-space:nowrap;padding:9px 12px}.mainpanel{min-height:65vh}.panelhead{padding:16px}.panelhead h1{font-size:19px}.toolbar{padding:10px}.mailrow{grid-template-columns:22px 32px minmax(0,1fr);gap:8px}.sender,.subject{grid-column:3}.avatar{grid-row:1/3}.mailrow input{grid-row:1/3}.head-actions{margin-left:0}.view{padding:16px}}
+.hidden{display:none!important}
+
+@media(max-width:900px){
+ .layout{grid-template-columns:205px minmax(0,1fr);padding:12px;gap:12px}
+ .brand{min-width:auto}
+ .mailrow{grid-template-columns:25px 34px minmax(90px,140px) minmax(0,1fr);gap:8px;padding:12px}
+ .maildate{display:none}
+ .topbar{padding:0 12px;gap:10px}
+}
+@media(max-width:650px){
+ .topbar{height:auto;min-height:62px;flex-wrap:wrap;padding:10px}
+ .brand{display:none}
+ .searchbar{order:2;flex-basis:100%;max-width:none}
+ .layout{display:flex;flex-direction:column;padding:10px}
+ .sidebar{padding:10px}
+ .compose{padding:10px}
+ .accountbox{display:block}
+ .nav{flex-direction:row;overflow:auto}
+ .navitem{width:auto;white-space:nowrap;padding:9px 12px}
+ .themebox{margin-top:0}
+ .mainpanel{min-height:65vh}
+ .panelhead{padding:16px}
+ .panelhead h1{font-size:19px}
+ .toolbar{padding:10px}
+ .mailrow{grid-template-columns:22px 32px minmax(0,1fr);gap:8px}
+ .sender,.subject{grid-column:3}
+ .avatar{grid-row:1/3}
+ .mailrow input{grid-row:1/3}
+ .head-actions{margin-left:0}
+ .view{padding:16px}
+}
 </style>
 </head>
+
 <body>
 <div class="app">
+
 <header class="topbar">
  <div class="brand"><div class="logo">D</div><span>Danke Mail</span></div>
+
  <div class="searchbar">
   <select id="searchScope">
-   <option value="ALL">All Folders</option><option value="INBOX">Inbox</option>
-   <option value="Sent">Sent</option><option value="Drafts">Drafts</option>
-   <option value="Spam">Spam</option><option value="Trash">Trash</option>
+   <option value="ALL">All Folders</option>
   </select>
-  <span>⌕</span><input id="searchInput" placeholder="Search emails...">
-  <button class="iconbtn" id="searchBtn">⌕</button>
+  <span>⌕</span>
+  <input id="searchInput" placeholder="Search emails...">
+  <button class="iconbtn" id="searchBtn" title="Search">⌕</button>
  </div>
- <div class="top-actions"><button class="iconbtn" id="refreshBtn">↻</button><button class="iconbtn" id="settingsBtn">⚙</button></div>
+
+ <div class="top-actions">
+  <button class="iconbtn" id="refreshBtn" title="Refresh">↻</button>
+  <button class="iconbtn" id="settingsBtn" title="Settings">⚙</button>
+ </div>
 </header>
+
 <div class="layout">
+
 <aside class="sidebar">
  <button class="btn primary compose" id="composeBtn">＋ Compose</button>
- <div class="accountbox"><label>Account</label><select id="accountSelect"><option>No account</option></select><div style="display:flex;gap:6px;margin-top:8px"><button class="btn soft" id="addAccountBtn">＋ Add</button><button class="btn" id="logoutBtn">Logout</button></div></div>
+
+ <div class="accountbox">
+  <label>Account</label>
+  <select id="accountSelect">
+   <option value="">No account</option>
+  </select>
+  <div style="display:flex;gap:6px;margin-top:8px">
+   <button class="btn soft" id="addAccountBtn">＋ Add</button>
+   <button class="btn" id="logoutBtn">Logout</button>
+  </div>
+ </div>
+
  <nav class="nav" id="folderNav"></nav>
+
  <div class="sectionline"></div>
+
  <div class="themebox">
-  <div class="small-label">Mode</div><div class="theme-toggle"><button data-mode="light">☀ Light</button><button data-mode="dark">☾ Dark</button></div>
+  <div class="small-label">Mode</div>
+  <div class="theme-toggle">
+   <button data-mode="light">☀ Light</button>
+   <button data-mode="dark">☾ Dark</button>
+  </div>
+
   <div class="small-label" style="margin-top:13px">Accent color</div>
   <div class="theme-row">
    <button class="theme-choice" data-accent="purple" style="background:#7c3aed"></button>
@@ -141,57 +275,1103 @@ button{cursor:pointer}
   </div>
  </div>
 </aside>
+
 <main class="mainpanel">
- <div class="panelhead"><div><h1 id="panelTitle">Inbox</h1><div class="sub" id="panelSub">Your messages</div></div><div class="head-actions"><button class="btn" id="manageAccountsBtn">Manage accounts</button></div></div>
- <div class="toolbar" id="listToolbar"><label><input type="checkbox" id="selectAll"> Select all</label><span class="spacer"></span><button class="btn" id="markReadBtn">Mark read</button><button class="btn" id="markUnreadBtn">Mark unread</button><button class="btn danger" id="deleteBtn">Delete</button></div>
- <div class="mail-list" id="mailList"><div class="empty">Add an account to start.</div></div><div class="status" id="status">Ready</div>
+
+ <div class="panelhead">
+  <div>
+   <h1 id="panelTitle">Inbox</h1>
+   <div class="sub" id="panelSub">Your messages</div>
+  </div>
+  <div class="head-actions">
+   <button class="btn" id="manageAccountsBtn">Manage accounts</button>
+  </div>
+ </div>
+
+ <div class="toolbar" id="listToolbar">
+  <label><input type="checkbox" id="selectAll"> Select all</label>
+  <span class="spacer"></span>
+  <button class="btn" id="markReadBtn">Mark read</button>
+  <button class="btn" id="markUnreadBtn">Mark unread</button>
+  <button class="btn danger" id="deleteBtn">Delete</button>
+ </div>
+
+ <div class="mail-list" id="mailList">
+  <div class="empty">Add an account to start.</div>
+ </div>
+
+ <div class="status" id="status">Ready</div>
+
 </main>
 </div>
 </div>
-<div class="modalback" id="modalBack"><div class="modal" id="modal"></div></div><div class="toast" id="toast"></div>
+
+<div class="modalback" id="modalBack">
+ <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-const $=id=>document.getElementById(id);
-let accounts=JSON.parse(localStorage.getItem('danke_accounts')||'[]'),activeId=localStorage.getItem('danke_active')||'';
-let folder='INBOX',messages=[],selected=new Set(),currentMessage=null,searchMode=false,searchTerm='';
-const providers=[
-{id:'ttcn',name:'TTCN',domains:['mx3.ttcn.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true},
-{id:'dti',name:'DTI',domains:['dti.ne.jp','snow.dti2.ne.jp'],imapHost:'imap.dti.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.dti.ne.jp',smtpPort:465,smtpSecure:true},
-{id:'toukai',name:'Toukai',domains:['toukai.me'],imapHost:'mail.toukai.me',imapPort:993,imapSecure:true,smtpHost:'mail.toukai.me',smtpPort:465,smtpSecure:true},
-{id:'kanto',name:'Kanto',domains:['kanto.me'],imapHost:'mail.kanto.me',imapPort:993,imapSecure:true,smtpHost:'mail.kanto.me',smtpPort:465,smtpSecure:true},
-{id:'custom',name:'Custom IMAP/SMTP',domains:[],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true}];
-const activeAccount=()=>accounts.find(a=>a.id===activeId);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function saveAccounts(){localStorage.setItem('danke_accounts',JSON.stringify(accounts));localStorage.setItem('danke_active',activeId)}
-function toast(s){$('toast').textContent=s;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2600)}
-function status(s){$('status').textContent=s}
-function theme(mode,accent){document.documentElement.dataset.theme=mode;document.documentElement.dataset.accent=accent;localStorage.setItem('danke_theme',mode);localStorage.setItem('danke_accent',accent);document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));document.querySelectorAll('[data-accent]').forEach(b=>b.classList.toggle('selected',b.dataset.accent===accent))}
-theme(localStorage.getItem('danke_theme')||'light',localStorage.getItem('danke_accent')||'purple');
-document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>theme(b.dataset.mode,document.documentElement.dataset.accent));
-document.querySelectorAll('[data-accent]').forEach(b=>b.onclick=()=>theme(document.documentElement.dataset.theme,b.dataset.accent));
-async function api(url,opt={}){let r=await fetch(url,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.message||'Request failed');return d}
-function renderAccounts(){$('accountSelect').innerHTML=accounts.map(a=>`<option value="${esc(a.id)}">${esc(a.email)}</option>`).join('')||'<option value="">No account</option>';$('accountSelect').value=activeId}
-function renderFolders(extra=[]){let fs=[['INBOX','📥','Inbox'],['Sent','📤','Sent'],['Drafts','📝','Drafts'],['Spam','⚠️','Spam'],['Trash','🗑️','Trash']];extra.forEach(f=>{let n=typeof f==='string'?f:f.name||f.path;if(n&&!fs.some(x=>x[0]===n))fs.push([n,'📁',n])});$('folderNav').innerHTML=fs.map(([id,ico,n])=>`<button class="navitem ${!searchMode&&folder===id?'active':''}" data-folder="${esc(id)}">${ico}<span>${esc(n)}</span></button>`).join('');$('folderNav').querySelectorAll('[data-folder]').forEach(b=>b.onclick=()=>selectFolder(b.dataset.folder))}
-function renderList(){selected.clear();$('selectAll').checked=false;$('listToolbar').style.display='flex';$('mailList').innerHTML=messages.length?messages.map((m,i)=>{let uid=m.uid??m.id??i,from=m.from||m.sender||'Unknown',sub=m.subject||'(No subject)',date=m.date?new Date(m.date).toLocaleDateString():'';let unread=!(m.flags||[]).includes('\\Seen')&&!(m.flags||[]).includes('Seen');return `<div class="mailrow ${unread?'unread':''}" data-uid="${esc(uid)}"><input type="checkbox" class="msgcheck" data-uid="${esc(uid)}"><div class="avatar">${esc(String(from).replace(/<.*?>/g,'').trim().slice(0,1).toUpperCase()||'U')}</div><div class="sender">${esc(from)}</div><div class="subject">${esc(sub)} <span class="snippet">— ${esc(m.snippet||'')}</span></div><div class="maildate">${esc(date)}</div></div>`}).join(''):'<div class="empty">No messages in this folder.</div>';
-$('mailList').querySelectorAll('.mailrow').forEach(r=>r.onclick=e=>{if(e.target.type!=='checkbox')openMessage(r.dataset.uid)});
-$('mailList').querySelectorAll('.msgcheck').forEach(c=>c.onchange=()=>{c.checked?selected.add(c.dataset.uid):selected.delete(c.dataset.uid);$('selectAll').checked=messages.length>0&&selected.size===messages.length});
-$('panelTitle').textContent=searchMode?'Search results':folder;$('panelSub').textContent=searchMode?`Results for "${searchTerm}"`:`${messages.length} messages`}
-async function loadMessages(){if(!activeAccount()){messages=[];renderList();status('Add an account to start');return}status('Loading…');$('mailList').classList.add('loading');try{let d=searchMode?await api('/api/search',{method:'POST',body:JSON.stringify({accountId:activeId,folder:$('searchScope').value,query:searchTerm})}):await api(`/api/inbox?accountId=${encodeURIComponent(activeId)}&folder=${encodeURIComponent(folder)}`);messages=d.messages||d.items||d.results||[];renderList();status(`${messages.length} messages loaded`)}catch(e){status('Load failed: '+e.message);$('mailList').innerHTML=`<div class="empty">⚠ ${esc(e.message)}</div>`}finally{$('mailList').classList.remove('loading')}}
-async function selectFolder(f){folder=f;searchMode=false;renderFolders();loadMessages()}
-async function doSearch(){searchTerm=$('searchInput').value.trim();searchMode=!!searchTerm;loadMessages()}
-async function openMessage(uid){if(!activeAccount())return;status('Opening email…');try{let d=await api(`/api/message/${encodeURIComponent(uid)}?accountId=${encodeURIComponent(activeId)}&folder=${encodeURIComponent(folder)}`);currentMessage=d.message||d;$('listToolbar').style.display='none';$('mailList').innerHTML=`<div class="view"><button class="btn" id="backList">← Back</button><div class="messagehead"><div class="head-actions" style="margin:0"><button class="btn" id="replyBtn">↩ Reply</button><button class="btn" id="forwardBtn">↪ Forward</button><button class="btn danger" id="singleDelete">Delete</button></div><h2>${esc(currentMessage.subject||'(No subject)')}</h2><div class="messagemeta">From: ${esc(currentMessage.from||'')}<br>To: ${esc(currentMessage.to||'')}<br>Date: ${esc(currentMessage.date||'')}</div></div><div class="messagebody">${currentMessage.html||`<pre style="white-space:pre-wrap;font:inherit">${esc(currentMessage.text||'')}</pre>`}</div></div>`;$('backList').onclick=renderList;$('replyBtn').onclick=()=>compose('reply');$('forwardBtn').onclick=()=>compose('forward');$('singleDelete').onclick=async()=>{await actions([String(uid)],'delete');renderList()};status('Email opened')}catch(e){status('Open failed: '+e.message);toast(e.message)}}
-async function actions(uids,action){if(!uids.length)return toast('Pilih email dulu');try{await api('/api/message/action',{method:'POST',body:JSON.stringify({accountId:activeId,folder,uids,action})});toast('Berhasil');loadMessages()}catch(e){toast('Action gagal: '+e.message)}}
-$('selectAll').onchange=()=>document.querySelectorAll('.msgcheck').forEach(c=>{c.checked=$('selectAll').checked;c.checked?selected.add(c.dataset.uid):selected.delete(c.dataset.uid)});
-$('markReadBtn').onclick=()=>actions([...selected],'read');$('markUnreadBtn').onclick=()=>actions([...selected],'unread');$('deleteBtn').onclick=()=>actions([...selected],'delete');
-$('searchBtn').onclick=doSearch;$('searchInput').onkeydown=e=>{if(e.key==='Enter')doSearch()};$('refreshBtn').onclick=loadMessages;
-$('accountSelect').onchange=()=>{activeId=$('accountSelect').value;saveAccounts();loadMessages()};
-function modal(s){$('modal').innerHTML=s;$('modalBack').classList.add('show')}function closeModal(){$('modalBack').classList.remove('show')}
-$('modalBack').onclick=e=>{if(e.target===$('modalBack'))closeModal()}
-function addAccount(){modal(`<h2>Add account</h2><form id="accountForm"><div class="field"><label>Email</label><input name="email" type="email" required></div><div class="field"><label>Password / App password</label><input name="password" type="password" required></div><div class="field"><label>Provider</label><select name="provider">${providers.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select></div><div id="custom"></div><div class="modalfoot"><button type="button" class="btn" id="cancel">Cancel</button><button class="btn primary">Connect</button></div></form>`);let f=$('accountForm'),p=f.provider,c=$('custom');function upd(){c.innerHTML=p.value==='custom'?'<div class="field"><label>IMAP host</label><input name="ih" required></div><div class="field"><label>IMAP port</label><input name="ip" value="993" type="number"></div><div class="field"><label>SMTP host</label><input name="sh" required></div><div class="field"><label>SMTP port</label><input name="sp" value="465" type="number"></div>':''}p.onchange=upd;upd();$('cancel').onclick=closeModal;f.onsubmit=async e=>{e.preventDefault();let fd=new FormData(f),pr=providers.find(x=>x.id===p.value),email=fd.get('email'),password=fd.get('password'),cfg={...pr};if(pr.id==='custom'){cfg.imapHost=fd.get('ih');cfg.imapPort=+fd.get('ip');cfg.smtpHost=fd.get('sh');cfg.smtpPort=+fd.get('sp')}try{await api('/api/login',{method:'POST',body:JSON.stringify({username:email,password,host:cfg.imapHost,port:cfg.imapPort,secure:cfg.imapSecure})});let a={id:crypto.randomUUID(),email,password,imapHost:cfg.imapHost,imapPort:cfg.imapPort,imapSecure:cfg.imapSecure,smtpHost:cfg.smtpHost,smtpPort:cfg.smtpPort,smtpSecure:cfg.smtpSecure};accounts.push(a);activeId=a.id;saveAccounts();renderAccounts();closeModal();loadMessages();toast('Account connected')}catch(err){toast('Login failed: '+err.message)}}}
-function compose(type='new'){let m=currentMessage||{},to=type==='reply'?m.from||'':'',subject=type==='reply'?'Re: '+(m.subject||''):type==='forward'?'Fwd: '+(m.subject||''):'',body=type==='forward'?`\n\nForwarded message:\nFrom: ${m.from||''}\nSubject: ${m.subject||''}\n\n${m.text||''}`:type==='reply'?`\n\nOn ${m.date||''}, ${m.from||''} wrote:\n> ${(m.text||'').split('\n').join('\n> ')}`:'';modal(`<h2>${type==='reply'?'Reply':type==='forward'?'Forward':'Compose'}</h2><form id="cf"><div class="field"><label>To</label><input name="to" type="email" required value="${esc(to)}"></div><div class="field"><label>Subject</label><input name="subject" value="${esc(subject)}"></div><div class="field"><label>Message</label><textarea name="text">${esc(body)}</textarea></div><div class="modalfoot"><button type="button" class="btn" id="cancel">Cancel</button><button class="btn primary">Send</button></div></form>`);$('cancel').onclick=closeModal;$('cf').onsubmit=async e=>{e.preventDefault();let fd=new FormData(e.target),a=activeAccount();try{await api('/api/send',{method:'POST',body:JSON.stringify({accountId:activeId,from:a.email,to:fd.get('to'),subject:fd.get('subject'),text:fd.get('text'),smtpHost:a.smtpHost,smtpPort:a.smtpPort,smtpSecure:a.smtpSecure,username:a.email,password:a.password})});closeModal();toast('Email sent')}catch(err){toast('Send failed: '+err.message)}}}
-$('composeBtn').onclick=()=>compose();$('addAccountBtn').onclick=addAccount;$('manageAccountsBtn').onclick=addAccount;
-$('settingsBtn').onclick=()=>toast('Theme tersedia di sidebar');
-$('logoutBtn').onclick=async()=>{if(!activeAccount())return;try{await api('/api/logout',{method:'POST',body:JSON.stringify({accountId:activeId})})}catch{}accounts=accounts.filter(a=>a.id!==activeId);activeId=accounts[0]?.id||'';saveAccounts();renderAccounts();loadMessages();toast('Account removed')};
-renderAccounts();renderFolders();loadMessages();
+// ========================================
+// STATE
+// ========================================
+
+const $ = id => document.getElementById(id);
+
+let accounts = JSON.parse(localStorage.getItem('danke_accounts') || '[]');
+let activeId = localStorage.getItem('danke_active') || '';
+
+let folder = 'INBOX';
+let folders = [];
+let messages = [];
+let selected = new Set();
+let currentMessage = null;
+let currentMessageFolder = 'INBOX';
+let searchMode = false;
+let searchTerm = '';
+let toastTimer = null;
+
+// ========================================
+// PROVIDERS
+// ========================================
+
+const providers = [
+ {
+  id:'ttcn',
+  name:'TTCN',
+  domains:['mx3.ttcn.ne.jp','ttcn.ne.jp'],
+  imapHost:'imap2.cm.dream.jp',
+  imapPort:993,
+  imapSecure:true,
+  smtpHost:'vsmtp2.cm.dream.jp',
+  smtpPort:465,
+  smtpSecure:true
+ },
+ {
+  id:'dti',
+  name:'DTI',
+  domains:['dti.ne.jp','snow.dti2.ne.jp','dti2.ne.jp'],
+  imapHost:'imap.dti.ne.jp',
+  imapPort:993,
+  imapSecure:true,
+  smtpHost:'smtp.dti.ne.jp',
+  smtpPort:465,
+  smtpSecure:true
+ },
+ {
+  id:'toukai',
+  name:'Toukai',
+  domains:['toukai.me'],
+  imapHost:'mail.toukai.me',
+  imapPort:993,
+  imapSecure:true,
+  smtpHost:'mail.toukai.me',
+  smtpPort:465,
+  smtpSecure:true
+ },
+ {
+  id:'kanto',
+  name:'Kanto',
+  domains:['kanto.me'],
+  imapHost:'mail.kanto.me',
+  imapPort:993,
+  imapSecure:true,
+  smtpHost:'mail.kanto.me',
+  smtpPort:465,
+  smtpSecure:true
+ },
+ {
+  id:'custom',
+  name:'Custom IMAP/SMTP',
+  domains:[],
+  imapHost:'',
+  imapPort:993,
+  imapSecure:true,
+  smtpHost:'',
+  smtpPort:465,
+  smtpSecure:true
+ }
+];
+
+const activeAccount = () => accounts.find(a => a.id === activeId);
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+ '&':'&amp;',
+ '<':'&lt;',
+ '>':'&gt;',
+ '"':'&quot;',
+ "'":'&#39;'
+}[c]));
+
+function saveAccounts(){
+ localStorage.setItem('danke_accounts', JSON.stringify(accounts));
+ localStorage.setItem('danke_active', activeId);
+}
+
+function toast(message){
+ $('toast').textContent = message;
+ $('toast').classList.add('show');
+ clearTimeout(toastTimer);
+ toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2800);
+}
+
+function status(message){
+ $('status').textContent = message;
+}
+
+// ========================================
+// THEME
+// ========================================
+
+function theme(mode, accent){
+ document.documentElement.dataset.theme = mode;
+ document.documentElement.dataset.accent = accent;
+
+ localStorage.setItem('danke_theme', mode);
+ localStorage.setItem('danke_accent', accent);
+
+ document.querySelectorAll('[data-mode]').forEach(button => {
+  button.classList.toggle('active', button.dataset.mode === mode);
+ });
+
+ document.querySelectorAll('.theme-choice').forEach(button => {
+  button.classList.toggle('selected', button.dataset.accent === accent);
+ });
+}
+
+theme(
+ localStorage.getItem('danke_theme') || 'light',
+ localStorage.getItem('danke_accent') || 'purple'
+);
+
+document.querySelectorAll('[data-mode]').forEach(button => {
+ button.onclick = () => theme(
+  button.dataset.mode,
+  document.documentElement.dataset.accent
+ );
+});
+
+document.querySelectorAll('.theme-choice').forEach(button => {
+ button.onclick = () => theme(
+  document.documentElement.dataset.theme,
+  button.dataset.accent
+ );
+});
+
+// ========================================
+// API
+// ========================================
+
+async function api(url, options = {}){
+ const account = activeAccount();
+
+ const headers = {
+  ...(options.headers || {})
+ };
+
+ if (!(options.body instanceof FormData)) {
+  headers['Content-Type'] = 'application/json';
+ }
+
+ if (account?.sessionId) {
+  headers['x-session-id'] = account.sessionId;
+ }
+
+ const response = await fetch(url, {
+  ...options,
+  headers
+ });
+
+ const data = await response.json().catch(() => ({}));
+
+ if (!response.ok) {
+  if (response.status === 401) {
+   throw new Error('Session expired. Please remove and add the account again.');
+  }
+
+  throw new Error(
+   data.details?.message ||
+   data.error ||
+   data.message ||
+   'Request failed'
+  );
+ }
+
+ return data;
+}
+
+// ========================================
+// ACCOUNT UI
+// ========================================
+
+function renderAccounts(){
+ $('accountSelect').innerHTML = accounts.map(account =>
+  `<option value="${esc(account.id)}">${esc(account.email)}</option>`
+ ).join('') || '<option value="">No account</option>';
+
+ $('accountSelect').value = activeId;
+}
+
+function detectProvider(email){
+ const domain = String(email).split('@').pop().toLowerCase();
+
+ return providers.find(provider =>
+  provider.domains.some(item => item.toLowerCase() === domain)
+ ) || providers.find(provider => provider.id === 'custom');
+}
+
+// ========================================
+// FOLDER HELPERS
+// ========================================
+
+function folderLabel(item){
+ const special = String(item.specialUse || '').toLowerCase();
+ const path = String(item.path || item.name || '').toLowerCase();
+
+ if (special.includes('inbox') || path === 'inbox') return 'Inbox';
+ if (special.includes('sent') || /sent|send|outbox/.test(path)) return 'Sent';
+ if (special.includes('draft') || /draft/.test(path)) return 'Drafts';
+ if (special.includes('trash') || /trash|deleted|bin/.test(path)) return 'Trash';
+ if (special.includes('junk') || /spam|junk/.test(path)) return 'Spam';
+
+ return item.name || item.path || 'Folder';
+}
+
+function folderIcon(label){
+ const icons = {
+  Inbox:'📥',
+  Sent:'📤',
+  Drafts:'📝',
+  Spam:'⚠️',
+  Trash:'🗑️'
+ };
+
+ return icons[label] || '📁';
+}
+
+async function loadFolders(){
+ const account = activeAccount();
+
+ if (!account) {
+  folders = [];
+  renderFolders();
+  updateSearchScopes();
+  return;
+ }
+
+ try {
+  const data = await api('/api/folders');
+
+  folders = Array.isArray(data) ? data : data.folders || [];
+
+  renderFolders();
+  updateSearchScopes();
+
+ } catch(error) {
+  console.error('Folder loading:', error);
+  renderFolders();
+ }
+}
+
+function renderFolders(){
+ const defaultFolders = [
+  {path:'INBOX',name:'Inbox',specialUse:'\\Inbox'},
+  {path:'Sent',name:'Sent',specialUse:'\\Sent'},
+  {path:'Drafts',name:'Drafts',specialUse:'\\Drafts'},
+  {path:'Spam',name:'Spam',specialUse:'\\Junk'},
+  {path:'Trash',name:'Trash',specialUse:'\\Trash'}
+ ];
+
+ const list = folders.length ? folders : defaultFolders;
+
+ const used = new Set();
+
+ const items = list.filter(item => {
+  const key = item.path || item.name;
+  if (!key || used.has(key)) return false;
+  used.add(key);
+  return true;
+ });
+
+ $('folderNav').innerHTML = items.map(item => {
+  const path = item.path || item.name;
+  const label = folderLabel(item);
+  const active = !searchMode && folder === path;
+
+  return `
+   <button class="navitem ${active ? 'active' : ''}"
+    data-folder="${esc(path)}">
+    ${folderIcon(label)}
+    <span>${esc(label)}</span>
+   </button>
+  `;
+ }).join('');
+
+ $('folderNav').querySelectorAll('[data-folder]').forEach(button => {
+  button.onclick = () => selectFolder(button.dataset.folder);
+ });
+}
+
+function updateSearchScopes(){
+ const select = $('searchScope');
+ const current = select.value || 'ALL';
+
+ const options = [
+  '<option value="ALL">All Folders</option>',
+  ...folders.map(item => {
+   const path = item.path || item.name;
+   const label = folderLabel(item);
+   return `<option value="${esc(path)}">${esc(label)}</option>`;
+  })
+ ];
+
+ select.innerHTML = options.join('');
+
+ if ([...select.options].some(option => option.value === current)) {
+  select.value = current;
+ } else {
+  select.value = 'ALL';
+ }
+}
+
+// ========================================
+// MESSAGE LIST
+// ========================================
+
+function isUnread(message){
+ const flags = (message.flags || []).map(flag => String(flag).toLowerCase());
+ return !flags.includes('\\seen') && !flags.includes('seen');
+}
+
+function formatDate(date){
+ if (!date) return '';
+
+ const parsed = new Date(date);
+
+ if (Number.isNaN(parsed.getTime())) return '';
+
+ return parsed.toLocaleDateString('id-ID', {
+  day:'2-digit',
+  month:'short',
+  year:'numeric'
+ });
+}
+
+function renderList(){
+ selected.clear();
+ $('selectAll').checked = false;
+ $('listToolbar').style.display = 'flex';
+
+ if (!messages.length) {
+  $('mailList').innerHTML = '<div class="empty">No messages found.</div>';
+ } else {
+  $('mailList').innerHTML = messages.map((message, index) => {
+   const from = message.from || message.sender || 'Unknown';
+   const subject = message.subject || '(No subject)';
+   const date = formatDate(message.date);
+   const unread = isUnread(message);
+
+   return `
+    <div class="mailrow ${unread ? 'unread' : ''}" data-index="${index}">
+     <input type="checkbox" class="msgcheck" data-index="${index}">
+     <div class="avatar">${esc(from.replace(/<.*?>/g,'').trim().slice(0,1).toUpperCase() || 'U')}</div>
+     <div class="sender">${esc(from)}</div>
+     <div class="subject">
+      ${esc(subject)}
+      <span class="snippet">— ${esc(message.snippet || '')}</span>
+     </div>
+     <div class="maildate">${esc(date)}</div>
+    </div>
+   `;
+  }).join('');
+ }
+
+ $('mailList').querySelectorAll('.mailrow').forEach(row => {
+  row.onclick = event => {
+   if (event.target.type === 'checkbox') return;
+
+   const message = messages[Number(row.dataset.index)];
+   if (message) openMessage(message);
+  };
+ });
+
+ $('mailList').querySelectorAll('.msgcheck').forEach(check => {
+  check.onchange = () => {
+   const index = Number(check.dataset.index);
+
+   if (check.checked) selected.add(index);
+   else selected.delete(index);
+
+   $('selectAll').checked =
+    messages.length > 0 && selected.size === messages.length;
+  };
+ });
+
+ $('panelTitle').textContent = searchMode ? 'Search results' : folderLabel(
+  folders.find(item => (item.path || item.name) === folder) || {path:folder,name:folder}
+ );
+
+ $('panelSub').textContent = searchMode
+  ? `Results for "${searchTerm}" · ${messages.length} messages`
+  : `${messages.length} messages`;
+}
+
+// ========================================
+// LOAD EMAILS
+// ========================================
+
+async function loadMessages(){
+ if (!activeAccount()) {
+  messages = [];
+  renderList();
+  status('Add an account to start');
+  return;
+ }
+
+ status('Loading messages…');
+ $('mailList').classList.add('loading');
+
+ try {
+  let data;
+
+  if (searchMode) {
+   const scope = $('searchScope').value || 'ALL';
+
+   data = await api(
+    `/api/search?q=${encodeURIComponent(searchTerm)}&folder=${encodeURIComponent(scope)}&limit=100`
+   );
+  } else {
+   data = await api(
+    `/api/inbox?folder=${encodeURIComponent(folder)}&page=1&limit=50`
+   );
+  }
+
+  messages = data.messages || [];
+  renderList();
+
+  status(`${messages.length} messages loaded`);
+
+ } catch(error) {
+  status('Load failed: ' + error.message);
+  $('mailList').innerHTML = `
+   <div class="empty">⚠ ${esc(error.message)}</div>
+  `;
+ } finally {
+  $('mailList').classList.remove('loading');
+ }
+}
+
+async function selectFolder(selectedFolder){
+ folder = selectedFolder;
+ searchMode = false;
+ $('searchInput').value = '';
+
+ renderFolders();
+ await loadMessages();
+}
+
+async function doSearch(){
+ searchTerm = $('searchInput').value.trim();
+
+ if (!searchTerm) {
+  searchMode = false;
+  await loadMessages();
+  return;
+ }
+
+ searchMode = true;
+ await loadMessages();
+}
+
+// ========================================
+// OPEN MESSAGE
+// ========================================
+
+async function openMessage(message){
+ if (!activeAccount()) return;
+
+ const uid = message.uid;
+ const messageFolder = message.folder || folder;
+
+ if (!uid) {
+  toast('Message UID is missing');
+  return;
+ }
+
+ status('Opening email…');
+ $('mailList').classList.add('loading');
+
+ try {
+  const data = await api(
+   `/api/message/${encodeURIComponent(uid)}?folder=${encodeURIComponent(messageFolder)}`
+  );
+
+  currentMessage = data.message || data;
+  currentMessageFolder = messageFolder;
+
+  $('listToolbar').style.display = 'none';
+
+  const bodyContent = currentMessage.text
+   ? `<pre>${esc(currentMessage.text)}</pre>`
+   : currentMessage.html
+    ? `<iframe class="messageframe" sandbox="" title="Email content"></iframe>`
+    : '<p>No message content.</p>';
+
+  $('mailList').innerHTML = `
+   <div class="view">
+    <button class="btn" id="backList">← Back</button>
+
+    <div class="messagehead">
+     <div class="head-actions" style="margin:0">
+      <button class="btn" id="replyBtn">↩ Reply</button>
+      <button class="btn" id="forwardBtn">↪ Forward</button>
+      <button class="btn danger" id="singleDelete">Delete</button>
+     </div>
+
+     <h2>${esc(currentMessage.subject || '(No subject)')}</h2>
+
+     <div class="messagemeta">
+      From: ${esc(currentMessage.from || '')}<br>
+      To: ${esc(currentMessage.to || '')}<br>
+      CC: ${esc(currentMessage.cc || '')}<br>
+      Date: ${esc(currentMessage.date || '')}
+     </div>
+    </div>
+
+    <div class="messagebody" id="messageContent">${bodyContent}</div>
+   </div>
+  `;
+
+  if (!currentMessage.text && currentMessage.html) {
+   const frame = $('messageContent').querySelector('iframe');
+
+   if (frame) {
+    frame.srcdoc = currentMessage.html;
+   }
+  }
+
+  $('backList').onclick = () => {
+   renderList();
+   status('Ready');
+  };
+
+  $('replyBtn').onclick = () => compose('reply');
+  $('forwardBtn').onclick = () => compose('forward');
+
+  $('singleDelete').onclick = async () => {
+   await performAction(
+    [{uid:String(uid),folder:messageFolder}],
+    'delete'
+   );
+
+   searchMode ? await doSearch() : await loadMessages();
+  };
+
+  status('Email opened');
+
+ } catch(error) {
+  status('Open failed: ' + error.message);
+  toast(error.message);
+ } finally {
+  $('mailList').classList.remove('loading');
+ }
+}
+
+// ========================================
+// MESSAGE ACTIONS
+// ========================================
+
+async function performAction(items, action){
+ if (!items.length) {
+  toast('Pilih email terlebih dahulu');
+  return;
+ }
+
+ const groups = {};
+
+ items.forEach(item => {
+  const key = item.folder || folder;
+
+  if (!groups[key]) groups[key] = [];
+
+  groups[key].push(Number(item.uid));
+ });
+
+ try {
+  for (const [folderName, uids] of Object.entries(groups)) {
+   await api('/api/message/action', {
+    method:'POST',
+    body:JSON.stringify({
+     folder:folderName,
+     uids,
+     action
+    })
+   });
+  }
+
+  toast(
+   action === 'read' ? 'Email ditandai sudah dibaca' :
+   action === 'unread' ? 'Email ditandai belum dibaca' :
+   'Email berhasil dihapus'
+  );
+
+  await loadMessages();
+
+ } catch(error) {
+  toast('Action failed: ' + error.message);
+ }
+}
+
+function getSelectedItems(){
+ return [...selected].map(index => {
+  const message = messages[index];
+
+  return {
+   uid:message.uid,
+   folder:message.folder || folder
+  };
+ }).filter(item => item.uid);
+}
+
+$('selectAll').onchange = () => {
+ selected.clear();
+
+ document.querySelectorAll('.msgcheck').forEach(check => {
+  check.checked = $('selectAll').checked;
+
+  if (check.checked) {
+   selected.add(Number(check.dataset.index));
+  }
+ });
+
+};
+
+$('markReadBtn').onclick = () => performAction(getSelectedItems(),'read');
+$('markUnreadBtn').onclick = () => performAction(getSelectedItems(),'unread');
+$('deleteBtn').onclick = () => performAction(getSelectedItems(),'delete');
+
+// ========================================
+// SEARCH / REFRESH
+// ========================================
+
+$('searchBtn').onclick = doSearch;
+
+$('searchInput').onkeydown = event => {
+ if (event.key === 'Enter') doSearch();
+};
+
+$('searchScope').onchange = () => {
+ if (searchTerm) doSearch();
+};
+
+$('refreshBtn').onclick = async () => {
+ if (activeAccount()) {
+  await loadFolders();
+  await loadMessages();
+ }
+};
+
+// ========================================
+// MODAL
+// ========================================
+
+function modal(content){
+ $('modal').innerHTML = content;
+ $('modalBack').classList.add('show');
+}
+
+function closeModal(){
+ $('modalBack').classList.remove('show');
+}
+
+$('modalBack').onclick = event => {
+ if (event.target === $('modalBack')) closeModal();
+};
+
+// ========================================
+// ADD ACCOUNT
+// ========================================
+
+function addAccount(){
+ modal(`
+  <h2>Add account</h2>
+
+  <form id="accountForm">
+
+   <div class="field">
+    <label>Email address</label>
+    <input name="email" type="email" placeholder="name@example.com" required>
+   </div>
+
+   <div class="field">
+    <label>Password / App password</label>
+    <input name="password" type="password" required autocomplete="new-password">
+   </div>
+
+   <div class="field">
+    <label>Provider</label>
+    <select name="provider" id="providerSelect">
+     ${providers.map(provider =>
+      `<option value="${provider.id}">${provider.name}</option>`
+     ).join('')}
+    </select>
+   </div>
+
+   <div id="providerInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px">
+    Provider will be detected from your email domain.
+   </div>
+
+   <div id="customFields"></div>
+
+   <div class="modalfoot">
+    <button type="button" class="btn" id="cancelAccount">Cancel</button>
+    <button class="btn primary" id="connectAccount">Connect</button>
+   </div>
+
+  </form>
+ `);
+
+ const form = $('accountForm');
+ const providerSelect = $('providerSelect');
+ const customFields = $('customFields');
+ const emailInput = form.email;
+
+ function updateProvider(){
+  const provider = providers.find(item => item.id === providerSelect.value);
+
+  if (provider?.id === 'custom') {
+   customFields.innerHTML = `
+    <div class="field">
+     <label>IMAP host</label>
+     <input name="imapHost" required placeholder="imap.example.com">
+    </div>
+
+    <div class="field">
+     <label>IMAP port</label>
+     <input name="imapPort" type="number" value="993" required>
+    </div>
+
+    <div class="field">
+     <label>SMTP host</label>
+     <input name="smtpHost" required placeholder="smtp.example.com">
+    </div>
+
+    <div class="field">
+     <label>SMTP port</label>
+     <input name="smtpPort" type="number" value="465" required>
+    </div>
+   `;
+
+   $('providerInfo').textContent = 'Enter your own IMAP and SMTP server settings.';
+  } else {
+   customFields.innerHTML = '';
+
+   $('providerInfo').textContent =
+    `Detected provider: ${provider?.name || 'Custom'}. Please verify server settings if login fails.`;
+  }
+ }
+
+ function autoDetect(){
+  const provider = detectProvider(emailInput.value);
+
+  if (provider) {
+   providerSelect.value = provider.id;
+   updateProvider();
+  }
+ }
+
+ emailInput.onchange = autoDetect;
+ emailInput.onblur = autoDetect;
+ providerSelect.onchange = updateProvider;
+
+ updateProvider();
+
+ $('cancelAccount').onclick = closeModal;
+
+ form.onsubmit = async event => {
+  event.preventDefault();
+
+  const fd = new FormData(form);
+  const email = String(fd.get('email')).trim();
+  const password = String(fd.get('password'));
+  const provider = providers.find(item => item.id === providerSelect.value);
+
+  let imapHost = provider.imapHost;
+  let imapPort = provider.imapPort;
+  let smtpHost = provider.smtpHost;
+  let smtpPort = provider.smtpPort;
+
+  if (provider.id === 'custom') {
+   imapHost = String(fd.get('imapHost')).trim();
+   imapPort = Number(fd.get('imapPort') || 993);
+   smtpHost = String(fd.get('smtpHost')).trim();
+   smtpPort = Number(fd.get('smtpPort') || 465);
+  }
+
+  if (!imapHost || !smtpHost) {
+   toast('IMAP and SMTP host are required');
+   return;
+  }
+
+  const button = $('connectAccount');
+  button.disabled = true;
+  button.textContent = 'Connecting…';
+
+  try {
+   const result = await api('/api/login', {
+    method:'POST',
+    body:JSON.stringify({
+     username:email,
+     password,
+     host:imapHost,
+     port:imapPort,
+     secure:true
+    })
+   });
+
+   if (!result.sessionId) {
+    throw new Error('Server did not return a session token');
+   }
+
+   const account = {
+    id:crypto.randomUUID(),
+    email,
+    sessionId:result.sessionId,
+    imapHost,
+    imapPort,
+    smtpHost,
+    smtpPort,
+    smtpSecure:true
+   };
+
+   accounts.push(account);
+   activeId = account.id;
+   folder = 'INBOX';
+   searchMode = false;
+
+   saveAccounts();
+   renderAccounts();
+   closeModal();
+
+   await loadFolders();
+   await loadMessages();
+
+   toast('Account connected successfully');
+
+  } catch(error) {
+   toast('Login failed: ' + error.message);
+  } finally {
+   if ($('connectAccount')) {
+    $('connectAccount').disabled = false;
+    $('connectAccount').textContent = 'Connect';
+   }
+  }
+ };
+}
+
+// ========================================
+// COMPOSE / REPLY / FORWARD
+// ========================================
+
+function compose(type = 'new'){
+ const message = currentMessage || {};
+
+ let to = '';
+ let subject = '';
+ let body = '';
+
+ if (type === 'reply') {
+  to = message.from || '';
+  subject = 'Re: ' + (message.subject || '');
+  body = `\n\nOn ${message.date || ''}, ${message.from || ''} wrote:\n> ${
+   (message.text || '').split('\n').join('\n> ')
+  }`;
+ }
+
+ if (type === 'forward') {
+  subject = 'Fwd: ' + (message.subject || '');
+
+  body = `
+
+---------- Forwarded message ----------
+From: ${message.from || ''}
+To: ${message.to || ''}
+Subject: ${message.subject || ''}
+Date: ${message.date || ''}
+
+${message.text || ''}
+`;
+ }
+
+ modal(`
+  <h2>${type === 'reply' ? 'Reply' : type === 'forward' ? 'Forward' : 'Compose'}</h2>
+
+  <form id="composeForm">
+
+   <div class="field">
+    <label>To</label>
+    <input name="to" required value="${esc(to)}" placeholder="recipient@example.com">
+   </div>
+
+   <div class="field">
+    <label>CC</label>
+    <input name="cc" placeholder="Optional">
+   </div>
+
+   <div class="field">
+    <label>BCC</label>
+    <input name="bcc" placeholder="Optional">
+   </div>
+
+   <div class="field">
+    <label>Subject</label>
+    <input name="subject" value="${esc(subject)}">
+   </div>
+
+   <div class="field">
+    <label>Message</label>
+    <textarea name="text">${esc(body)}</textarea>
+   </div>
+
+   <div class="modalfoot">
+    <button type="button" class="btn" id="cancelCompose">Cancel</button>
+    <button class="btn primary" id="sendButton">Send</button>
+   </div>
+
+  </form>
+ `);
+
+ $('cancelCompose').onclick = closeModal;
+
+ $('composeForm').onsubmit = async event => {
+  event.preventDefault();
+
+  const account = activeAccount();
+
+  if (!account) {
+   toast('No active account');
+   return;
+  }
+
+  const fd = new FormData(event.target);
+  const button = $('sendButton');
+
+  button.disabled = true;
+  button.textContent = 'Sending…';
+
+  try {
+   await api('/api/send', {
+    method:'POST',
+    body:JSON.stringify({
+     to:fd.get('to'),
+     cc:fd.get('cc'),
+     bcc:fd.get('bcc'),
+     subject:fd.get('subject'),
+     text:fd.get('text'),
+     smtpHost:account.smtpHost,
+     smtpPort:account.smtpPort,
+     smtpSecure:account.smtpSecure
+    })
+   });
+
+   closeModal();
+   toast('Email sent successfully');
+
+  } catch(error) {
+   toast('Send failed: ' + error.message);
+  } finally {
+   if ($('sendButton')) {
+    $('sendButton').disabled = false;
+    $('sendButton').textContent = 'Send';
+   }
+  }
+ };
+}
+
+// ========================================
+// BUTTON EVENTS
+// ========================================
+
+$('composeBtn').onclick = () => compose();
+$('addAccountBtn').onclick = addAccount;
+$('manageAccountsBtn').onclick = addAccount;
+
+$('settingsBtn').onclick = () => {
+ document.querySelector('.themebox').scrollIntoView({
+  behavior:'smooth',
+  block:'center'
+ });
+};
+
+$('accountSelect').onchange = async () => {
+ activeId = $('accountSelect').value;
+ folder = 'INBOX';
+ searchMode = false;
+ searchTerm = '';
+ $('searchInput').value = '';
+
+ saveAccounts();
+ renderFolders();
+
+ await loadFolders();
+ await loadMessages();
+};
+
+$('logoutBtn').onclick = async () => {
+ const account = activeAccount();
+
+ if (!account) {
+  toast('No active account');
+  return;
+ }
+
+ if (!confirm(`Remove ${account.email} from Danke Mail?`)) return;
+
+ try {
+  await api('/api/logout', {
+   method:'POST',
+   body:JSON.stringify({})
+  });
+ } catch(error) {
+  console.warn(error);
+ }
+
+ accounts = accounts.filter(item => item.id !== activeId);
+ activeId = accounts[0]?.id || '';
+
+ saveAccounts();
+ renderAccounts();
+
+ folder = 'INBOX';
+ searchMode = false;
+
+ await loadFolders();
+ await loadMessages();
+
+ toast('Account removed');
+};
+
+// ========================================
+// INITIALIZE
+// ========================================
+
+async function initialize(){
+ renderAccounts();
+
+ if (activeAccount()) {
+  await loadFolders();
+  await loadMessages();
+ } else {
+  renderFolders();
+  updateSearchScopes();
+  messages = [];
+  renderList();
+  status('Add an account to start');
+ }
+}
+
+initialize();
 </script>
 </body>
 </html>
