@@ -148,7 +148,10 @@ function readSessionToken(token) {
     }
 }
 
-// Supports session token from header, Bearer token, body, or URL.
+// ========================================
+// SESSION HELPER
+// ========================================
+
 function getSession(req) {
     const authorization = req.headers.authorization || '';
 
@@ -199,6 +202,7 @@ async function withImap(config, callback) {
     try {
         await client.connect();
         connected = true;
+
         return await callback(client);
     } finally {
         if (connected) {
@@ -278,6 +282,36 @@ function clearMessageCache(config, folder, uids) {
 
 function normalizeFolder(value) {
     return String(value || 'INBOX').trim();
+}
+
+function getPagination(query) {
+    const page = Math.max(
+        1,
+        Math.floor(Number(query.page) || 1)
+    );
+
+    const limit = Math.min(
+        100,
+        Math.max(1, Math.floor(Number(query.limit) || 50))
+    );
+
+    return { page, limit };
+}
+
+function paginateMessages(messages, page, limit) {
+    const total = messages.length;
+    const totalPages = Math.ceil(total / limit);
+    const start = (page - 1) * limit;
+
+    return {
+        messages: messages.slice(start, start + limit),
+        total,
+        page,
+        limit,
+        totalPages,
+        hasPrevious: page > 1,
+        hasNext: page < totalPages
+    };
 }
 
 // ========================================
@@ -405,7 +439,8 @@ app.get('/api/folders', async (req, res) => {
 });
 
 // ========================================
-// INBOX / SELECTED FOLDER
+// INBOX / ALL FOLDERS
+// PAGINATION
 // ========================================
 
 app.get('/api/inbox', async (req, res) => {
@@ -418,8 +453,7 @@ app.get('/api/inbox', async (req, res) => {
     }
 
     const folder = normalizeFolder(req.query.folder);
-    const page = Math.max(1, Number(req.query.page || 1));
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 25)));
+    const { page, limit } = getPagination(req.query);
 
     try {
         const result = await withImap(config, async client => {
@@ -431,29 +465,57 @@ app.get('/api/inbox', async (req, res) => {
                     { uid: true }
                 );
 
-                if (!uids.length) {
-                    return { messages: [], total: 0, folder };
+                const total = uids.length;
+
+                if (!total) {
+                    return {
+                        messages: [],
+                        total: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                        hasPrevious: false,
+                        hasNext: false,
+                        folder
+                    };
                 }
 
-                const total = uids.length;
-                const start = Math.max(0, total - page * limit);
-                const end = total - (page - 1) * limit;
-                const selected = uids.slice(start, end).reverse();
-
-                const messages = await client.fetchAll(
-                    selected,
-                    {
-                        uid: true,
-                        envelope: true,
-                        flags: true,
-                        internalDate: true
-                    },
-                    { uid: true }
+                const start = Math.max(
+                    0,
+                    total - page * limit
                 );
 
+                const end = total - (page - 1) * limit;
+
+                const selected = uids
+                    .slice(start, end)
+                    .reverse();
+
+                const messages = selected.length
+                    ? await client.fetchAll(
+                        selected,
+                        {
+                            uid: true,
+                            envelope: true,
+                            flags: true,
+                            internalDate: true
+                        },
+                        { uid: true }
+                    )
+                    : [];
+
+                const totalPages = Math.ceil(total / limit);
+
                 return {
-                    messages: messages.map(m => formatMessage(m, folder)),
+                    messages: messages.map(m =>
+                        formatMessage(m, folder)
+                    ),
                     total,
+                    page,
+                    limit,
+                    totalPages,
+                    hasPrevious: page > 1,
+                    hasNext: page < totalPages,
                     folder
                 };
             } finally {
@@ -469,7 +531,8 @@ app.get('/api/inbox', async (req, res) => {
 
 // ========================================
 // SEARCH
-// Supports ALL or a specific folder
+// ALL INBOX + SPECIFIC FOLDER
+// PAGINATION
 // ========================================
 
 app.get('/api/search', async (req, res) => {
@@ -483,7 +546,8 @@ app.get('/api/search', async (req, res) => {
 
     const query = String(req.query.q || '').trim();
     const requestedFolder = String(req.query.folder || 'ALL');
-    const limit = Math.min(200, Math.max(1, Number(req.query.limit || 100)));
+
+    const { page, limit } = getPagination(req.query);
 
     if (!query || query.length > 200) {
         return res.status(400).json({
@@ -492,21 +556,20 @@ app.get('/api/search', async (req, res) => {
     }
 
     try {
-        const results = await withImap(config, async client => {
+        const result = await withImap(config, async client => {
             const mailboxes = await client.list();
 
             const selectedMailboxes =
                 requestedFolder.toUpperCase() === 'ALL'
                     ? mailboxes.filter(isSelectable)
                     : mailboxes.filter(mailbox =>
-                        mailbox.path === requestedFolder
+                        mailbox.path === requestedFolder &&
+                        isSelectable(mailbox)
                     );
 
             const allResults = [];
 
             for (const mailbox of selectedMailboxes) {
-                if (allResults.length >= limit) break;
-
                 let lock;
 
                 try {
@@ -519,11 +582,8 @@ app.get('/api/search', async (req, res) => {
 
                     if (!uids.length) continue;
 
-                    const remaining = limit - allResults.length;
-                    const selected = uids.slice(-remaining).reverse();
-
                     const messages = await client.fetchAll(
-                        selected,
+                        uids,
                         {
                             uid: true,
                             envelope: true,
@@ -538,6 +598,7 @@ app.get('/api/search', async (req, res) => {
                             formatMessage(message, mailbox.path)
                         );
                     }
+
                 } catch (err) {
                     console.error(
                         'Search folder:',
@@ -549,19 +610,22 @@ app.get('/api/search', async (req, res) => {
                 }
             }
 
-            allResults.sort((a, b) =>
-                new Date(b.date || 0) - new Date(a.date || 0)
-            );
+            allResults.sort((a, b) => {
+                const dateA = new Date(a.date || 0).getTime();
+                const dateB = new Date(b.date || 0).getTime();
 
-            return allResults.slice(0, limit);
+                return dateB - dateA;
+            });
+
+            return {
+                query,
+                folder: requestedFolder,
+                ...paginateMessages(allResults, page, limit)
+            };
         });
 
-        res.json({
-            query,
-            folder: requestedFolder,
-            total: results.length,
-            messages: results
-        });
+        res.json(result);
+
     } catch (err) {
         sendError(res, err, 'Search');
     }
