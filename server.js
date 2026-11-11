@@ -14,23 +14,40 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const sessions = new Map();
 
+// IMAP CLIENT
 function createImapClient(config) {
-    return new ImapFlow({
+    const client = new ImapFlow({
         host: config.host,
         port: Number(config.port || 993),
         secure: config.secure !== false,
+
         auth: {
             user: config.username,
             pass: config.password
         },
+
         logger: false,
-        socketTimeout: 60000,
+
+        // Connection timeout settings (milliseconds)
+        connectionTimeout: 90000,
+        greetingTimeout: 60000,
+        socketTimeout: 120000,
+
         tls: {
-            rejectUnauthorized: true,
-            minDHSize: 512,
-            ciphers: 'DEFAULT@SECLEVEL=0'
+            rejectUnauthorized: true
         }
     });
+
+    // IMPORTANT: Prevent unhandled ImapFlow error events
+    client.on('error', err => {
+        console.error('IMAP connection error:', err.message);
+    });
+
+    client.on('close', () => {
+        console.log('IMAP connection closed');
+    });
+
+    return client;
 }
 
 function getSession(req) {
@@ -38,18 +55,24 @@ function getSession(req) {
     return id ? sessions.get(id) : null;
 }
 
+// SAFE IMAP CONNECTION
 async function withImap(config, callback) {
     const client = createImapClient(config);
-
-    await client.connect();
+    let connected = false;
 
     try {
+        await client.connect();
+        connected = true;
+
         return await callback(client);
+
     } finally {
-        try {
-            await client.logout();
-        } catch (e) {
-            // Connection may already be closed.
+        if (connected) {
+            try {
+                await client.logout();
+            } catch (err) {
+                console.log('IMAP logout:', err.message);
+            }
         }
     }
 }
@@ -59,6 +82,7 @@ function addressList(list = []) {
         if (x.name && x.address) {
             return `${x.name} <${x.address}>`;
         }
+
         return x.address || x.name || '';
     }).filter(Boolean).join(', ');
 }
@@ -78,10 +102,29 @@ function formatMessage(message, folder) {
 }
 
 function isSelectable(mailbox) {
-    const flags = mailbox.flags || new Set();
-    return !(flags.has && flags.has('\\Noselect'));
+    const flags = Array.from(mailbox.flags || []);
+
+    return !flags.some(
+        flag => String(flag).toLowerCase() === '\\noselect'
+    );
 }
 
+function sendError(res, err, operation) {
+    console.error(operation + ':', err);
+
+    const message = err.message || 'Unknown error';
+
+    const timeout = /timeout|timed out|ETIMEDOUT/i.test(message);
+
+    res.status(timeout ? 504 : 500).json({
+        error: timeout ? 'Connection timed out' : operation + ' failed',
+        details: {
+            message
+        }
+    });
+}
+
+// HEALTH
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -89,6 +132,7 @@ app.get('/health', (req, res) => {
     });
 });
 
+// PROVIDERS
 app.get('/api/providers', (req, res) => {
     res.json({ providers: [] });
 });
@@ -132,8 +176,12 @@ app.post('/api/login', async (req, res) => {
         });
 
     } catch (err) {
-        res.status(401).json({
-            error: 'IMAP login failed',
+        console.error('IMAP login failed:', err.message);
+
+        const timeout = /timeout|timed out|ETIMEDOUT/i.test(err.message);
+
+        res.status(timeout ? 504 : 401).json({
+            error: timeout ? 'IMAP connection timed out' : 'IMAP login failed',
             details: {
                 message: err.message
             }
@@ -141,12 +189,14 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// AUTHENTICATED FOLDER LIST
+// FOLDER LIST
 app.get('/api/folders', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
-        return res.status(401).json({ error: 'Not logged in' });
+        return res.status(401).json({
+            error: 'Not logged in'
+        });
     }
 
     try {
@@ -165,7 +215,7 @@ app.get('/api/folders', async (req, res) => {
         res.json(folders);
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        sendError(res, err, 'Folder loading');
     }
 });
 
@@ -174,7 +224,9 @@ app.get('/api/inbox', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
-        return res.status(401).json({ error: 'Not logged in' });
+        return res.status(401).json({
+            error: 'Not logged in'
+        });
     }
 
     const folder = String(req.query.folder || 'INBOX');
@@ -192,12 +244,16 @@ app.get('/api/inbox', async (req, res) => {
                 );
 
                 if (!uids || !uids.length) {
-                    return { messages: [], total: 0 };
+                    return {
+                        messages: [],
+                        total: 0
+                    };
                 }
 
                 const total = uids.length;
                 const start = Math.max(0, total - page * limit);
                 const end = total - (page - 1) * limit;
+
                 const selected = uids.slice(start, end).reverse();
 
                 const messages = await client.fetchAll(
@@ -224,7 +280,7 @@ app.get('/api/inbox', async (req, res) => {
         res.json(result);
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        sendError(res, err, 'Inbox loading');
     }
 });
 
@@ -233,7 +289,9 @@ app.get('/api/search', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
-        return res.status(401).json({ error: 'Not logged in' });
+        return res.status(401).json({
+            error: 'Not logged in'
+        });
     }
 
     const query = String(req.query.q || '').trim();
@@ -290,10 +348,16 @@ app.get('/api/search', async (req, res) => {
                     }
 
                 } catch (err) {
-                    // Skip folders that cannot be searched.
-                    console.error('Search folder error:', folder, err.message);
+                    console.error(
+                        'Search folder error:',
+                        folder,
+                        err.message
+                    );
+
                 } finally {
-                    if (lock) lock.release();
+                    if (lock) {
+                        lock.release();
+                    }
                 }
             }
 
@@ -311,10 +375,7 @@ app.get('/api/search', async (req, res) => {
         });
 
     } catch (err) {
-        res.status(500).json({
-            error: 'Search failed',
-            details: { message: err.message }
-        });
+        sendError(res, err, 'Search');
     }
 });
 
@@ -323,14 +384,18 @@ app.get('/api/message/:uid', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
-        return res.status(401).json({ error: 'Not logged in' });
+        return res.status(401).json({
+            error: 'Not logged in'
+        });
     }
 
     const uid = Number(req.params.uid);
     const folder = String(req.query.folder || 'INBOX');
 
     if (!Number.isSafeInteger(uid) || uid < 1) {
-        return res.status(400).json({ error: 'Invalid message UID' });
+        return res.status(400).json({
+            error: 'Invalid message UID'
+        });
     }
 
     try {
@@ -340,7 +405,10 @@ app.get('/api/message/:uid', async (req, res) => {
             try {
                 const message = await client.fetchOne(
                     uid,
-                    { source: true, uid: true },
+                    {
+                        source: true,
+                        uid: true
+                    },
                     { uid: true }
                 );
 
@@ -370,7 +438,7 @@ app.get('/api/message/:uid', async (req, res) => {
         res.json(result);
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        sendError(res, err, 'Message loading');
     }
 });
 
@@ -379,7 +447,9 @@ app.post('/api/send', async (req, res) => {
     const config = getSession(req);
 
     if (!config) {
-        return res.status(401).json({ error: 'Not logged in' });
+        return res.status(401).json({
+            error: 'Not logged in'
+        });
     }
 
     const {
@@ -402,10 +472,16 @@ app.post('/api/send', async (req, res) => {
             host: smtpHost,
             port: Number(smtpPort || 465),
             secure: smtpSecure !== false,
+
             auth: {
                 user: config.username,
                 pass: config.password
             },
+
+            connectionTimeout: 90000,
+            greetingTimeout: 60000,
+            socketTimeout: 120000,
+
             tls: {
                 rejectUnauthorized: true
             }
@@ -418,16 +494,15 @@ app.post('/api/send', async (req, res) => {
             text: text || ''
         });
 
+        transporter.close();
+
         res.json({
             success: true,
             messageId: info.messageId
         });
 
     } catch (err) {
-        res.status(500).json({
-            error: 'Send failed',
-            details: { message: err.message }
-        });
+        sendError(res, err, 'Email sending');
     }
 });
 
@@ -435,11 +510,32 @@ app.post('/api/send', async (req, res) => {
 app.post('/api/logout', (req, res) => {
     const id = req.headers['x-session-id'] || req.body?.sessionId;
 
-    if (id) sessions.delete(id);
+    if (id) {
+        sessions.delete(id);
+    }
 
-    res.json({ success: true });
+    res.json({
+        success: true
+    });
 });
 
+// GLOBAL ERROR HANDLER
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    res.status(500).json({
+        error: 'Internal server error',
+        details: {
+            message: err.message
+        }
+    });
+});
+
+// START SERVER
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Danke Mail running on port ${PORT}`);
 });
