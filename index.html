@@ -1,0 +1,24 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1769aa"><title>Japan Mail</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f2f6fa;color:#172435;font:15px system-ui}header{background:#1769aa;color:#fff;padding:18px;font-size:22px;font-weight:700;position:sticky;top:0}main{max-width:700px;margin:auto;padding:14px}.card{background:#fff;border-radius:15px;padding:16px;margin-bottom:13px;box-shadow:0 2px 7px #00000008}h2{font-size:17px;margin:0 0 12px}label{display:block;font-size:12px;color:#63768a;margin:10px 0 5px}input,textarea{width:100%;padding:11px;border:1px solid #d5dfeb;border-radius:9px;font:inherit}button{background:#1769aa;color:#fff;border:0;padding:12px;border-radius:10px;font:600 14px system-ui;cursor:pointer}.secondary{background:#e8f1fa;color:#14558b}.row{display:flex;gap:8px;margin-top:12px}.row button{flex:1}.msg{padding:12px 0;border-bottom:1px solid #e9eef4;cursor:pointer}.msg b{display:block}.msg small{color:#718096}.hidden{display:none}.note{font-size:12px;color:#758496}.status{white-space:pre-wrap;font-size:13px;margin-top:10px}.pill{font-size:11px;background:#e8f1fa;color:#1769aa;border-radius:20px;padding:4px 8px}
+</style></head><body><header>✉ Japan Mail <span class="pill">IMAP</span></header><main>
+<section class="card" id="login"><h2>Hubungkan akun email</h2>
+<label>Email</label><input id="email" placeholder="nama@biglobe.ne.jp" type="email">
+<label>Password / App password</label><input id="password" type="password">
+<label>IMAP Host</label><input id="imapHost" placeholder="host IMAP resmi provider">
+<label>IMAP Port</label><input id="imapPort" value="993">
+<label>SMTP Host</label><input id="smtpHost" placeholder="host SMTP resmi provider">
+<label>SMTP Port</label><input id="smtpPort" value="465">
+<div class="row"><button onclick="login()">Login</button></div><p class="note">Isi server resmi provider. IMAP/SMTP harus diaktifkan oleh penyedia email.</p></section>
+<section class="card hidden" id="mail"><div class="row"><h2 style="flex:1">Inbox</h2><button class="secondary" onclick="loadInbox()">Refresh</button><button class="secondary" onclick="logout()">Keluar</button></div><div id="list"></div></section>
+<section class="card hidden" id="reader"><h2 id="subj"></h2><small id="sender"></small><pre id="body" style="white-space:pre-wrap;overflow-wrap:anywhere;font:13px system-ui"></pre></section>
+<section class="card hidden" id="compose"><h2>Kirim email</h2><label>To</label><input id="to"><label>Subject</label><input id="subject"><label>Isi</label><textarea id="text" rows="5"></textarea><div class="row"><button onclick="send()">Kirim</button></div></section><div class="status" id="status"></div>
+</main><script>
+let token='',email='';const $=x=>document.getElementById(x),say=x=>$('status').textContent=x;
+async function api(path,opt={}){let r=await fetch('/api'+path,{...opt,headers:{'Content-Type':'application/json','Authorization':token,...opt.headers}});let d=await r.json();if(!r.ok)throw Error(d.error||'Error');return d}
+async function login(){try{say('Menghubungkan IMAP…');let d=await api('/login',{method:'POST',headers:{},body:JSON.stringify({email:$('email').value,password:$('password').value,imapHost:$('imapHost').value,imapPort:$('imapPort').value,smtpHost:$('smtpHost').value,smtpPort:$('smtpPort').value})});token=d.token;email=d.email;$('login').classList.add('hidden');$('mail').classList.remove('hidden');$('compose').classList.remove('hidden');await loadInbox();say('Login berhasil')}catch(e){say(e.message)}}
+async function loadInbox(){try{say('Memuat inbox…');let d=await api('/inbox');$('list').innerHTML=d.messages.map(m=>`<div class="msg" onclick="read(${m.uid})"><b>${esc(m.subject)}</b><small>${esc(m.from)} · ${m.date?new Date(m.date).toLocaleString():''}</small></div>`).join('')||'Inbox kosong';say(`${d.total} pesan`)}catch(e){say(e.message)}}
+async function read(uid){try{let d=await api('/message/'+uid);$('reader').classList.remove('hidden');$('subj').textContent=d.subject||'(Tanpa subjek)';$('sender').textContent=d.from||'';$('body').textContent=d.raw;say('Email dibuka (raw MIME; tampilan HTML belum dirender)')}catch(e){say(e.message)}}
+async function send(){try{let d=await api('/send',{method:'POST',body:JSON.stringify({to:$('to').value,subject:$('subject').value,text:$('text').value})});say('Email terkirim: '+d.messageId)}catch(e){say(e.message)}}
+async function logout(){try{await api('/logout',{method:'POST'})}catch{}token='';$('login').classList.remove('hidden');$('mail').classList.add('hidden');$('compose').classList.add('hidden');$('reader').classList.add('hidden');say('Logout')}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+</script></body></html>
