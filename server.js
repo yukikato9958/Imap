@@ -38,7 +38,7 @@ const tlsOptions = {
 // ========================================
 
 const MESSAGE_CACHE = new Map();
-const MESSAGE_CACHE_TTL = 120000;
+const MESSAGE_CACHE_TTL = 300000;
 const MESSAGE_CACHE_MAX = 100;
 
 function getCachedMessage(key) {
@@ -169,8 +169,13 @@ function getSession(req) {
 }
 
 // ========================================
-// IMAP
+// IMAP CONNECTION POOL
 // ========================================
+
+const IMAP_POOL = new Map();
+
+const IMAP_IDLE_TIMEOUT = 5 * 60 * 1000;
+const IMAP_POOL_MAX = 20;
 
 function createImapClient(config) {
     const client = new ImapFlow({
@@ -195,30 +200,134 @@ function createImapClient(config) {
     return client;
 }
 
-async function withImap(config, callback) {
-    const client = createImapClient(config);
-    let connected = false;
+function getImapPoolKey(config) {
+    return crypto.createHash('sha256')
+        .update(JSON.stringify({
+            host: config.host,
+            port: config.port,
+            secure: config.secure,
+            username: config.username,
+            password: config.password
+        }))
+        .digest('hex');
+}
+
+function removeImapConnection(key, entry) {
+    if (IMAP_POOL.get(key) === entry) {
+        IMAP_POOL.delete(key);
+    }
+}
+
+async function closeImapConnection(entry) {
+    if (!entry || entry.closed || entry.closing) return;
+
+    entry.closing = true;
 
     try {
-        await client.connect();
-        connected = true;
-
-        return await callback(client);
+        await entry.client.logout();
+    } catch {
+        try {
+            entry.client.close();
+        } catch {}
     } finally {
-        if (connected) {
-            try {
-                await client.logout();
-            } catch {
-                try {
-                    client.close();
-                } catch {}
-            }
-        } else {
-            try {
-                client.close();
-            } catch {}
+        entry.closed = true;
+        entry.closing = false;
+    }
+}
+
+async function withImap(config, callback) {
+    const key = getImapPoolKey(config);
+
+    let entry = IMAP_POOL.get(key);
+
+    if (!entry || entry.closed || entry.closing) {
+        const client = createImapClient(config);
+
+        entry = {
+            client,
+            active: 0,
+            lastUsed: Date.now(),
+            closed: false,
+            closing: false,
+            connectPromise: null
+        };
+
+        IMAP_POOL.set(key, entry);
+
+        client.on('close', () => {
+            entry.closed = true;
+            removeImapConnection(key, entry);
+        });
+    }
+
+    entry.active++;
+    entry.lastUsed = Date.now();
+
+    try {
+        if (!entry.connectPromise) {
+            entry.connectPromise = entry.client.connect()
+                .catch(err => {
+                    entry.closed = true;
+                    removeImapConnection(key, entry);
+
+                    try {
+                        entry.client.close();
+                    } catch {}
+
+                    throw err;
+                });
+        }
+
+        await entry.connectPromise;
+
+        if (entry.closed || entry.closing) {
+            throw new Error('IMAP connection closed');
+        }
+
+        return await callback(entry.client);
+
+    } finally {
+        entry.active = Math.max(0, entry.active - 1);
+        entry.lastUsed = Date.now();
+    }
+}
+
+// Close connections that have been idle for too long.
+const imapCleanupTimer = setInterval(() => {
+    const now = Date.now();
+
+    for (const [key, entry] of IMAP_POOL) {
+        if (
+            entry.active === 0 &&
+            !entry.closing &&
+            now - entry.lastUsed > IMAP_IDLE_TIMEOUT
+        ) {
+            removeImapConnection(key, entry);
+            closeImapConnection(entry);
         }
     }
+
+    if (IMAP_POOL.size > IMAP_POOL_MAX) {
+        const idleEntries = [...IMAP_POOL.entries()]
+            .filter(([, entry]) =>
+                entry.active === 0 && !entry.closing
+            )
+            .sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+
+        while (
+            IMAP_POOL.size > IMAP_POOL_MAX &&
+            idleEntries.length
+        ) {
+            const [key, entry] = idleEntries.shift();
+
+            removeImapConnection(key, entry);
+            closeImapConnection(entry);
+        }
+    }
+}, 60000);
+
+if (imapCleanupTimer.unref) {
+    imapCleanupTimer.unref();
 }
 
 // ========================================
@@ -322,7 +431,8 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         app: 'Danke Mail',
-        cache: MESSAGE_CACHE.size
+        cache: MESSAGE_CACHE.size,
+        imapConnections: IMAP_POOL.size
     });
 });
 
@@ -330,7 +440,8 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         app: 'Danke Mail',
-        cache: MESSAGE_CACHE.size
+        cache: MESSAGE_CACHE.size,
+        imapConnections: IMAP_POOL.size
     });
 });
 
