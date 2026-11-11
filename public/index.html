@@ -18,6 +18,7 @@
 body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,system-ui,-apple-system,Segoe UI,sans-serif}
 button,input,textarea,select{font:inherit}
 button{cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
 .hidden{display:none!important}
 .muted{color:var(--muted)}
 .small{font-size:12px}
@@ -106,11 +107,32 @@ button{cursor:pointer}
 .sender-avatar .avatar-fallback{
  display:grid;place-items:center;width:100%;height:100%
 }
-.sender-name{
- min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
-}
+.sender-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .message-sender-avatar{width:46px;height:46px;min-width:46px}
 
+/* PAGINATION */
+.pagination{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;flex-wrap:wrap;padding:15px 4px;margin-top:10px
+}
+.pagination-info{font-size:12px;color:var(--muted)}
+.pagination-controls{display:flex;align-items:center;gap:8px}
+.pagination-controls button{
+ border:1px solid var(--line);background:var(--surface);
+ color:var(--text);padding:9px 13px;border-radius:9px;font-weight:600
+}
+.pagination-controls button:hover:not(:disabled){
+ border-color:var(--primary);color:var(--primary)
+}
+.pagination-controls button:disabled{opacity:.4;cursor:not-allowed}
+.page-indicator{
+ min-width:105px;text-align:center;font-size:12px;
+ color:var(--muted);font-weight:700
+}
+.page-size-select{
+ border:1px solid var(--line);background:var(--surface);
+ color:var(--text);padding:8px;border-radius:9px;font-size:12px
+}
 .empty{padding:65px 20px;text-align:center;color:var(--muted)}
 .empty .big{font-size:40px;margin-bottom:10px}
 #messageView{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
@@ -141,6 +163,10 @@ button{cursor:pointer}
  .login-card{padding:22px 18px}
  .row.mobile-stack{display:block}
  .row.mobile-stack>*{width:100%}
+ .pagination{align-items:flex-start}
+ .pagination-controls{width:100%;justify-content:space-between}
+ .pagination-controls button{padding:9px 10px}
+ .page-indicator{min-width:90px}
 }
 </style>
 </head>
@@ -259,6 +285,20 @@ button{cursor:pointer}
     <div class="mail-list" id="mailList">
      <div class="empty"><div class="big">✉</div>Loading messages...</div>
     </div>
+
+    <div class="pagination" id="pagination">
+     <div class="pagination-info" id="paginationInfo">0 email</div>
+     <div class="pagination-controls">
+      <select class="page-size-select" id="pageSizeSelect" title="Emails per page">
+       <option value="25">25</option>
+       <option value="50" selected>50</option>
+       <option value="100">100</option>
+      </select>
+      <button id="prevPageBtn" disabled>← Previous</button>
+      <span class="page-indicator" id="pageIndicator">Page 1 / 1</span>
+      <button id="nextPageBtn" disabled>Next →</button>
+     </div>
+    </div>
    </div>
    <div id="messageView" class="hidden"></div>
   </div>
@@ -371,8 +411,11 @@ const $=id=>document.getElementById(id);
 const state={
  accounts:[],activeId:null,folders:[],currentFolder:'INBOX',
  messages:[],selected:new Set(),searchMode:false,searchQuery:'',
- currentMessage:null,theme:{mode:'light',accent:'#7257d8'}
+ currentMessage:null,
+ page:1,pageSize:50,totalMessages:0,totalPages:0,
+ theme:{mode:'light',accent:'#7257d8'}
 };
+
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* SENDER LOGO DETECTOR */
@@ -417,49 +460,81 @@ function senderAvatar(sender,large=false){
 }
 
 const activeAccount=()=>state.accounts.find(a=>a.id===state.activeId);
+
 function toast(message){
- $('toast').textContent=message;$('toast').classList.remove('hidden');
- clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.add('hidden'),3500);
+ $('toast').textContent=message;
+ $('toast').classList.remove('hidden');
+ clearTimeout(toast.timer);
+ toast.timer=setTimeout(()=>$('toast').classList.add('hidden'),3500);
 }
+
 function showLogin(){
- $('loginPage').classList.remove('hidden');$('dashboard').classList.add('hidden');
+ $('loginPage').classList.remove('hidden');
+ $('dashboard').classList.add('hidden');
 }
+
 function showDashboard(){
- $('loginPage').classList.add('hidden');$('dashboard').classList.remove('hidden');
+ $('loginPage').classList.add('hidden');
+ $('dashboard').classList.remove('hidden');
 }
+
 function saveAccounts(){
  localStorage.setItem('danke_accounts',JSON.stringify(state.accounts));
  localStorage.setItem('danke_active',state.activeId||'');
 }
+
 function loadSaved(){
  try{
   state.accounts=JSON.parse(localStorage.getItem('danke_accounts')||'[]');
   state.activeId=localStorage.getItem('danke_active')||null;
- }catch{state.accounts=[];state.activeId=null}
+ }catch{
+  state.accounts=[];
+  state.activeId=null;
+ }
+
  state.accounts=state.accounts.filter(a=>a.sessionId);
+
  if(!activeAccount())state.activeId=state.accounts[0]?.id||null;
 }
+
 function apiHeaders(){
  const a=activeAccount();
  return a?.sessionId?{'X-Session-Id':a.sessionId}:{};
 }
+
 async function api(url,options={}){
  const headers={...apiHeaders(),...(options.headers||{})};
+
  if(options.body)headers['Content-Type']='application/json';
+
  const response=await fetch(url,{...options,headers});
  let data={};
+
  try{data=await response.json()}catch{}
- if(!response.ok)throw new Error(data.details?.message||data.error||data.message||`Request gagal (${response.status})`);
+
+ if(!response.ok){
+  throw new Error(
+   data.details?.message||
+   data.error||
+   data.message||
+   `Request gagal (${response.status})`
+  );
+ }
+
  return data;
 }
 
 /* PROVIDER FORM */
 function fillProviderSelect(){
- $('provider').innerHTML=window.PROVIDERS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+ $('provider').innerHTML=window.PROVIDERS.map(p=>
+  `<option value="${esc(p.id)}">${esc(p.name)}</option>`
+ ).join('');
 }
+
 function selectedProvider(){
  return window.PROVIDERS.find(p=>p.id===$('provider').value)||window.PROVIDERS.at(-1);
 }
+
 function applyProvider(p){
  $('provider').value=p.id;
  $('imapHost').value=p.imapHost||'';
@@ -468,62 +543,110 @@ function applyProvider(p){
  $('smtpHost').value=p.smtpHost||'';
  $('smtpPort').value=p.smtpPort||465;
  $('smtpSecure').value=String(p.smtpSecure!==false);
- $('providerNote').textContent=p.notes||(p.id==='manual'?'Isi host IMAP dan SMTP sesuai informasi provider email kamu.':'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu.');
+
+ $('providerNote').textContent=
+  p.notes||
+  (p.id==='manual'
+   ?'Isi host IMAP dan SMTP sesuai informasi provider email kamu.'
+   :'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu.');
 }
+
 function detectFromEmail(){
  const p=window.detectProvider($('email').value);
  applyProvider(p);
 }
+
 $('email').addEventListener('input',detectFromEmail);
 $('provider').addEventListener('change',()=>applyProvider(selectedProvider()));
+
 fillProviderSelect();
 applyProvider(window.PROVIDERS[0]);
 
 /* LOGIN AND ADD ACCOUNT */
 let addingAccount=false;
+
 $('loginForm').addEventListener('submit',async e=>{
  e.preventDefault();
+
  const email=$('email').value.trim();
  const password=$('password').value;
  const p=selectedProvider();
  const host=$('imapHost').value.trim();
+
  if(!host){toast('IMAP host belum diisi.');return}
  if(!$('smtpHost').value.trim()){toast('SMTP host belum diisi.');return}
+
  const payload={
-  host,port:Number($('imapPort').value)||993,
+  host,
+  port:Number($('imapPort').value)||993,
   secure:$('imapSecure').value==='true',
-  username:email,password
+  username:email,
+  password
  };
- const btn=$('connectBtn');btn.disabled=true;btn.textContent='Connecting...';
+
+ const btn=$('connectBtn');
+ btn.disabled=true;
+ btn.textContent='Connecting...';
+
  try{
   const result=await fetch('/api/login',{
-   method:'POST',headers:{'Content-Type':'application/json'},
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
    body:JSON.stringify(payload)
   });
+
   const data=await result.json().catch(()=>({}));
-  if(!result.ok||!data.sessionId)throw new Error(data.details?.message||data.error||'Login gagal. Periksa email, password, dan host IMAP.');
+
+  if(!result.ok||!data.sessionId){
+   throw new Error(
+    data.details?.message||
+    data.error||
+    'Login gagal. Periksa email, password, dan host IMAP.'
+   );
+  }
+
   const account={
    id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),
-   email,sessionId:data.sessionId,providerId:p.id,providerName:p.name,
-   imapHost:host,imapPort:Number($('imapPort').value)||993,
+   email,
+   sessionId:data.sessionId,
+   providerId:p.id,
+   providerName:p.name,
+   imapHost:host,
+   imapPort:Number($('imapPort').value)||993,
    imapSecure:$('imapSecure').value==='true',
    smtpHost:$('smtpHost').value.trim(),
    smtpPort:Number($('smtpPort').value)||465,
    smtpSecure:$('smtpSecure').value==='true'
   };
+
   state.accounts.push(account);
-  state.activeId=account.id;saveAccounts();
+  state.activeId=account.id;
+  state.page=1;
+  saveAccounts();
+
   addingAccount=false;
-  $('password').value='';$('loginForm').reset();
+  $('password').value='';
+  $('loginForm').reset();
   applyProvider(window.PROVIDERS[0]);
-  showDashboard();renderAccount();await loadFolders();await loadInbox();
+
+  showDashboard();
+  renderAccount();
+  await loadFolders();
+  await loadInbox(1);
+
   toast('Akun berhasil terhubung.');
- }catch(err){toast(err.message||'Tidak dapat terhubung.')}
- finally{btn.disabled=false;btn.textContent='Connect Account'}
+ }catch(err){
+  toast(err.message||'Tidak dapat terhubung.');
+ }finally{
+  btn.disabled=false;
+  btn.textContent='Connect Account';
+ }
 });
+
 function openAddAccount(){
  addingAccount=true;
- $('email').value='';$('password').value='';
+ $('email').value='';
+ $('password').value='';
  applyProvider(window.PROVIDERS[0]);
  showLogin();
  $('sidebar').classList.remove('open');
@@ -532,100 +655,232 @@ function openAddAccount(){
 
 /* ACCOUNT SWITCH / LOGOUT */
 function renderAccount(){
- const a=activeAccount();if(!a)return;
+ const a=activeAccount();
+ if(!a)return;
  $('accountLabel').textContent=a.email;
 }
+
 $('accountSwitch').addEventListener('click',()=>{
- if(state.accounts.length<=1){toast('Hanya ada satu akun yang terhubung.');return}
+ if(state.accounts.length<=1){
+  toast('Hanya ada satu akun yang terhubung.');
+  return;
+ }
+
  const options=state.accounts.map((a,i)=>`${i+1}. ${a.email}`).join('\n');
  const choice=prompt('Pilih nomor akun:\n'+options);
  const index=Number(choice)-1;
+
  if(Number.isInteger(index)&&state.accounts[index]){
-  state.activeId=state.accounts[index].id;saveAccounts();
-  renderAccount();loadFolders().then(loadInbox).catch(e=>toast(e.message));
+  state.activeId=state.accounts[index].id;
+  state.currentFolder='INBOX';
+  state.page=1;
+  saveAccounts();
+
+  renderAccount();
+
+  loadFolders()
+   .then(()=>loadInbox(1))
+   .catch(e=>toast(e.message));
  }
 });
+
 $('addAccountBtn').addEventListener('click',openAddAccount);
+
 $('logoutBtn').addEventListener('click',async()=>{
  const a=activeAccount();
- if(a){try{await api('/api/logout',{method:'POST',body:JSON.stringify({})})}catch{}}
+
+ if(a){
+  try{
+   await api('/api/logout',{
+    method:'POST',
+    body:JSON.stringify({})
+   });
+  }catch{}
+ }
+
  state.accounts=state.accounts.filter(x=>x.id!==state.activeId);
- state.activeId=state.accounts[0]?.id||null;saveAccounts();
+ state.activeId=state.accounts[0]?.id||null;
+ saveAccounts();
+
  if(state.activeId){
-  renderAccount();await loadFolders();await loadInbox();
- }else{showLogin()}
+  state.currentFolder='INBOX';
+  state.page=1;
+  renderAccount();
+  await loadFolders();
+  await loadInbox(1);
+ }else{
+  showLogin();
+ }
 });
 
 /* FOLDERS */
 function folderType(f){
  const s=(f.specialUse||'').toLowerCase();
  const n=(f.name||'').toLowerCase();
+
  if(s.includes('inbox')||n==='inbox')return 'inbox';
  if(s.includes('sent')||n.includes('sent')||n.includes('送信'))return 'sent';
  if(s.includes('draft')||n.includes('draft')||n.includes('下書き'))return 'drafts';
  if(s.includes('trash')||s.includes('deleted')||n.includes('trash')||n.includes('ゴミ箱'))return 'trash';
  if(s.includes('junk')||s.includes('spam')||n.includes('spam')||n.includes('迷惑'))return 'spam';
  if(n.includes('archive')||n.includes('all mail'))return 'archive';
+
  return 'folder';
 }
-const folderIcons={inbox:'▣',sent:'➤',drafts:'▤',trash:'⌫',spam:'⚠',archive:'▣',folder:'▰'};
+
+const folderIcons={
+ inbox:'▣',sent:'➤',drafts:'▤',trash:'⌫',
+ spam:'⚠',archive:'▣',folder:'▰'
+};
+
 async function loadFolders(){
  const data=await api('/api/folders');
+
  state.folders=Array.isArray(data)?data:(data.folders||[]);
- if(!state.folders.length)state.folders=[{name:'INBOX',path:'INBOX',specialUse:'\\Inbox'}];
+
+ if(!state.folders.length){
+  state.folders=[{name:'INBOX',path:'INBOX',specialUse:'\\Inbox'}];
+ }
+
  renderFolders();
 }
+
 function renderFolders(){
  const list=$('folderList');
+
  list.innerHTML=state.folders.map((f,i)=>{
   const type=folderType(f);
   const active=state.currentFolder===f.path&&!state.searchMode;
+
   return `<button class="folder-btn ${active?'active':''}" data-folder-index="${i}">
-   <span>${folderIcons[type]||'▰'}</span><span>${esc(f.name||f.path)}</span>
+   <span>${folderIcons[type]||'▰'}</span>
+   <span>${esc(f.name||f.path)}</span>
   </button>`;
  }).join('');
+
  list.querySelectorAll('[data-folder-index]').forEach(btn=>{
   btn.addEventListener('click',()=>{
    const f=state.folders[Number(btn.dataset.folderIndex)];
-   state.currentFolder=f.path;state.searchMode=false;state.searchQuery='';
-   $('searchInput').value='';$('clearSearchBtn').classList.add('hidden');
-   $('sidebar').classList.remove('open');loadInbox();
+
+   state.currentFolder=f.path;
+   state.page=1;
+   state.searchMode=false;
+   state.searchQuery='';
+   state.selected.clear();
+
+   $('searchInput').value='';
+   $('clearSearchBtn').classList.add('hidden');
+
+   $('sidebar').classList.remove('open');
+   renderFolders();
+   loadInbox(1);
   });
  });
 }
+
 function titleForFolder(){
  const f=state.folders.find(x=>x.path===state.currentFolder);
  return f?.name||state.currentFolder;
 }
 
-/* MESSAGE LIST / SEARCH */
-async function loadInbox(){
- state.selected.clear();state.searchMode=false;
+/* PAGINATION UI */
+function updatePagination(){
+ const total=Number(state.totalMessages)||0;
+ const page=Number(state.page)||1;
+ const size=Number(state.pageSize)||50;
+ const pages=Math.max(1,Number(state.totalPages)||Math.ceil(total/size));
+
+ const start=total===0?0:(page-1)*size+1;
+ const end=Math.min(page*size,total);
+
+ $('paginationInfo').textContent=
+  total===0?'0 email':`${start}–${end} dari ${total} email`;
+
+ $('pageIndicator').textContent=`Halaman ${page} / ${pages}`;
+
+ $('prevPageBtn').disabled=page<=1;
+ $('nextPageBtn').disabled=page>=pages||total===0;
+
+ $('pageSizeSelect').value=String(size);
+ $('pagination').classList.toggle('hidden',total===0);
+}
+
+function setPaginationData(data){
+ state.totalMessages=Number(data.total)||0;
+ state.totalPages=Number(
+  data.totalPages??Math.ceil(state.totalMessages/state.pageSize)
+ )||0;
+
+ state.page=Number(data.page)||state.page;
+ updatePagination();
+}
+
+/* MESSAGE LIST / INBOX */
+async function loadInbox(page=1){
+ state.page=Math.max(1,Number(page)||1);
+ state.selected.clear();
+ state.searchMode=false;
+ state.searchQuery='';
+
  $('pageTitle').textContent=titleForFolder();
  $('pageSubtitle').textContent=activeAccount()?.email||'';
- $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
+
+ $('listView').classList.remove('hidden');
+ $('messageView').classList.add('hidden');
+ $('clearSearchBtn').classList.add('hidden');
+
  $('mailList').innerHTML='<div class="empty">Loading messages...</div>';
+
  try{
-  const params=new URLSearchParams({folder:state.currentFolder,page:'1',limit:'50'});
+  const params=new URLSearchParams({
+   folder:state.currentFolder,
+   page:String(state.page),
+   limit:String(state.pageSize)
+  });
+
   const data=await api('/api/inbox?'+params.toString());
+
   state.messages=data.messages||[];
+
+  // Jika halaman terakhir kosong karena email dihapus,
+  // kembali ke halaman sebelumnya.
+  if(!state.messages.length&&state.page>1&&Number(data.total)>0){
+   return loadInbox(state.page-1);
+  }
+
+  setPaginationData(data);
   renderMessages();
- }catch(err){$('mailList').innerHTML=`<div class="empty">${esc(err.message)}</div>`}
+
+ }catch(err){
+  state.messages=[];
+  state.totalMessages=0;
+  state.totalPages=0;
+  updatePagination();
+
+  $('mailList').innerHTML=
+   `<div class="empty">${esc(err.message)}</div>`;
+ }
 }
+
 function renderMessages(){
  const list=$('mailList');
+
  if(!state.messages.length){
-  list.innerHTML='<div class="empty"><div class="big">✉</div>No messages found.</div>';return;
+  list.innerHTML='<div class="empty"><div class="big">✉</div>No messages found.</div>';
+  return;
  }
+
  list.innerHTML=state.messages.map((m,i)=>{
   const uid=m.uid??m.id;
   const folder=m.folder||state.currentFolder;
   const key=folder+'::'+uid;
+
   const from=m.from?.text||m.from||m.sender||'(Unknown sender)';
   const subject=m.subject||'(No subject)';
   const date=m.date?new Date(m.date).toLocaleString():'';
   const preview=m.text?.replace(/\s+/g,' ').slice(0,130)||m.snippet||'';
   const unread=!(m.flags||[]).includes('\\Seen')&&!m.seen;
+
   return `<div class="mail-row ${unread?'unread':''}" data-message-index="${i}">
    <input type="checkbox" data-select-key="${esc(key)}" ${state.selected.has(key)?'checked':''}>
    <div class="mail-info">
@@ -639,13 +894,20 @@ function renderMessages(){
    <div class="mail-date">${esc(date)}</div>
   </div>`;
  }).join('');
+
  list.querySelectorAll('.mail-row').forEach(row=>{
   row.addEventListener('click',e=>{
    if(e.target.type==='checkbox')return;
+
    const m=state.messages[Number(row.dataset.messageIndex)];
-   openMessage(m.uid??m.id,m.folder||state.currentFolder);
+
+   openMessage(
+    m.uid??m.id,
+    m.folder||state.currentFolder
+   );
   });
  });
+
  list.querySelectorAll('[data-select-key]').forEach(cb=>{
   cb.addEventListener('change',()=>{
    if(cb.checked)state.selected.add(cb.dataset.selectKey);
@@ -653,58 +915,164 @@ function renderMessages(){
   });
  });
 }
-async function doSearch(){
+
+/* SEARCH WITH PAGINATION */
+async function doSearch(page=1){
  const q=$('searchInput').value.trim();
- if(!q){loadInbox();return}
- state.searchMode=true;state.searchQuery=q;state.selected.clear();
+
+ if(!q){
+  state.page=1;
+  loadInbox(1);
+  return;
+ }
+
+ state.page=Math.max(1,Number(page)||1);
+ state.searchMode=true;
+ state.searchQuery=q;
+ state.selected.clear();
+
  $('pageTitle').textContent='Search results';
  $('pageSubtitle').textContent='All folders · '+q;
  $('clearSearchBtn').classList.remove('hidden');
+
  $('mailList').innerHTML='<div class="empty">Searching all folders...</div>';
- $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
+
+ $('listView').classList.remove('hidden');
+ $('messageView').classList.add('hidden');
+
  try{
-  const params=new URLSearchParams({q,limit:'100'});
+  const params=new URLSearchParams({
+   q,
+   folder:'ALL',
+   page:String(state.page),
+   limit:String(state.pageSize)
+  });
+
   const data=await api('/api/search?'+params.toString());
-  state.messages=data.messages||[];renderMessages();
- }catch(err){$('mailList').innerHTML=`<div class="empty">${esc(err.message)}</div>`}
+
+  state.messages=data.messages||[];
+
+  setPaginationData(data);
+  renderMessages();
+
+ }catch(err){
+  state.messages=[];
+  state.totalMessages=0;
+  state.totalPages=0;
+  updatePagination();
+
+  $('mailList').innerHTML=
+   `<div class="empty">${esc(err.message)}</div>`;
+ }
 }
+
+/* PAGINATION BUTTONS */
+$('prevPageBtn').addEventListener('click',()=>{
+ if(state.page<=1)return;
+
+ const nextPage=state.page-1;
+
+ if(state.searchMode)doSearch(nextPage);
+ else loadInbox(nextPage);
+});
+
+$('nextPageBtn').addEventListener('click',()=>{
+ const pages=state.totalPages||Math.ceil(state.totalMessages/state.pageSize);
+
+ if(state.page>=pages)return;
+
+ const nextPage=state.page+1;
+
+ if(state.searchMode)doSearch(nextPage);
+ else loadInbox(nextPage);
+});
+
+$('pageSizeSelect').addEventListener('change',()=>{
+ state.pageSize=Number($('pageSizeSelect').value)||50;
+ state.page=1;
+
+ if(state.searchMode)doSearch(1);
+ else loadInbox(1);
+});
+
 let searchTimer;
+
 $('searchInput').addEventListener('input',()=>{
  clearTimeout(searchTimer);
- searchTimer=setTimeout(()=>doSearch(),450);
+
+ searchTimer=setTimeout(()=>{
+  doSearch(1);
+ },450);
 });
+
 $('clearSearchBtn').addEventListener('click',()=>{
- $('searchInput').value='';$('clearSearchBtn').classList.add('hidden');loadInbox();
+ $('searchInput').value='';
+ $('clearSearchBtn').classList.add('hidden');
+ state.searchMode=false;
+ state.page=1;
+ loadInbox(1);
 });
-$('refreshBtn').addEventListener('click',()=>state.searchMode?doSearch():loadInbox());
+
+$('refreshBtn').addEventListener('click',()=>{
+ if(state.searchMode)doSearch(state.page);
+ else loadInbox(state.page);
+});
 
 /* OPEN MESSAGE */
 async function openMessage(uid,folder){
- $('listView').classList.add('hidden');$('messageView').classList.remove('hidden');
+ $('listView').classList.add('hidden');
+ $('messageView').classList.remove('hidden');
+
  $('messageView').innerHTML='<div class="empty">Opening message...</div>';
+
  try{
-  const params=new URLSearchParams({folder:folder||state.currentFolder});
-  const msg=await api('/api/message/'+encodeURIComponent(uid)+'?'+params.toString());
-  state.currentMessage={...msg,uid,folder:folder||state.currentFolder};
+  const params=new URLSearchParams({
+   folder:folder||state.currentFolder
+  });
+
+  const msg=await api(
+   '/api/message/'+encodeURIComponent(uid)+'?'+params.toString()
+  );
+
+  state.currentMessage={
+   ...msg,
+   uid,
+   folder:folder||state.currentFolder
+  };
+
   renderMessage();
+
  }catch(err){
-  $('messageView').innerHTML=`<div class="empty">${esc(err.message)}<br><br><button class="secondary" id="backToList">Back</button></div>`;
+  $('messageView').innerHTML=`
+   <div class="empty">
+    ${esc(err.message)}
+    <br><br>
+    <button class="secondary" id="backToList">Back</button>
+   </div>`;
+
   $('backToList')?.addEventListener('click',backToList);
  }
 }
+
 function renderMessage(){
  const m=state.currentMessage;
+
  const from=m.from?.text||m.from||m.sender||'';
  const to=m.to?.text||m.to||'';
  const date=m.date?new Date(m.date).toLocaleString():'';
  const html=m.html||'';
+
  $('messageView').innerHTML=`
   <div class="message-toolbar">
    <button id="backMessage">← Back</button>
    <button id="replyMessage">↩ Reply</button>
    <button id="deleteMessage" class="danger">Delete</button>
   </div>
-  <h2 style="font-size:21px;margin:0 0 14px">${esc(m.subject||'(No subject)')}</h2>
+
+  <h2 style="font-size:21px;margin:0 0 14px">
+   ${esc(m.subject||'(No subject)')}
+  </h2>
+
   <div class="message-meta">
    <div class="sender-line" style="margin-bottom:12px">
     ${senderAvatar(from,true)}
@@ -713,76 +1081,144 @@ function renderMessage(){
    <div class="small muted">To: ${esc(to)}</div>
    <div class="small muted">${esc(date)}</div>
   </div>
+
   <div class="message-body" id="messageBody"></div>`;
+
  $('backMessage').onclick=backToList;
- $('deleteMessage').onclick=()=>actionMessages('delete',[{uid:m.uid,folder:m.folder}]).then(backToList);
+
+ $('deleteMessage').onclick=()=>{
+  actionMessages('delete',[{
+   uid:m.uid,
+   folder:m.folder
+  }]).then(backToList);
+ };
+
  $('replyMessage').onclick=()=>{
-  $('composeTo').value=(m.replyTo?.text||m.from?.text||m.from||'').match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0]||'';
+  $('composeTo').value=(
+   m.replyTo?.text||m.from?.text||m.from||''
+  ).match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0]||'';
+
   $('composeSubject').value='Re: '+(m.subject||'');
   $('composeText').value='\n\n--- Original message ---\n'+(m.text||'');
+
   openCompose();
  };
+
  const body=$('messageBody');
+
  if(html){
   const iframe=document.createElement('iframe');
   iframe.setAttribute('sandbox','');
-  iframe.srcdoc='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:14px Arial,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+html+'</body></html>';
+
+  iframe.srcdoc=
+   '<!doctype html><html><head>'+
+   '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+   '<style>body{font:14px Arial,sans-serif;overflow-wrap:anywhere}img{max-width:100%;height:auto}</style>'+
+   '</head><body>'+html+'</body></html>';
+
   body.appendChild(iframe);
  }else{
-  const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=m.text||'(No message content)';
+  const pre=document.createElement('pre');
+  pre.style.whiteSpace='pre-wrap';
+  pre.textContent=m.text||'(No message content)';
   body.appendChild(pre);
  }
 }
+
 function backToList(){
- $('messageView').classList.add('hidden');$('listView').classList.remove('hidden');
- if(state.searchMode)doSearch();else loadInbox();
+ $('messageView').classList.add('hidden');
+ $('listView').classList.remove('hidden');
+
+ if(state.searchMode)doSearch(state.page);
+ else loadInbox(state.page);
 }
 
 /* BULK ACTIONS */
 $('selectAllBtn').addEventListener('click',()=>{
- if(state.selected.size===state.messages.length)state.selected.clear();
- else state.messages.forEach(m=>state.selected.add((m.folder||state.currentFolder)+'::'+(m.uid??m.id)));
+ if(state.selected.size===state.messages.length){
+  state.selected.clear();
+ }else{
+  state.messages.forEach(m=>{
+   state.selected.add(
+    (m.folder||state.currentFolder)+'::'+(m.uid??m.id)
+   );
+  });
+ }
+
  renderMessages();
 });
+
 async function actionMessages(action,items){
- if(!items.length){toast('Pilih email terlebih dahulu.');return}
+ if(!items.length){
+  toast('Pilih email terlebih dahulu.');
+  return;
+ }
+
  const groups={};
+
  items.forEach(item=>{
   const f=item.folder||state.currentFolder;
   (groups[f]||(groups[f]=[])).push(item.uid);
  });
+
  try{
   for(const [folder,uids] of Object.entries(groups)){
-   await api('/api/message/action',{method:'POST',body:JSON.stringify({folder,uids,action})});
+   await api('/api/message/action',{
+    method:'POST',
+    body:JSON.stringify({folder,uids,action})
+   });
   }
+
   toast('Aksi berhasil dilakukan.');
-  if(state.searchMode)await doSearch();else await loadInbox();
- }catch(err){toast(err.message)}
+
+  if(state.searchMode)await doSearch(state.page);
+  else await loadInbox(state.page);
+
+ }catch(err){
+  toast(err.message);
+ }
 }
+
 function selectedItems(){
  return [...state.selected].map(key=>{
   const split=key.lastIndexOf('::');
-  return {folder:key.slice(0,split),uid:key.slice(split+2)};
+
+  return {
+   folder:key.slice(0,split),
+   uid:key.slice(split+2)
+  };
  });
 }
+
 $('readBtn').onclick=()=>actionMessages('read',selectedItems());
 $('unreadBtn').onclick=()=>actionMessages('unread',selectedItems());
+
 $('deleteBtn').onclick=()=>{
- if(confirm('Hapus email yang dipilih?'))actionMessages('delete',selectedItems());
+ if(confirm('Hapus email yang dipilih?')){
+  actionMessages('delete',selectedItems());
+ }
 };
 
 /* COMPOSE / SEND */
 function openCompose(){
- const a=activeAccount();if(!a)return;
+ const a=activeAccount();
+ if(!a)return;
+
  $('composeSmtpHost').value=a.smtpHost||'';
  $('composeSmtpPort').value=a.smtpPort||465;
  $('composeSmtpSecure').value=String(a.smtpSecure!==false);
+
  $('composeModal').classList.remove('hidden');
 }
+
 $('composeBtn').onclick=openCompose;
+
 $('composeForm').addEventListener('submit',async e=>{
  e.preventDefault();
- const a=activeAccount();if(!a)return;
+
+ const a=activeAccount();
+ if(!a)return;
+
  const payload={
   to:$('composeTo').value.trim(),
   subject:$('composeSubject').value,
@@ -791,17 +1227,35 @@ $('composeForm').addEventListener('submit',async e=>{
   smtpPort:Number($('composeSmtpPort').value)||465,
   smtpSecure:$('composeSmtpSecure').value==='true'
  };
+
  try{
-  await api('/api/send',{method:'POST',body:JSON.stringify(payload)});
-  $('composeModal').classList.add('hidden');$('composeForm').reset();
+  await api('/api/send',{
+   method:'POST',
+   body:JSON.stringify(payload)
+  });
+
+  $('composeModal').classList.add('hidden');
+  $('composeForm').reset();
+
   toast('Email berhasil dikirim.');
- }catch(err){toast(err.message)}
+
+ }catch(err){
+  toast(err.message);
+ }
 });
 
 /* THEMES */
 function applyTheme(){
- document.documentElement.style.setProperty('--primary',state.theme.accent);
- document.documentElement.style.setProperty('--primary2',state.theme.accent);
+ document.documentElement.style.setProperty(
+  '--primary',
+  state.theme.accent
+ );
+
+ document.documentElement.style.setProperty(
+  '--primary2',
+  state.theme.accent
+ );
+
  if(state.theme.mode==='dark'){
   document.documentElement.style.setProperty('--bg','#171522');
   document.documentElement.style.setProperty('--surface','#211f2e');
@@ -817,38 +1271,70 @@ function applyTheme(){
   document.documentElement.style.setProperty('--muted','#89849b');
   document.documentElement.style.setProperty('--line','#e9e5f1');
  }
+
  localStorage.setItem('danke_theme',JSON.stringify(state.theme));
 }
-try{state.theme={...state.theme,...JSON.parse(localStorage.getItem('danke_theme')||'{}')}}catch{}
+
+try{
+ state.theme={
+  ...state.theme,
+  ...JSON.parse(localStorage.getItem('danke_theme')||'{}')
+ };
+}catch{}
+
 applyTheme();
+
 $('themeBtn').onclick=()=>{
  $('modeSelect').value=state.theme.mode;
  $('themeModal').classList.remove('hidden');
 };
+
 document.querySelectorAll('[data-accent]').forEach(btn=>{
- btn.onclick=()=>{state.theme.accent=btn.dataset.accent;applyTheme()}
+ btn.onclick=()=>{
+  state.theme.accent=btn.dataset.accent;
+  applyTheme();
+ };
 });
+
 $('saveThemeBtn').onclick=()=>{
- state.theme.mode=$('modeSelect').value;applyTheme();
- $('themeModal').classList.add('hidden');toast('Theme updated.');
+ state.theme.mode=$('modeSelect').value;
+ applyTheme();
+
+ $('themeModal').classList.add('hidden');
+ toast('Theme updated.');
 };
 
 /* MODALS / MOBILE */
 document.querySelectorAll('[data-close]').forEach(btn=>{
- btn.onclick=()=>$(btn.dataset.close).classList.add('hidden');
+ btn.onclick=()=>{
+  $(btn.dataset.close).classList.add('hidden');
+ };
 });
+
 document.querySelectorAll('.modal-backdrop').forEach(bg=>{
- bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.add('hidden')});
+ bg.addEventListener('click',e=>{
+  if(e.target===bg)bg.classList.add('hidden');
+ });
 });
-$('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');
+
+$('menuBtn').onclick=()=>{
+ $('sidebar').classList.toggle('open');
+};
 
 /* INITIALIZE */
 (async function init(){
  loadSaved();
+
  if(activeAccount()){
-  showDashboard();renderAccount();
-  try{await loadFolders();await loadInbox()}
-  catch(err){toast(err.message+' — Silakan login ulang jika sesi sudah berakhir.')}
+  showDashboard();
+  renderAccount();
+
+  try{
+   await loadFolders();
+   await loadInbox(1);
+  }catch(err){
+   toast(err.message+' — Silakan login ulang jika sesi sudah berakhir.');
+  }
  }else{
   showLogin();
  }
