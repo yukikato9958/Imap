@@ -3,340 +3,297 @@ const express = require('express');
 const { ImapFlow } = require('imapflow');
 const nodemailer = require('nodemailer');
 const { simpleParser } = require('mailparser');
-const crypto = require('crypto');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
+const PORT = process.env.PORT || 8080;
 const sessions = new Map();
 
-function auth(req, res, next) {
-  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  const session = sessions.get(token);
-
-  if (!session) {
-    return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-  }
-
-  req.mailSession = session;
-  next();
+function safeError(err) {
+  return {
+    message: err?.message || String(err),
+    code: err?.code || null,
+    response: err?.response || null,
+    responseCode: err?.responseCode || null,
+    command: err?.command || null
+  };
 }
 
-function createImapClient(session) {
-  return new ImapFlow({
-    host: session.imapHost,
-    port: Number(session.imapPort),
-    secure: session.imapSecure,
-    auth: {
-      user: session.email,
-      pass: session.password
-    },
+function getSession(req) {
+  const id = req.headers['x-session-id'] || req.body?.sessionId;
+  return id ? sessions.get(id) : null;
+}
+
+app.get('/health', (_req, res) =>
+  res.json({ ok: true, app: 'Danke Mail' })
+);
+
+app.get('/api/providers', (_req, res) => {
+  try {
+    res.json(require('./public/providers.js'));
+  } catch (_e) {
+    res.json([]);
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { host, port = 993, secure = true, username, password } = req.body || {};
+
+  if (!host || !username || !password) {
+    return res.status(400).json({
+      error: 'Host, username, and password are required.'
+    });
+  }
+
+  const client = new ImapFlow({
+    host,
+    port: Number(port),
+    secure: Boolean(secure),
+    auth: { user: username, pass: password },
     logger: false,
     tls: {
       rejectUnauthorized: true,
       ciphers: 'DEFAULT@SECLEVEL=0',
       minDHSize: 512
-    }
+    },
+    socketTimeout: 30000
   });
-}
-
-function safeFolder(value) {
-  if (typeof value !== 'string' || !value.trim()) return 'INBOX';
-  return value;
-}
-
-async function withImap(session, work) {
-  const client = createImapClient(session);
 
   try {
     await client.connect();
-    return await work(client);
-  } finally {
+
+    const sessionId =
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    sessions.set(sessionId, { client, username, host });
+
+    res.json({ ok: true, sessionId, username, host });
+
+  } catch (err) {
+    try { client.close(); } catch (_e) {}
+
+    console.error('IMAP LOGIN ERROR:', safeError(err));
+
+    res.status(401).json({
+      error: 'IMAP login failed',
+      details: safeError(err)
+    });
+  }
+});
+
+app.get('/api/folders', async (req, res) => {
+  const session = getSession(req);
+
+  if (!session)
+    return res.status(401).json({ error: 'Not logged in' });
+
+  try {
+    const folders = await session.client.list();
+
+    res.json(folders.map(f => ({
+      name: f.name,
+      path: f.path,
+      delimiter: f.delimiter,
+      specialUse: f.specialUse || null
+    })));
+
+  } catch (err) {
+    console.error('FOLDER LIST ERROR:', safeError(err));
+
+    res.status(500).json({
+      error: 'Could not load folders',
+      details: safeError(err)
+    });
+  }
+});
+
+app.get('/api/inbox', async (req, res) => {
+  const session = getSession(req);
+
+  if (!session)
+    return res.status(401).json({ error: 'Not logged in' });
+
+  const folder = req.query.folder || 'INBOX';
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+
+  try {
+    const lock = await session.client.getMailboxLock(folder);
+
     try {
-      await client.logout();
-    } catch (_) {}
-  }
-}
+      const mailbox = session.client.mailbox;
+      const total = mailbox?.exists || 0;
 
-function addressList(list) {
-  if (!Array.isArray(list)) return '';
+      const start = Math.max(1, total - (page * limit) + 1);
+      const end = Math.max(0, total - ((page - 1) * limit));
 
-  return list.map(x =>
-    x.name
-      ? `${x.name} <${x.address || ''}>`
-      : (x.address || '')
-  ).join(', ');
-}
+      if (!total || end < start) {
+        return res.json({ messages: [], total, page, limit });
+      }
 
-function embedInlineImages(html, attachments) {
-  let result = html || '';
+      const messages = [];
 
-  for (const file of attachments || []) {
-    if (!file.contentId || !file.content) continue;
+      for await (const msg of session.client.fetch(
+        `${start}:${end}`,
+        {
+          uid: true,
+          envelope: true,
+          flags: true,
+          internalDate: true,
+          size: true
+        }
+      )) {
+        messages.push({
+          uid: msg.uid,
+          subject: msg.envelope?.subject || '(No subject)',
+          from: msg.envelope?.from?.map(x =>
+            x.name ? `${x.name} <${x.address}>` : x.address
+          ).join(', ') || '',
+          to: msg.envelope?.to?.map(x => x.address).join(', ') || '',
+          date: msg.internalDate,
+          flags: [...(msg.flags || [])],
+          size: msg.size
+        });
+      }
 
-    const cid = String(file.contentId).replace(/^<|>$/g, '');
-    const mime = file.contentType || 'application/octet-stream';
-    const data = `data:${mime};base64,${file.content.toString('base64')}`;
-    const escapedCid = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      messages.sort((a, b) => b.uid - a.uid);
 
-    result = result.replace(
-      new RegExp(`cid:${escapedCid}`, 'gi'),
-      data
-    );
-  }
+      res.json({ messages, total, page, limit });
 
-  return result;
-}
-
-app.get('/health', (req, res) => {
-  res.json({ ok: true, app: 'Danke Mail' });
-});
-
-app.get('/api/providers', (req, res) => {
-  res.json({ ok: true });
-});
-
-/* LOGIN */
-app.post('/api/login', async (req, res) => {
-  const {
-    email,
-    password,
-    imapHost,
-    imapPort,
-    imapSecure,
-    smtpHost,
-    smtpPort,
-    smtpSecure
-  } = req.body || {};
-
-  if (!email || !password || !imapHost) {
-    return res.status(400).json({
-      error: 'Email, password and IMAP host are required.'
-    });
-  }
-
-  const session = {
-    email: String(email).trim(),
-    password: String(password),
-    imapHost: String(imapHost).trim(),
-    imapPort: Number(imapPort || 993),
-    imapSecure: imapSecure !== false,
-    smtpHost: String(smtpHost || '').trim(),
-    smtpPort: Number(smtpPort || 465),
-    smtpSecure: smtpSecure !== false
-  };
-
-  try {
-    await withImap(session, async client => {
-      const lock = await client.getMailboxLock('INBOX');
+    } finally {
       lock.release();
-    });
+    }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, session);
+  } catch (err) {
+    console.error('INBOX ERROR:', safeError(err));
 
-    res.json({
-      ok: true,
-      token,
-      email: session.email
-    });
-  } catch (error) {
-    res.status(400).json({
-      error: `IMAP login failed: ${error.message}`
+    res.status(500).json({
+      error: 'Could not load messages',
+      details: safeError(err)
     });
   }
 });
 
-/* FOLDERS */
-app.get('/api/folders', auth, async (req, res) => {
+app.get('/api/message/:uid', async (req, res) => {
+  const session = getSession(req);
+
+  if (!session)
+    return res.status(401).json({ error: 'Not logged in' });
+
+  const folder = req.query.folder || 'INBOX';
+
   try {
-    const folders = await withImap(req.mailSession, async client => {
-      const list = await client.list();
+    const lock = await session.client.getMailboxLock(folder);
 
-      return list.map(folder => ({
-        path: folder.path,
-        name: folder.name,
-        specialUse: folder.specialUse || '',
-        delimiter: folder.delimiter || '/'
-      }));
+    try {
+      const msg = await session.client.fetchOne(
+        Number(req.params.uid),
+        {
+          uid: true,
+          source: true,
+          envelope: true,
+          flags: true,
+          internalDate: true
+        },
+        { uid: true }
+      );
+
+      if (!msg)
+        return res.status(404).json({ error: 'Message not found' });
+
+      const parsed = await simpleParser(msg.source);
+
+      res.json({
+        uid: msg.uid,
+        subject: parsed.subject || '(No subject)',
+        from: parsed.from?.text || '',
+        to: parsed.to?.text || '',
+        date: parsed.date || msg.internalDate,
+        text: parsed.text || '',
+        html: parsed.html || '',
+        attachments: (parsed.attachments || []).map(a => ({
+          filename: a.filename,
+          contentType: a.contentType,
+          size: a.size
+        }))
+      });
+
+    } finally {
+      lock.release();
+    }
+
+  } catch (err) {
+    console.error('MESSAGE ERROR:', safeError(err));
+
+    res.status(500).json({
+      error: 'Could not open message',
+      details: safeError(err)
     });
-
-    res.json({ folders });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 });
 
-/* INBOX AND PAGINATION */
-app.get('/api/inbox', auth, async (req, res) => {
-  const folder = safeFolder(req.query.folder);
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+app.post('/api/send', async (req, res) => {
+  const session = getSession(req);
+
+  if (!session)
+    return res.status(401).json({ error: 'Not logged in' });
+
+  const { to, subject, text, html } = req.body || {};
+
+  if (!to)
+    return res.status(400).json({ error: 'Recipient is required' });
+
+  const transporter = nodemailer.createTransport({
+    host: req.body.smtpHost,
+    port: Number(req.body.smtpPort || 465),
+    secure: req.body.smtpSecure !== false,
+    auth: {
+      user: session.username,
+      pass: req.body.password
+    },
+    tls: { rejectUnauthorized: true }
+  });
 
   try {
-    const result = await withImap(req.mailSession, async client => {
-      const lock = await client.getMailboxLock(folder);
-
-      try {
-        const found = await client.search({ all: true }, { uid: true });
-        const uids = Array.isArray(found) ? found : [];
-        const total = uids.length;
-        const totalPages = Math.max(1, Math.ceil(total / limit));
-        const safePage = Math.min(page, totalPages);
-
-        const end = total - ((safePage - 1) * limit);
-        const start = Math.max(0, end - limit);
-        const selected = uids.slice(start, end).reverse();
-
-        let messages = [];
-
-        if (selected.length) {
-          const fetched = await client.fetchAll(
-            selected,
-            {
-              uid: true,
-              envelope: true,
-              flags: true,
-              internalDate: true
-            },
-            { uid: true }
-          );
-
-          messages = fetched.map(message => {
-            const env = message.envelope || {};
-
-            return {
-              uid: message.uid,
-              from: addressList(env.from),
-              to: addressList(env.to),
-              subject: env.subject || '(No subject)',
-              date: message.internalDate || env.date || null,
-              flags: Array.from(message.flags || [])
-            };
-          }).sort((a, b) => Number(b.uid) - Number(a.uid));
-        }
-
-        return {
-          folder,
-          messages,
-          total,
-          page: safePage,
-          limit,
-          totalPages,
-          hasPrevious: safePage > 1,
-          hasNext: safePage < totalPages
-        };
-      } finally {
-        lock.release();
-      }
-    });
-
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/* READ MESSAGE */
-app.get('/api/message/:uid', auth, async (req, res) => {
-  const folder = safeFolder(req.query.folder);
-  const uid = String(req.params.uid);
-
-  if (!/^\d+$/.test(uid)) {
-    return res.status(400).json({ error: 'Invalid message ID.' });
-  }
-
-  try {
-    const result = await withImap(req.mailSession, async client => {
-      const lock = await client.getMailboxLock(folder);
-
-      try {
-        const message = await client.fetchOne(
-          uid,
-          { uid: true, source: true },
-          { uid: true }
-        );
-
-        if (!message || !message.source) {
-          throw new Error('Message not found.');
-        }
-
-        const parsed = await simpleParser(message.source);
-        const html = embedInlineImages(parsed.html || '', parsed.attachments);
-
-        return {
-          uid: message.uid,
-          subject: parsed.subject || '(No subject)',
-          from: addressList(parsed.from && parsed.from.value),
-          to: addressList(parsed.to && parsed.to.value),
-          date: parsed.date || null,
-          text: parsed.text || '',
-          html,
-          attachments: (parsed.attachments || []).map(file => ({
-            filename: file.filename || 'attachment',
-            contentType: file.contentType,
-            size: file.size
-          }))
-        };
-      } finally {
-        lock.release();
-      }
-    });
-
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/* SEND EMAIL */
-app.post('/api/send', auth, async (req, res) => {
-  const { to, subject, text } = req.body || {};
-  const session = req.mailSession;
-
-  if (!to || !session.smtpHost) {
-    return res.status(400).json({
-      error: 'Recipient and SMTP host are required.'
-    });
-  }
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host: session.smtpHost,
-      port: session.smtpPort,
-      secure: session.smtpSecure,
-      auth: {
-        user: session.email,
-        pass: session.password
-      }
-    });
-
     const info = await transporter.sendMail({
-      from: session.email,
+      from: session.username,
       to,
-      subject: subject || '(No subject)',
-      text: text || ''
+      subject: subject || '',
+      text: text || '',
+      html: html || undefined
     });
 
-    res.json({
-      ok: true,
-      messageId: info.messageId
+    res.json({ ok: true, messageId: info.messageId });
+
+  } catch (err) {
+    console.error('SMTP SEND ERROR:', safeError(err));
+
+    res.status(500).json({
+      error: 'SMTP send failed',
+      details: safeError(err)
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 });
 
-/* LOGOUT */
-app.post('/api/logout', auth, (req, res) => {
-  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  sessions.delete(token);
+app.post('/api/logout', async (req, res) => {
+  const session = getSession(req);
+
+  if (session) {
+    sessions.delete(
+      req.headers['x-session-id'] || req.body?.sessionId
+    );
+
+    try {
+      await session.client.logout();
+    } catch (_e) {
+      try { session.client.close(); } catch (_e2) {}
+    }
+  }
+
   res.json({ ok: true });
 });
-
-/* SERVER */
-const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Danke Mail running on port ${PORT}`);
