@@ -2,7 +2,7 @@
 window.PROVIDERS = [
   {
     id: 'ttcn',
-    name: 'TTCN / DTI',
+    name: 'TTCN',
     domains: ['mx3.ttcn.ne.jp'],
     imapHost: 'imap2.cm.dream.jp',
     imapPort: 993,
@@ -14,13 +14,63 @@ window.PROVIDERS = [
   {
     id: 'dti',
     name: 'DTI',
-    domains: ['dti.ne.jp'],
+    domains: [
+      'dti.ne.jp',
+      'dti2.ne.jp',
+      'fides.dti.ne.jp',
+      'mars.dti.ne.jp',
+      'zephyr.dti.ne.jp',
+      'river.dti.ne.jp',
+      'aurora.dti.ne.jp',
+      'mica.dti.ne.jp',
+      'vesta.dti.ne.jp',
+      'saturn.dti.ne.jp',
+      'sky.dti2.ne.jp',
+      'snow.dti2.ne.jp'
+    ],
+    matchSubdomains: true,
     imapHost: 'imap.cm.dream.jp',
     imapPort: 993,
     imapSecure: true,
     smtpHost: 'vsmtp.cm.dream.jp',
     smtpPort: 465,
     smtpSecure: true
+  },
+  {
+    id: 'jcom',
+    name: 'J:COM / ZAQ',
+    domains: ['jcom.zaq.ne.jp'],
+    imapHost: '',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'IMAP and SMTP server settings need verification.'
+  },
+  {
+    id: 'dream',
+    name: 'Dream.jp',
+    domains: ['dream.jp'],
+    imapHost: '',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'IMAP and SMTP server settings need verification.'
+  },
+  {
+    id: 'mb-point',
+    name: 'MB Point',
+    domains: ['mb.point.ne.jp'],
+    imapHost: '',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'IMAP and SMTP server settings need verification.'
   },
   {
     id: 'biglobe',
@@ -275,18 +325,24 @@ window.PROVIDERS = [
   }
 ];
 
+// AUTOMATIC PROVIDER DETECTION
 window.detectProvider = function(email) {
-  const d = (email || '').trim().toLowerCase().split('@').pop();
+  const value = (email || '').trim().toLowerCase();
+  const atIndex = value.lastIndexOf('@');
 
-  if (!d || !d.includes('.')) {
+  if (atIndex < 1 || atIndex === value.length - 1) {
     return window.PROVIDERS.find(p => p.id === 'manual');
   }
 
-  return window.PROVIDERS.find(p =>
-    p.id !== 'manual' &&
-    p.domains.some(domain =>
-      d === domain ||
-      (p.matchSubdomains && d.endsWith('.' + domain))
-    )
+  const domain = value.substring(atIndex + 1);
+
+  return window.PROVIDERS.find(provider =>
+    provider.id !== 'manual' &&
+    provider.domains.some(item => {
+      const base = item.toLowerCase();
+
+      return domain === base ||
+        (provider.matchSubdomains && domain.endsWith('.' + base));
+    })
   ) || window.PROVIDERS.find(p => p.id === 'manual');
 };
