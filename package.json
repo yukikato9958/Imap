@@ -1,7 +1,7 @@
 {
   "name": "japan-mail-web",
-  "version": "1.1.0",
-  "description": "Japan Mail web IMAP/SMTP client with provider presets",
+  "version": "1.2.0",
+  "description": "Japan Mail web IMAP/SMTP client with provider presets and folder reader",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -12,6 +12,7 @@
   "dependencies": {
     "express": "^4.21.2",
     "imapflow": "^1.0.178",
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^6.10.1",
+    "mailparser": "^3.7.4"
   }
 }
