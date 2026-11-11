@@ -65,7 +65,8 @@ window.PROVIDERS = [
     imapSecure: true,
     smtpHost: 'hi-ho.mose-mail.jp',
     smtpPort: 465,
-    smtpSecure: true
+    smtpSecure: true,
+    notes: 'Use your full email address as username. If authentication fails, check the provider account settings.'
   },
   {
     id: 'katch',
