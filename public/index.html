@@ -474,6 +474,60 @@ html[data-danke-mode="dark"] #addAccountBtn{
 .theme-dot{cursor:pointer}
 </style>
 
+
+<style id="final-theme-surfaces-fix">
+/* Keep theme accent visible; all panels follow mode and selected accent */
+body{
+ background:
+  radial-gradient(ellipse at 10% 0%,color-mix(in srgb,var(--primary) 22%,transparent),transparent 52%),
+  radial-gradient(ellipse at 90% 25%,color-mix(in srgb,var(--primary) 13%,transparent),transparent 48%),
+  var(--bg)!important;
+}
+#dashboard{background:var(--surface)!important}
+.topbar,.content,.mail-list,.mail-row,.message-view,.message-card,
+.modal,.account-switch,.compose-card{
+ background-color:var(--surface)!important;
+ color:var(--text)!important;
+}
+.content{
+ background:linear-gradient(145deg,
+ color-mix(in srgb,var(--primary) 5%,var(--surface)),
+ var(--surface) 65%)!important;
+}
+.mail-row{border-bottom:1px solid var(--line)!important}
+.mail-row:hover{background:var(--surface2)!important}
+.mail-row.selected,.mail-row.active{
+ background:color-mix(in srgb,var(--primary) 17%,var(--surface))!important;
+}
+.folder-btn.active{
+ background:color-mix(in srgb,var(--primary) 20%,var(--surface))!important;
+ color:var(--text)!important;
+}
+html[data-danke-mode="dark"] #dashboard,
+html[data-danke-mode="dark"] .topbar,
+html[data-danke-mode="dark"] .content,
+html[data-danke-mode="dark"] .mail-list,
+html[data-danke-mode="dark"] .mail-row,
+html[data-danke-mode="dark"] .message-view,
+html[data-danke-mode="dark"] .message-card,
+html[data-danke-mode="dark"] .modal,
+html[data-danke-mode="dark"] .account-switch{
+ background-color:var(--surface)!important;color:var(--text)!important;
+}
+html[data-danke-mode="dark"] .content{
+ background:linear-gradient(145deg,
+ color-mix(in srgb,var(--primary) 12%,var(--surface)),
+ var(--surface) 70%)!important;
+}
+html[data-danke-mode="dark"] .mail-row:hover{
+ background:var(--surface2)!important;
+}
+html[data-danke-mode="dark"] .mail-row.selected,
+html[data-danke-mode="dark"] .folder-btn.active{
+ background:color-mix(in srgb,var(--primary) 28%,var(--surface))!important;
+}
+</style>
+
 </head>
 <body>
 
