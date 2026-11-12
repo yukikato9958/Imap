@@ -830,6 +830,7 @@ app.get('/api/message/:uid', async (req, res) => {
 // MARK READ / UNREAD / DELETE
 // ========================================
 
+
 app.post('/api/message/action', async (req, res) => {
     const config = getSession(req);
 
@@ -871,6 +872,60 @@ app.post('/api/message/action', async (req, res) => {
 
     try {
         await withImap(config, async client => {
+            // Khusus Delete: cari folder Trash
+            if (action === 'delete') {
+                const mailboxes = await client.list();
+
+                let trash = mailboxes.find(box =>
+                    String(box.specialUse || '').toLowerCase() === '\\trash'
+                );
+
+                if (!trash) {
+                    const names = [
+                        'trash',
+                        'deleted',
+                        'deleted items',
+                        'deleted messages',
+                        'bin',
+                        'ごみ箱',
+                        'ゴミ箱'
+                    ];
+
+                    trash = mailboxes.find(box =>
+                        names.includes(
+                            String(box.path).split('/').pop().toLowerCase()
+                        )
+                    );
+                }
+
+                if (!trash) {
+                    throw new Error(
+                        'Folder Trash tidak ditemukan. Periksa nama folder Trash di akun email.'
+                    );
+                }
+
+                const lock = await client.getMailboxLock(folder);
+
+                try {
+                    if (folder === trash.path) {
+                        await client.messageDelete(
+                            validUIDs,
+                            { uid: true }
+                        );
+                    } else {
+                        await client.messageMove(
+                            validUIDs,
+                            trash.path,
+                            { uid: true }
+                        );
+                    }
+                } finally {
+                    lock.release();
+                }
+
+                return;
+            }
+
             const lock = await client.getMailboxLock(folder);
 
             try {
@@ -884,11 +939,6 @@ app.post('/api/message/action', async (req, res) => {
                     await client.messageFlagsRemove(
                         validUIDs,
                         ['\\Seen'],
-                        { uid: true }
-                    );
-                } else if (action === 'delete') {
-                    await client.messageDelete(
-                        validUIDs,
                         { uid: true }
                     );
                 }
@@ -908,8 +958,9 @@ app.post('/api/message/action', async (req, res) => {
                     ? 'Emails marked as read'
                     : action === 'unread'
                     ? 'Emails marked as unread'
-                    : 'Emails deleted'
+                    : 'Emails moved to Trash'
         });
+
     } catch (err) {
         sendError(res, err, 'Message action');
     }
