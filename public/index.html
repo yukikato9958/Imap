@@ -576,55 +576,72 @@ async function api(url,options={}){
 }
 
 /* PROVIDER FORM */
+
 function fillProviderSelect(){
- $('provider').innerHTML=window.PROVIDERS.map(p=>
-  `<option value="${esc(p.id)}">${esc(p.name)}</option>`
- ).join('');
+ const providerSelect = $('provider');
+
+ if (!providerSelect) {
+  console.error('Elemen #provider tidak ditemukan');
+  return;
+ }
+
+ if (!Array.isArray(window.PROVIDERS)) {
+  console.error('window.PROVIDERS bukan array');
+  return;
+ }
+
+ providerSelect.innerHTML = '';
+
+ window.PROVIDERS.forEach(p => {
+  const option = document.createElement('option');
+  option.value = p.id;
+  option.textContent = p.name;
+  providerSelect.appendChild(option);
+ });
+
+ console.log('Provider dimuat:', providerSelect.options.length);
 }
 
 function selectedProvider(){
- return window.PROVIDERS.find(p=>p.id===$('provider').value)||window.PROVIDERS.at(-1);
+ return window.PROVIDERS.find(
+  p => p.id === $('provider').value
+ ) || window.PROVIDERS[window.PROVIDERS.length - 1];
 }
 
 function applyProvider(p){
- $('provider').value=p.id;
- $('imapHost').value=p.imapHost||'';
- $('imapPort').value=p.imapPort||993;
- $('imapSecure').value=String(p.imapSecure!==false);
- $('smtpHost').value=p.smtpHost||'';
- $('smtpPort').value=p.smtpPort||465;
- $('smtpSecure').value=String(p.smtpSecure!==false);
+ if (!p) return;
 
- $('providerNote').textContent=
-  p.notes||
-  (p.id==='manual'
-   ?'Isi host IMAP dan SMTP sesuai informasi provider email kamu.'
-   :'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu.');
+ $('provider').value = p.id;
+ $('imapHost').value = p.imapHost || '';
+ $('imapPort').value = p.imapPort || 993;
+ $('imapSecure').value = String(p.imapSecure !== false);
+ $('smtpHost').value = p.smtpHost || '';
+ $('smtpPort').value = p.smtpPort || 465;
+ $('smtpSecure').value = String(p.smtpSecure !== false);
+
+ $('providerNote').textContent =
+  p.notes ||
+  (p.id === 'manual'
+   ? 'Isi host IMAP dan SMTP sesuai informasi provider email kamu.'
+   : 'Preset ' + p.name + ' dipilih. Pastikan pengaturan sesuai akun email kamu.');
 }
 
 function detectFromEmail(){
- const p=window.detectProvider($('email').value);
+ const p = window.detectProvider($('email').value);
  applyProvider(p);
 }
 
-$('email').addEventListener('input',detectFromEmail);
-$('provider').addEventListener('change',()=>applyProvider(selectedProvider()));
+fillProviderSelect();
 
-try {
-    console.log('Jumlah provider:', window.PROVIDERS.length);
+$('email').addEventListener('input', detectFromEmail);
+$('provider').addEventListener('change', () => {
+ applyProvider(selectedProvider());
+});
 
-    fillProviderSelect();
-
-    console.log(
-        'Provider berhasil dimuat:',
-        $('provider').options.length
-    );
-
-    applyProvider(window.PROVIDERS[0]);
-
-} catch (error) {
-    console.error('ERROR PROVIDER:', error);
+if (window.PROVIDERS.length) {
+ applyProvider(window.PROVIDERS[0]);
 }
+
 /* LOGIN AND ADD ACCOUNT */
 let addingAccount=false;
 
