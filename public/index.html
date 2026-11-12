@@ -369,6 +369,111 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 html[style*="--bg:"] body{background-color:var(--bg)}
 @media(prefers-reduced-motion:reduce){body{transition:none}}
 </style>
+
+<style id="dark-mode-readable-fix">
+/* Dark mode readability: override old hard-coded light text colors */
+html[data-danke-mode="dark"] body,
+html[data-danke-mode="dark"] #dashboard,
+html[data-danke-mode="dark"] .topbar,
+html[data-danke-mode="dark"] .content,
+html[data-danke-mode="dark"] .mail-list,
+html[data-danke-mode="dark"] .mail-row,
+html[data-danke-mode="dark"] .modal,
+html[data-danke-mode="dark"] .message-card,
+html[data-danke-mode="dark"] .message-view,
+html[data-danke-mode="dark"] .message-body,
+html[data-danke-mode="dark"] .compose-card {
+ background-color:#211a30 !important;
+ color:#f5f0ff !important;
+}
+html[data-danke-mode="dark"] body{
+ background:
+  radial-gradient(ellipse at 15% 0%,color-mix(in srgb,var(--primary) 24%,transparent),transparent 48%),
+  #15101f !important;
+}
+html[data-danke-mode="dark"] #dashboard{background:#211a30!important}
+html[data-danke-mode="dark"] .content{background:#211a30!important}
+html[data-danke-mode="dark"] .mail-row{border-color:#3b304d!important}
+html[data-danke-mode="dark"] .mail-row:hover,
+html[data-danke-mode="dark"] .mail-row.unread{background:#302442!important}
+html[data-danke-mode="dark"] .mail-row .sender,
+html[data-danke-mode="dark"] .mail-row .subject,
+html[data-danke-mode="dark"] .mail-row .snippet,
+html[data-danke-mode="dark"] .mail-row .mail-date,
+html[data-danke-mode="dark"] .content-head h2,
+html[data-danke-mode="dark"] .message-meta,
+html[data-danke-mode="dark"] .message-toolbar,
+html[data-danke-mode="dark"] .message-body,
+html[data-danke-mode="dark"] .small,
+html[data-danke-mode="dark"] .muted,
+html[data-danke-mode="dark"] label,
+html[data-danke-mode="dark"] .pagination,
+html[data-danke-mode="dark"] .page-indicator{
+ color:#e9e1f7!important;
+}
+html[data-danke-mode="dark"] .mail-row .snippet,
+html[data-danke-mode="dark"] .mail-row .mail-date,
+html[data-danke-mode="dark"] .muted{color:#bcb0d2!important}
+html[data-danke-mode="dark"] input,
+html[data-danke-mode="dark"] select,
+html[data-danke-mode="dark"] textarea,
+html[data-danke-mode="dark"] .searchbox{
+ background:#302641!important;color:#f7f2ff!important;border-color:#4a3b60!important;
+}
+html[data-danke-mode="dark"] input::placeholder,
+html[data-danke-mode="dark"] textarea::placeholder{color:#b5a8ca!important}
+html[data-danke-mode="dark"] .toolbar button,
+html[data-danke-mode="dark"] .message-toolbar button,
+html[data-danke-mode="dark"] .pagination button,
+html[data-danke-mode="dark"] .close{
+ background:#342849!important;color:#eee6ff!important;border-color:#4b3b61!important;
+}
+html[data-danke-mode="dark"] .sidebar{color:#f8f5ff!important}
+html[data-danke-mode="dark"] .message-body iframe{background:#fff!important}
+</style>
+
+
+<style id="accent-theme-functional-fix">
+/* Selected accent color is applied to all theme accents */
+:root{
+ --accent-soft:color-mix(in srgb,var(--primary) 12%,var(--surface));
+ --accent-glow:color-mix(in srgb,var(--primary) 24%,transparent);
+}
+body{
+ background:
+  radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--primary) 20%,transparent),transparent 48%),
+  radial-gradient(ellipse at 92% 20%,color-mix(in srgb,var(--primary) 13%,transparent),transparent 45%),
+  var(--bg)!important;
+}
+#dashboard{box-shadow:0 22px 65px color-mix(in srgb,var(--primary) 22%,transparent)!important}
+.logo,.primary,#connectBtn,#composeBtn,#addAccountBtn{
+ background:linear-gradient(115deg,
+  color-mix(in srgb,var(--primary) 82%,white),
+  var(--primary),
+  color-mix(in srgb,var(--primary) 78%,black))!important;
+ border-color:var(--primary)!important;
+}
+.primary:hover,#connectBtn:hover,#composeBtn:hover,#addAccountBtn:hover{
+ filter:brightness(1.08);
+}
+.brand span,.link,.text-primary,.active .folder-btn-icon{color:var(--primary)!important}
+.folder-btn.active,.mail-row.selected,.theme-dot.active{
+ background:color-mix(in srgb,var(--primary) 13%,var(--surface))!important;
+ border-color:color-mix(in srgb,var(--primary) 45%,var(--line))!important;
+}
+html[data-danke-mode="dark"] .folder-btn.active,
+html[data-danke-mode="dark"] .mail-row.selected{
+ background:color-mix(in srgb,var(--primary) 25%,#211a30)!important;
+}
+html[data-danke-mode="dark"] .primary,
+html[data-danke-mode="dark"] #connectBtn,
+html[data-danke-mode="dark"] #composeBtn,
+html[data-danke-mode="dark"] #addAccountBtn{
+ color:#fff!important;
+}
+.theme-dot{cursor:pointer}
+</style>
+
 </head>
 <body>
 
@@ -1540,6 +1645,7 @@ $('composeForm').addEventListener('submit',async e=>{
 
 /* THEMES */
 function applyTheme(){
+ document.documentElement.setAttribute('data-danke-mode',state.theme.mode);
  document.documentElement.style.setProperty(
   '--primary',
   state.theme.accent
