@@ -671,9 +671,15 @@ $('loginForm').addEventListener('submit',async e=>{
   };
 
   state.accounts.push(account);
-  state.activeId=account.id;
-  state.page=1;
-  saveAccounts();
+ state.activeId=account.id;
+state.page=1;
+saveAccounts();
+
+console.log('AKUN TERSIMPAN:', {
+    email: account.email,
+    sessionIdAda: !!account.sessionId,
+    sessionIdPanjang: account.sessionId?.length
+});
 
   addingAccount=false;
   $('password').value='';
