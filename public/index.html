@@ -580,66 +580,97 @@ async function api(url,options={}){
 function fillProviderSelect(){
  const providerSelect = $('provider');
 
- if (!providerSelect) {
-  console.error('Elemen #provider tidak ditemukan');
-  return;
+ if(!providerSelect){
+  console.error('Provider dropdown #provider tidak ditemukan.');
+  return false;
  }
 
- if (!Array.isArray(window.PROVIDERS)) {
-  console.error('window.PROVIDERS bukan array');
-  return;
+ if(!Array.isArray(window.PROVIDERS) || window.PROVIDERS.length === 0){
+  providerSelect.innerHTML = '<option value="">Provider tidak tersedia</option>';
+  console.error('Daftar window.PROVIDERS kosong atau tidak valid.');
+  return false;
  }
 
- providerSelect.innerHTML = '';
+ providerSelect.replaceChildren();
 
- window.PROVIDERS.forEach(p => {
+ window.PROVIDERS.forEach(provider=>{
   const option = document.createElement('option');
-  option.value = p.id;
-  option.textContent = p.name;
+  option.value = provider.id;
+  option.textContent = provider.name;
   providerSelect.appendChild(option);
  });
 
- console.log('Provider dimuat:', providerSelect.options.length);
+ console.log('Provider berhasil dimuat:', providerSelect.options.length);
+ return true;
 }
 
 function selectedProvider(){
- return window.PROVIDERS.find(
-  p => p.id === $('provider').value
- ) || window.PROVIDERS[window.PROVIDERS.length - 1];
+ const providerSelect = $('provider');
+ if(!providerSelect || !Array.isArray(window.PROVIDERS)) return null;
+
+ return window.PROVIDERS.find(provider=>provider.id === providerSelect.value)
+  || window.PROVIDERS.find(provider=>provider.id === 'manual')
+  || window.PROVIDERS[window.PROVIDERS.length - 1]
+  || null;
 }
 
-function applyProvider(p){
- if (!p) return;
+function applyProvider(provider){
+ if(!provider) return;
 
- $('provider').value = p.id;
- $('imapHost').value = p.imapHost || '';
- $('imapPort').value = p.imapPort || 993;
- $('imapSecure').value = String(p.imapSecure !== false);
- $('smtpHost').value = p.smtpHost || '';
- $('smtpPort').value = p.smtpPort || 465;
- $('smtpSecure').value = String(p.smtpSecure !== false);
+ const setValue = (id,value)=>{
+  const element = $(id);
+  if(element) element.value = value;
+ };
 
- $('providerNote').textContent =
-  p.notes ||
-  (p.id === 'manual'
-   ? 'Isi host IMAP dan SMTP sesuai informasi provider email kamu.'
-   : 'Preset ' + p.name + ' dipilih. Pastikan pengaturan sesuai akun email kamu.');
+ setValue('provider', provider.id);
+ setValue('imapHost', provider.imapHost || '');
+ setValue('imapPort', provider.imapPort || 993);
+ setValue('imapSecure', String(provider.imapSecure !== false));
+ setValue('smtpHost', provider.smtpHost || '');
+ setValue('smtpPort', provider.smtpPort || 465);
+ setValue('smtpSecure', String(provider.smtpSecure !== false));
+
+ const note = $('providerNote');
+ if(note){
+  note.textContent = provider.notes ||
+   (provider.id === 'manual'
+    ? 'Isi host IMAP dan SMTP sesuai informasi provider email kamu.'
+    : 'Preset ' + provider.name + ' dipilih. Pastikan pengaturan sesuai akun email kamu.');
+ }
 }
 
 function detectFromEmail(){
- const p = window.detectProvider($('email').value);
- applyProvider(p);
+ const emailInput = $('email');
+ if(!emailInput || typeof window.detectProvider !== 'function') return;
+ applyProvider(window.detectProvider(emailInput.value));
 }
 
-fillProviderSelect();
+function initializeProviderForm(){
+ const providerSelect = $('provider');
+ const emailInput = $('email');
 
-$('email').addEventListener('input', detectFromEmail);
-$('provider').addEventListener('change', () => {
- applyProvider(selectedProvider());
-});
+ if(!fillProviderSelect()) return;
 
-if (window.PROVIDERS.length) {
- applyProvider(window.PROVIDERS[0]);
+ if(emailInput){
+  emailInput.addEventListener('input', detectFromEmail);
+ }
+
+ if(providerSelect){
+  providerSelect.addEventListener('change',()=>{
+   applyProvider(selectedProvider());
+  });
+ }
+
+ const initialProvider = window.PROVIDERS.find(provider=>provider.id === 'manual')
+  || window.PROVIDERS[0];
+ applyProvider(initialProvider);
+}
+
+// Jalankan setelah elemen form tersedia.
+if(document.readyState === 'loading'){
+ document.addEventListener('DOMContentLoaded', initializeProviderForm, {once:true});
+}else{
+ initializeProviderForm();
 }
 
 /* LOGIN AND ADD ACCOUNT */
@@ -1457,33 +1488,32 @@ document.querySelectorAll('.modal-backdrop').forEach(bg=>{
 });
 
 
+
 function openSidebar(){
- $('sidebar').classList.add('open');
- $('sidebarOverlay').classList.add('active');
- document.body.style.overflow='hidden';
+ const sidebar = $('sidebar');
+ const overlay = $('sidebarOverlay');
+
+ if(sidebar) sidebar.classList.add('open');
+ if(overlay) overlay.classList.add('active');
+
+ document.body.style.overflow = 'hidden';
 }
 
 function closeSidebar(){
- $('sidebar').classList.remove('open');
- $('sidebarOverlay').classList.remove('active');
- document.body.style.overflow='';
+ const sidebar = $('sidebar');
+ const overlay = $('sidebarOverlay');
+
+ if(sidebar) sidebar.classList.remove('open');
+ if(overlay) overlay.classList.remove('active');
+
+ document.body.style.overflow = '';
 }
 
-function toggleSidebar(){
- if($('sidebar').classList.contains('open')){
-  closeSidebar();
- }else{
-  openSidebar();
- }
+const sidebarOverlay = $('sidebarOverlay');
+
+if(sidebarOverlay){
+ sidebarOverlay.addEventListener('click', closeSidebar);
 }
-
-$('menuBtn').onclick=toggleSidebar;
-$('sidebarClose').onclick=closeSidebar;
-$('sidebarOverlay').onclick=closeSidebar;
-
-document.addEventListener('keydown',e=>{
- if(e.key==='Escape')closeSidebar();
-});
 
 
 /* INITIALIZE */
@@ -1516,3 +1546,6 @@ document.addEventListener('keydown',e=>{
  }
 })();
 
+</script>
+</body>
+</html>
