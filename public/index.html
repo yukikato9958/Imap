@@ -303,6 +303,71 @@ body{
  .content:has(#messageView:not(.hidden)){display:block}
 }
 
+
+/* FIX KONTRAS: teks inbox dan toolbar harus terbaca */
+.content, .content * { opacity: 1; }
+.content { color: #302744 !important; }
+.content-head h2 { color: #302044 !important; }
+.content-head, .content-head * { color: #5b4b78; }
+.mail-row, .mail-row * { opacity: 1 !important; }
+.mail-row .sender,
+.mail-row .subject,
+.mail-row .snippet,
+.mail-row .mail-date { color: #33254f !important; }
+.mail-row .sender { font-weight: 700 !important; }
+.mail-row .subject { color: #6b5a8e !important; }
+.mail-row .snippet { color: #75688d !important; }
+.mail-row .mail-date { color: #8b80a3 !important; }
+.toolbar button { color: #4b376f !important; }
+.toolbar button:disabled { opacity: .65 !important; color: #75658f !important; }
+.content-head h2, #contentHead h2 { color: #33204f !important; }
+.content-head p, #contentHead p { color: #76668f !important; }
+
+</style>
+<style id="theme-aware-background-fix">
+/* ===== THEME-AWARE BACKGROUND & SURFACES (FIX) ===== */
+body{
+ background:
+   radial-gradient(ellipse at 15% 0%, color-mix(in srgb,var(--primary) 16%,transparent), transparent 48%),
+   radial-gradient(ellipse at 90% 18%, color-mix(in srgb,var(--primary) 10%,transparent), transparent 42%),
+   var(--bg) !important;
+ color:var(--text) !important;
+ transition:background .25s,color .2s;
+}
+#dashboard{
+ background:var(--surface) !important;
+ box-shadow:0 22px 65px color-mix(in srgb,var(--primary) 18%,transparent) !important;
+}
+.topbar{background:var(--surface) !important;color:var(--text) !important}
+.content{
+ background:
+  linear-gradient(180deg,
+   color-mix(in srgb,var(--primary) 3%,var(--surface)) 0%,
+   var(--surface) 100%) !important;
+ color:var(--text) !important;
+}
+.mail-list,.modal,.account-switch,.mail-row,
+.toolbar button,.message-toolbar button{
+ background-color:var(--surface) !important;
+ color:var(--text) !important;
+ border-color:var(--line) !important;
+}
+.mail-row:hover,.folder-btn:hover{
+ background-color:var(--surface2) !important;
+}
+.searchbox input{
+ background:var(--surface2) !important;
+ color:var(--text) !important;
+ border-color:var(--line) !important;
+}
+input,select,textarea{color:var(--text)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+.content-head h2,.sender,.subject,.mail-preview,.message-meta,
+.message-toolbar,.pagination,.page-indicator{color:var(--text)}
+.mail-preview,.mail-date,.page-indicator{color:var(--muted)}
+/* Theme mode: true dark surfaces, including inbox and reading pane */
+html[style*="--bg:"] body{background-color:var(--bg)}
+@media(prefers-reduced-motion:reduce){body{transition:none}}
 </style>
 </head>
 <body>
