@@ -937,8 +937,12 @@ function renderMessages(){
   const subject=m.subject||'(No subject)';
   const date=m.date?new Date(m.date).toLocaleString():'';
   const preview=m.text?.replace(/\s+/g,' ').slice(0,130)||m.snippet||'';
-  const unread=!(m.flags||[]).includes('\\Seen')&&!m.seen;
+  const cacheKey=folder+':'+uid;
+const cached=state.messageCache.get(cacheKey);
 
+const unread=cached
+ ? false
+ : !(m.flags||[]).includes('\\Seen')&&!m.seen;
   return `<div class="mail-row ${unread?'unread':''}" data-message-index="${i}">
    <input type="checkbox" data-select-key="${esc(key)}" ${state.selected.has(key)?'checked':''}>
    <div class="mail-info">
