@@ -610,9 +610,21 @@ function detectFromEmail(){
 $('email').addEventListener('input',detectFromEmail);
 $('provider').addEventListener('change',()=>applyProvider(selectedProvider()));
 
-fillProviderSelect();
-applyProvider(window.PROVIDERS[0]);
+try {
+    console.log('Jumlah provider:', window.PROVIDERS.length);
 
+    fillProviderSelect();
+
+    console.log(
+        'Provider berhasil dimuat:',
+        $('provider').options.length
+    );
+
+    applyProvider(window.PROVIDERS[0]);
+
+} catch (error) {
+    console.error('ERROR PROVIDER:', error);
+}
 /* LOGIN AND ADD ACCOUNT */
 let addingAccount=false;
 
