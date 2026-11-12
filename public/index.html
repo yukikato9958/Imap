@@ -1458,8 +1458,13 @@ document.addEventListener('keydown',e=>{
 
 
 /* INITIALIZE */
+
 (async function init(){
  loadSaved();
+
+ console.log('AKUN DIMUAT:', state.accounts.length);
+ console.log('AKUN AKTIF:', !!activeAccount());
+ console.log('SESSION ID ADA:', !!activeAccount()?.sessionId);
 
  if(activeAccount()){
   showDashboard();
@@ -1467,14 +1472,18 @@ document.addEventListener('keydown',e=>{
 
   try{
    await loadFolders();
+   console.log('FOLDER BERHASIL DIMUAT');
+
    await loadInbox(1);
+   console.log('INBOX BERHASIL DIMUAT');
+
   }catch(err){
+   console.error('GAGAL MEMULIHKAN SESI:', err);
    toast(err.message+' — Silakan login ulang jika sesi sudah berakhir.');
   }
  }else{
+  console.log('TIDAK ADA AKUN AKTIF');
   showLogin();
  }
 })();
-</script>
-</body>
-</html>
+
