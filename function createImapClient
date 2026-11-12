@@ -26,6 +26,14 @@ const SESSION_KEY = crypto
     .update(SESSION_SECRET)
     .digest();
 
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
+
+const tlsOptions = {
+    rejectUnauthorized: true,
+    minDHSize: 512,
+    ciphers: 'DEFAULT@SECLEVEL=0'
+};
+
 
 // ========================================
 // MESSAGE CACHE
