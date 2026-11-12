@@ -149,7 +149,55 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .toast{position:fixed;bottom:22px;right:22px;z-index:50;background:#29243b;color:#fff;padding:13px 17px;border-radius:11px;box-shadow:var(--shadow);max-width:90vw}
 .theme-options{display:flex;gap:9px;flex-wrap:wrap}
 .theme-dot{width:30px;height:30px;border:3px solid var(--surface);outline:1px solid var(--line);border-radius:50%}
+
 .mobile-menu{display:none}
+
+.sidebar-close{
+ display:none;
+ border:0;
+ background:var(--surface2);
+ color:var(--text);
+ width:34px;
+ height:34px;
+ border-radius:9px;
+ font-size:18px;
+}
+
+.sidebar-overlay{
+ display:none;
+}
+
+@media(max-width:760px){
+ .sidebar{
+  position:fixed;
+  z-index:30;
+  left:-270px;
+  top:0;
+  bottom:0;
+  transition:left .2s;
+  box-shadow:var(--shadow);
+ }
+
+ .sidebar.open{left:0}
+
+ .sidebar-close{
+  display:block;
+  margin-left:auto;
+  flex-shrink:0;
+ }
+
+ .sidebar-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(20,15,35,.48);
+  z-index:25;
+ }
+
+ .sidebar-overlay.active{display:block}
+
+ .mobile-menu{display:inline-block}
+}
+
 @media(max-width:760px){
  #dashboard{height:100dvh}
  .sidebar{position:fixed;z-index:15;left:-270px;top:0;bottom:0;transition:left .2s;box-shadow:var(--shadow)}
@@ -238,10 +286,11 @@ button:disabled{opacity:.4;cursor:not-allowed}
 
 <section id="dashboard" class="hidden">
  <aside class="sidebar" id="sidebar">
-  <div class="side-brand">
-   <div class="logo">D</div>
-   <div class="brand">Danke <span>Mail</span></div>
-  </div>
+ <div class="side-brand">
+ <div class="logo">D</div>
+ <div class="brand">Danke <span>Mail</span></div>
+ <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
+</div>
   <button class="account-switch" id="accountSwitch">
    <span class="small muted">CURRENT ACCOUNT</span>
    <strong id="accountLabel">Email account</strong>
@@ -649,7 +698,7 @@ function openAddAccount(){
  $('password').value='';
  applyProvider(window.PROVIDERS[0]);
  showLogin();
- $('sidebar').classList.remove('open');
+ closeSidebar();
  $('email').focus();
 }
 
@@ -1324,9 +1373,35 @@ document.querySelectorAll('.modal-backdrop').forEach(bg=>{
  });
 });
 
-$('menuBtn').onclick=()=>{
- $('sidebar').classList.toggle('open');
-};
+
+function openSidebar(){
+ $('sidebar').classList.add('open');
+ $('sidebarOverlay').classList.add('active');
+ document.body.style.overflow='hidden';
+}
+
+function closeSidebar(){
+ $('sidebar').classList.remove('open');
+ $('sidebarOverlay').classList.remove('active');
+ document.body.style.overflow='';
+}
+
+function toggleSidebar(){
+ if($('sidebar').classList.contains('open')){
+  closeSidebar();
+ }else{
+  openSidebar();
+ }
+}
+
+$('menuBtn').onclick=toggleSidebar;
+$('sidebarClose').onclick=closeSidebar;
+$('sidebarOverlay').onclick=closeSidebar;
+
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape')closeSidebar();
+});
+
 
 /* INITIALIZE */
 (async function init(){
