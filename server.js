@@ -12,12 +12,13 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const SESSION_SECRET =
-    process.env.SESSION_SECRET ||
-    crypto.randomBytes(32).toString('hex');
 
-if (!process.env.SESSION_SECRET) {
-    console.warn('WARNING: SESSION_SECRET not configured.');
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+if (!SESSION_SECRET) {
+    throw new Error(
+        'SESSION_SECRET belum diatur. Tambahkan SESSION_SECRET di environment variables.'
+    );
 }
 
 const SESSION_KEY = crypto
@@ -25,13 +26,6 @@ const SESSION_KEY = crypto
     .update(SESSION_SECRET)
     .digest();
 
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
-
-const tlsOptions = {
-    rejectUnauthorized: true,
-    minDHSize: 512,
-    ciphers: 'DEFAULT@SECLEVEL=0'
-};
 
 // ========================================
 // MESSAGE CACHE
