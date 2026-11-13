@@ -569,6 +569,19 @@ html[data-danke-mode="dark"] #messageView .message-toolbar button{
 #messageView .message-body iframe{background:#fff!important}
 </style>
 
+<style id="mobile-fix">
+/* Login: bisa di-scroll, tombol selalu terjangkau */
+html{height:auto}
+body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#loginPage{min-height:100vh;min-height:100dvh;align-items:flex-start!important;padding:20px 14px calc(40px + env(safe-area-inset-bottom))}
+.login-wrap{margin:auto}
+@media(max-width:760px){
+ /* Saat email dibuka, sembunyikan daftar supaya pesan langsung tampil */
+ .content:has(#messageView:not(.hidden)) #listView{display:none!important}
+ #messageView{padding:16px!important;max-height:none!important}
+ .message-body iframe{min-height:260px}
+}
+</style>
 </head>
 <body>
 
@@ -874,6 +887,10 @@ function toast(message){
 function showLogin(){
  $('loginPage').classList.remove('hidden');
  $('dashboard').classList.add('hidden');
+ document.body.style.overflow='';
+ $('sidebar')?.classList.remove('open');
+ $('sidebarOverlay')?.classList.remove('active');
+ window.scrollTo(0,0);
 }
 
 function showDashboard(){
@@ -1479,8 +1496,9 @@ async function openMessage(uid,folder){
  const messageFolder=folder||state.currentFolder;
  const cacheKey=messageFolder+':'+uid;
 
- $('listView').classList.remove('hidden');
+ $('listView').classList.toggle('hidden',window.innerWidth<=760);
  $('messageView').classList.remove('hidden');
+ document.querySelector('.content').scrollTop=0;
 
  // Tandai email sebagai sudah dibaca
  api('/api/message/action',{
@@ -1605,7 +1623,13 @@ function renderMessage(){
 
  if(html){
   const iframe=document.createElement('iframe');
-  iframe.setAttribute('sandbox','');
+  iframe.setAttribute('sandbox','allow-same-origin');
+  iframe.addEventListener('load',()=>{
+   try{
+    const h=iframe.contentDocument.documentElement.scrollHeight;
+    if(h)iframe.style.height=(h+16)+'px';
+   }catch{}
+  });
 
   iframe.srcdoc=
    '<!doctype html><html><head>'+
