@@ -294,6 +294,7 @@ body{
  .content:has(#messageView:not(.hidden)) #listView{min-width:0}
  .content:has(#messageView:not(.hidden)) #messageView{
   display:block!important;min-width:0;max-height:calc(100vh - 165px);overflow:auto;
+  position:sticky;top:0;
  }
  .content:has(#messageView:not(.hidden)) .content-head{grid-column:1/-1}
 }
@@ -302,7 +303,6 @@ body{
  .sidebar{background:linear-gradient(180deg,#261746,#1d1235)}
  .content:has(#messageView:not(.hidden)){display:block}
 }
-
 
 /* FIX KONTRAS: teks inbox dan toolbar harus terbaca */
 .content, .content * { opacity: 1; }
@@ -322,10 +322,8 @@ body{
 .toolbar button:disabled { opacity: .65 !important; color: #75658f !important; }
 .content-head h2, #contentHead h2 { color: #33204f !important; }
 .content-head p, #contentHead p { color: #76668f !important; }
-
 </style>
 <style id="theme-aware-background-fix">
-/* ===== THEME-AWARE BACKGROUND & SURFACES (FIX) ===== */
 body{
  background:
    radial-gradient(ellipse at 15% 0%, color-mix(in srgb,var(--primary) 16%,transparent), transparent 48%),
@@ -365,13 +363,10 @@ input::placeholder,textarea::placeholder{color:var(--muted)}
 .content-head h2,.sender,.subject,.mail-preview,.message-meta,
 .message-toolbar,.pagination,.page-indicator{color:var(--text)}
 .mail-preview,.mail-date,.page-indicator{color:var(--muted)}
-/* Theme mode: true dark surfaces, including inbox and reading pane */
 html[style*="--bg:"] body{background-color:var(--bg)}
 @media(prefers-reduced-motion:reduce){body{transition:none}}
 </style>
-
 <style id="dark-mode-readable-fix">
-/* Dark mode readability: override old hard-coded light text colors */
 html[data-danke-mode="dark"] body,
 html[data-danke-mode="dark"] #dashboard,
 html[data-danke-mode="dark"] .topbar,
@@ -431,10 +426,7 @@ html[data-danke-mode="dark"] .close{
 html[data-danke-mode="dark"] .sidebar{color:#f8f5ff!important}
 html[data-danke-mode="dark"] .message-body iframe{background:#fff!important}
 </style>
-
-
 <style id="accent-theme-functional-fix">
-/* Selected accent color is applied to all theme accents */
 :root{
  --accent-soft:color-mix(in srgb,var(--primary) 12%,var(--surface));
  --accent-glow:color-mix(in srgb,var(--primary) 24%,transparent);
@@ -473,10 +465,7 @@ html[data-danke-mode="dark"] #addAccountBtn{
 }
 .theme-dot{cursor:pointer}
 </style>
-
-
 <style id="final-theme-surfaces-fix">
-/* Keep theme accent visible; all panels follow mode and selected accent */
 body{
  background:
   radial-gradient(ellipse at 10% 0%,color-mix(in srgb,var(--primary) 22%,transparent),transparent 52%),
@@ -527,10 +516,7 @@ html[data-danke-mode="dark"] .folder-btn.active{
  background:color-mix(in srgb,var(--primary) 28%,var(--surface))!important;
 }
 </style>
-
-
 <style id="opened-email-theme-fix">
-/* Reading pane and opened-message header must follow app theme */
 #messageView,
 #messageView .message-card,
 #messageView .message-header,
@@ -565,18 +551,14 @@ html[data-danke-mode="dark"] #messageView .message-title{color:#f5f0ff!important
 html[data-danke-mode="dark"] #messageView .message-toolbar button{
  background:#342849!important;color:#f5f0ff!important;border-color:#4b3b61!important;
 }
-/* Keep original email HTML readable; only the app's surrounding panel is themed */
 #messageView .message-body iframe{background:#fff!important}
 </style>
-
 <style id="mobile-fix">
-/* Login: bisa di-scroll, tombol selalu terjangkau */
 html{height:auto}
 body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #loginPage{min-height:100vh;min-height:100dvh;align-items:flex-start!important;padding:20px 14px calc(40px + env(safe-area-inset-bottom))}
 .login-wrap{margin:auto}
 @media(max-width:760px){
- /* Saat email dibuka, sembunyikan daftar supaya pesan langsung tampil */
  .content:has(#messageView:not(.hidden)) #listView{display:none!important}
  #messageView{padding:16px!important;max-height:none!important}
  .message-body iframe{min-height:260px}
@@ -1496,9 +1478,15 @@ async function openMessage(uid,folder){
  const messageFolder=folder||state.currentFolder;
  const cacheKey=messageFolder+':'+uid;
 
- $('listView').classList.toggle('hidden',window.innerWidth<=760);
+ const content=document.querySelector('.content');
+ const isMobile=window.innerWidth<=760;
+
+ state.listScroll=content.scrollTop; // simpan posisi daftar
+
+ $('listView').classList.toggle('hidden',isMobile);
  $('messageView').classList.remove('hidden');
- document.querySelector('.content').scrollTop=0;
+
+ if(isMobile)content.scrollTop=0; // hanya di HP, karena daftar disembunyikan
 
  // Tandai email sebagai sudah dibaca
  api('/api/message/action',{
@@ -1644,11 +1632,16 @@ function renderMessage(){
   pre.textContent=m.text||'(No message content)';
   body.appendChild(pre);
  }
+
+ $('messageView').scrollTop=0; // email baru mulai dari atas, daftar tidak ikut
 }
 
 function backToList(){
  $('messageView').classList.add('hidden');
  $('listView').classList.remove('hidden');
+
+ const content=document.querySelector('.content');
+ requestAnimationFrame(()=>{content.scrollTop=state.listScroll||0});
 }
 
 /* BULK ACTIONS */
