@@ -564,6 +564,39 @@ body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
  .message-body iframe{min-height:260px}
 }
 </style>
+<style id="sidebar-follows-accent">
+/* Sidebar mengikuti warna aksen yang dipilih */
+.sidebar,
+html[data-danke-mode="dark"] .sidebar{
+ background:linear-gradient(180deg,
+  color-mix(in srgb,var(--primary) 34%,#0f0a1c) 0%,
+  color-mix(in srgb,var(--primary) 18%,#0b0715) 100%)!important;
+ color:#f8f5ff!important;
+}
+.sidebar .brand{color:#fff!important}
+.sidebar .brand span{color:color-mix(in srgb,var(--primary) 45%,white)!important}
+.sidebar .account-switch{
+ background-color:rgba(255,255,255,.08)!important;
+ border-color:rgba(255,255,255,.14)!important;
+ color:#fff!important;
+}
+.sidebar .muted,.sidebar .small,.sidebar .side-label{color:rgba(255,255,255,.62)!important}
+.sidebar .folder-btn{color:#f1ebff!important;background:transparent!important}
+.sidebar .folder-btn:hover{
+ background-color:rgba(255,255,255,.10)!important;color:#fff!important;
+}
+.sidebar .folder-btn.active,
+html[data-danke-mode="dark"] .sidebar .folder-btn.active{
+ background:var(--primary)!important;color:#fff!important;
+ box-shadow:0 7px 18px rgba(0,0,0,.25)!important;
+}
+.sidebar .side-bottom{border-color:rgba(255,255,255,.16)!important}
+.sidebar .side-bottom button{color:#f1ebff!important;background:transparent!important}
+.sidebar .side-bottom button:hover{background:rgba(255,255,255,.10)!important}
+.sidebar .side-bottom .danger{color:#ff9aa9!important}
+.sidebar-close{background:rgba(255,255,255,.12)!important;color:#fff!important}
+.logo{color:#fff!important}
+</style>
 </head>
 <body>
 
@@ -734,6 +767,12 @@ body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
     <button class="theme-dot" style="background:#3186dc" data-accent="#3186dc" title="Blue"></button>
     <button class="theme-dot" style="background:#259c83" data-accent="#259c83" title="Green"></button>
     <button class="theme-dot" style="background:#e58b38" data-accent="#e58b38" title="Orange"></button>
+    <button class="theme-dot" style="background:#5b5bd6" data-accent="#5b5bd6" title="Indigo"></button>
+    <button class="theme-dot" style="background:#0f9488" data-accent="#0f9488" title="Teal"></button>
+    <button class="theme-dot" style="background:#0ea5e9" data-accent="#0ea5e9" title="Sky"></button>
+    <button class="theme-dot" style="background:#e11d48" data-accent="#e11d48" title="Rose"></button>
+    <button class="theme-dot" style="background:#475569" data-accent="#475569" title="Graphite"></button>
+    <button class="theme-dot" style="background:#10b981" data-accent="#10b981" title="Emerald"></button>
    </div>
   </div>
   <div class="field"><label>DISPLAY MODE</label>
