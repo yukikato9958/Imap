@@ -563,11 +563,13 @@ body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
 <script>
 window.PROVIDERS = [
-{id:'ttcn',name:'TTCN',domains:['mx3.ttcn.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true},
-{id:'dti',name:'DTI',domains:['dti.ne.jp','dti2.ne.jp','fides.dti.ne.jp','mars.dti.ne.jp','zephyr.dti.ne.jp','river.dti.ne.jp','aurora.dti.ne.jp','mica.dti.ne.jp','vesta.dti.ne.jp','saturn.dti.ne.jp','sky.dti2.ne','snow.dti2.ne'],matchSubdomains:true,imapHost:'imap.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp.cm.dream.jp',smtpPort:465,smtpSecure:true},
+{id:'ttcn',name:'TTCN',domains:['mx3.ttcn.ne.jp','mx6.ttcn.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true},
+{id:'dti',name:'DTI',domains:['dti.ne.jp','dti2.ne.jp','fides.dti.ne.jp','mars.dti.ne.jp','zephyr.dti.ne.jp','river.dti.ne.jp','aurora.dti.ne.jp','mica.dti.ne.jp','vesta.dti.ne.jp','saturn.dti.ne.jp','sky.dti2.ne.jp','snow.dti2.ne.jp'],matchSubdomains:true,imapHost:'imap.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp.cm.dream.jp',smtpPort:465,smtpSecure:true},
 {id:'jcom',name:'J:COM / ZAQ',domains:['jcom.zaq.ne.jp'],imapHost:'imap.jcom.zaq.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtpa.jcom.zaq.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'zaq',name:'ZAQ / TANET',domains:['oct.zaq.ne.jp','tanet.ne.jp','zaq.ne.jp'],matchSubdomains:true,imapHost:'imap-f.zaq.ne.jp',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'imap-f.zaq.ne.jp is a candidate for oct.zaq.ne.jp and used for TANET/ZAQ regional manuals.'},
+{id:'tcn-catv',name:'Tokyo Cable Network (TCN)',domains:['tcn-catv.ne.jp'],imapHost:'imap.tcn-catv.ne.jp',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
 {id:'dream',name:'Dream.jp',domains:['dream.jp'],imapHost:'imap.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp.cm.dream.jp',smtpPort:465,smtpSecure:true},
-{id:'mb-point',name:'MB Point',domains:['mb.point.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true,notes:'Server mapping needs confirmation with MB Point.'},
+{id:'mb-point',name:'MB Point',domains:['mb.point.ne.jp','mh.point.ne.jp'],imapHost:'imap2.cm.dream.jp',imapPort:993,imapSecure:true,smtpHost:'vsmtp2.cm.dream.jp',smtpPort:465,smtpSecure:true,notes:'Server mapping needs confirmation with MB Point.'},
 {id:'biglobe',name:'BIGLOBE',domains:['biglobe.ne.jp'],imapHost:'mail.biglobe.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.biglobe.ne.jp',smtpPort:465,smtpSecure:true},
 {id:'ocn',name:'OCN',domains:['ocn.ne.jp'],imapHost:'imap.ocn.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.ocn.ne.jp',smtpPort:465,smtpSecure:true},
 {id:'so-net',name:'So-net',domains:['so-net.ne.jp'],imapHost:'imap.so-net.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.so-net.ne.jp',smtpPort:465,smtpSecure:true},
@@ -606,6 +608,22 @@ window.PROVIDERS = [
 {id:'enjoy',name:'ENJOY',domains:['enjoy.ne.jp'],imapHost:'imaps.enjoy.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtps.enjoy.ne.jp',smtpPort:465,smtpSecure:true},
 {id:'stupid',name:'Stupid.jp',domains:['stupid.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true},
 {id:'myad',name:'BIGLOBE Myad',domains:['myad.jp'],imapHost:'mail.biglobe.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.biglobe.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'mjct',name:'MJCT',domains:['mjct.co.jp'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'Custom IMAP server required; no authoritative public IMAP hostname confirmed.'},
+{id:'plala',name:'Plala',domains:['plala.or.jp'],matchSubdomains:true,imapHost:'imap.plala.or.jp',imapPort:993,imapSecure:true,smtpHost:'secure.plala.or.jp',smtpPort:465,smtpSecure:true},
+{id:'eonet',name:'eo / eonet',domains:['eonet.ne.jp'],matchSubdomains:true,imapHost:'imaps.eonet.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtps.eonet.ne.jp',smtpPort:465,smtpSecure:true},
+{id:'bb-excite',name:'BB.excite Mail',domains:['sky.bbexcite.jp','star.bbexcite.jp','love.bbexcite.jp','happy.bbexcite.jp','dream.bbexcite.jp','mail.bbexcite.jp'],imapHost:'mbox.mose-mail.jp',imapPort:993,imapSecure:true,smtpHost:'mbox.mose-mail.jp',smtpPort:465,smtpSecure:true,notes:'Existing BB.excite Mail accounts; new applications suspended since August 2023. Does not apply to discontinued @excite.co.jp mail.'},
+{id:'t-com',name:'@T COM',domains:['t-com.ne.jp'],matchSubdomains:true,imapHost:'imaps.t-com.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtps.t-com.ne.jp',smtpPort:465,smtpSecure:true,notes:'IMAP requires a prior mail specification change/activation.'},
+{id:'iijmio',name:'IIJmio Safety Mail',domains:['iijmio-mail.jp','mio.jp','miomio.jp','miobox.jp','e23.jp','x-il.jp'],imapHost:'imap.iijmio-mail.jp',imapPort:993,imapSecure:true,smtpHost:'mbox.iijmio-mail.jp',smtpPort:465,smtpSecure:true,notes:'Requires an active IIJmio Safety Mail account.'},
+{id:'iij4u',name:'IIJ4U',domains:['iij4u.or.jp'],imapHost:'imap.iij4u.or.jp',imapPort:993,imapSecure:true,smtpHost:'mbox.iij4u.or.jp',smtpPort:465,smtpSecure:true,notes:'Legacy IIJ4U email service; confirm account eligibility.'},
+{id:'asahi-net',name:'ASAHI Net',domains:['asahi-net.or.jp','asahinet.jp','asahi-net.co.jp'],imapHost:'imap.asahi-net.jp',imapPort:993,imapSecure:true,smtpHost:'mail.asahi-net.or.jp',smtpPort:465,smtpSecure:true},
+{id:'tikitiki',name:'TikiTiki',domains:['tiki.ne.jp','et.tiki.ne.jp','wt.tiki.ne.jp'],matchSubdomains:true,imapHost:'mail.tiki.ne.jp',imapPort:993,imapSecure:true,smtpHost:'mail.tiki.ne.jp',smtpPort:465,smtpSecure:true,notes:'For the standard renewed mail service; separate hosting products may use other servers.'},
+{id:'interlink-mail',name:'INTERLINK Mail',domains:['imail.moe','imail.earth'],imapHost:'imail.moe',imapPort:993,imapSecure:true,smtpHost:'imail.moe',smtpPort:587,smtpSecure:false,notes:'IMAP/SMTP may use imail.moe or imail.earth according to the account. SMTP uses STARTTLS on port 587.'},
+{id:'kcn',name:'KCN (account-specific)',domains:['kcn.jp','kcn.ne.jp'],matchSubdomains:true,imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'Server address varies by account. Check KCN registration documents. No universal host has been confirmed.'},
+{id:'docomo',name:'NTT Docomo Mail',domains:['docomo.ne.jp'],imapHost:'imap.spmode.ne.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.spmode.ne.jp',smtpPort:465,smtpSecure:true,notes:'For PC/Android; iPhone/iPad use imap2.spmode.ne.jp. Requires d account ID and IMAP-specific password.'},
+{id:'softbank',name:'SoftBank E-Mail(i)',domains:['i.softbank.jp'],imapHost:'imap.softbank.jp',imapPort:993,imapSecure:true,smtpHost:'smtp.softbank.jp',smtpPort:465,smtpSecure:true,notes:'For E-Mail(i) accounts, not necessarily @softbank.ne.jp MMS.'},
+{id:'ymobile',name:'Y!mobile Mail',domains:['yahoo.ne.jp'],imapHost:'ymobileimap.mail.yahoo.ne.jp',imapPort:993,imapSecure:true,smtpHost:'ymobilesmtp.mail.yahoo.ne.jp',smtpPort:465,smtpSecure:true,notes:'Y!mobile mail service; provider warns PC mail clients may be unsupported.'},
+{id:'rakumail',name:'Rakuten Mobile RakuMail Portability',domains:['rakumail.jp'],imapHost:'mail.rakumail.jp',imapPort:993,imapSecure:true,smtpHost:'mail.rakumail.jp',smtpPort:465,smtpSecure:true,notes:'External IMAP/SMTP is documented for RakuMail Portability; requires IMAP password and eligible subscription.'},
+{id:'au-mail',name:'au Mail / ezweb',domains:['ezweb.ne.jp','au.com'],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true,notes:'For au Mail Portability, obtain account-specific IMAP/SMTP host and credentials from au My Page. Do not assume a global hostname.'},
 {id:'manual',name:'Other / Manual',domains:[],imapHost:'',imapPort:993,imapSecure:true,smtpHost:'',smtpPort:465,smtpSecure:true}
 ];
 
@@ -622,13 +640,32 @@ window.detectProvider=function(email){
 
 /* APP STATE */
 const $=id=>document.getElementById(id);
+const CLIENT_CACHE_TTL=45*1000;
 const state={
  accounts:[],activeId:null,folders:[],currentFolder:'INBOX',
  messages:[],selected:new Set(),searchMode:false,searchQuery:'',
  currentMessage:null,messageCache:new Map(),
+ inboxCache:new Map(),searchCache:new Map(),
  page:1,pageSize:50,totalMessages:0,totalPages:0,
  theme:{mode:'light',accent:'#7040df'}
 };
+
+function getTimedCache(map,key){
+ const entry=map.get(key);
+ if(!entry)return null;
+ if(Date.now()>entry.expiresAt){map.delete(key);return null}
+ return entry.data;
+}
+function setTimedCache(map,key,data,maxSize=40){
+ map.delete(key);
+ while(map.size>=maxSize)map.delete(map.keys().next().value);
+ map.set(key,{data,expiresAt:Date.now()+CLIENT_CACHE_TTL});
+}
+function clearListCachesForActiveAccount(){
+ const prefix=(activeAccount()?.id||'default')+':';
+ for(const k of state.inboxCache.keys())if(k.startsWith(prefix))state.inboxCache.delete(k);
+ for(const k of state.searchCache.keys())if(k.startsWith(prefix))state.searchCache.delete(k);
+}
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -819,16 +856,25 @@ function setPaginationData(data){
  updatePagination();
 }
 
-/* MESSAGE LIST / INBOX */
-async function loadInbox(page=1){
+/* MESSAGE LIST / INBOX (WITH FAST CLIENT CACHE) */
+async function loadInbox(page=1,forceRefresh=false){
  state.page=Math.max(1,Number(page)||1);state.selected.clear();state.searchMode=false;state.searchQuery='';
  $('pageTitle').textContent=titleForFolder();$('pageSubtitle').textContent=activeAccount()?.email||'';
  $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');
+ const cacheKey=(activeAccount()?.id||'default')+':'+state.currentFolder+':'+state.page+':'+state.pageSize;
+ const cached=!forceRefresh?getTimedCache(state.inboxCache,cacheKey):null;
+ if(cached){
+  state.messages=cached.messages||[];
+  setPaginationData(cached);renderMessages();
+  return;
+ }
  $('mailList').innerHTML='<div class="empty">Loading messages...</div>';
  try{
   const params=new URLSearchParams({folder:state.currentFolder,page:String(state.page),limit:String(state.pageSize)});
+  if(forceRefresh)params.set('refresh','1');
   const data=await api('/api/inbox?'+params.toString());state.messages=data.messages||[];
-  if(!state.messages.length&&state.page>1&&Number(data.total)>0)return loadInbox(state.page-1);
+  if(!state.messages.length&&state.page>1&&Number(data.total)>0)return loadInbox(state.page-1,forceRefresh);
+  setTimedCache(state.inboxCache,cacheKey,data);
   setPaginationData(data);renderMessages();
  }catch(err){state.messages=[];state.totalMessages=0;state.totalPages=0;updatePagination();$('mailList').innerHTML=`<div class="empty">${esc(err.message)}</div>`}
 }
@@ -845,7 +891,7 @@ function renderMessages(){
  list.querySelectorAll('[data-select-key]').forEach(cb=>cb.addEventListener('change',()=>{if(cb.checked)state.selected.add(cb.dataset.selectKey);else state.selected.delete(cb.dataset.selectKey)}));
 }
 
-/* SEARCH: MANUAL BUTTON + ACCOUNT-SPECIFIC HISTORY */
+/* SEARCH: MANUAL BUTTON + ACCOUNT-SPECIFIC HISTORY + CACHE */
 const SEARCH_HISTORY_LIMIT=20;
 function searchHistoryKey(){const a=activeAccount();return a?'danke_search_history_'+a.id:null}
 function getSearchHistory(){const key=searchHistoryKey();if(!key)return [];try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
@@ -876,15 +922,27 @@ $('searchInput').addEventListener('keydown',e=>{
  if(e.key==='Enter'){e.preventDefault();$('searchHistory').classList.add('hidden');doSearch(1)}
  if(e.key==='Escape')$('searchHistory').classList.add('hidden');
 });
-async function doSearch(page=1){
+async function doSearch(page=1,forceRefresh=false){
  const q=$('searchInput').value.trim();
- if(!q){state.page=1;state.searchMode=false;state.searchQuery='';loadInbox(1);return}
+ if(!q){state.page=1;state.searchMode=false;state.searchQuery='';loadInbox(1,forceRefresh);return}
  saveSearchHistory(q);state.page=Math.max(1,Number(page)||1);state.searchMode=true;state.searchQuery=q;state.selected.clear();
  $('pageTitle').textContent='Search results';$('pageSubtitle').textContent='All folders · '+q;$('clearSearchBtn').classList.remove('hidden');
- $('mailList').innerHTML='<div class="empty">Searching all folders...</div>';$('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
+ $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
+ const cacheKey=(activeAccount()?.id||'default')+':'+q.toLowerCase()+':'+state.page+':'+state.pageSize;
+ const cached=!forceRefresh?getTimedCache(state.searchCache,cacheKey):null;
+ if(cached){
+  state.messages=cached.messages||[];
+  setPaginationData(cached);renderMessages();
+  return;
+ }
+ $('mailList').innerHTML='<div class="empty">Searching all folders...</div>';
  try{
-  const params=new URLSearchParams({q,folder:'ALL',page:String(state.page),limit:String(state.pageSize)}),data=await api('/api/search?'+params.toString());
-  state.messages=data.messages||[];setPaginationData(data);renderMessages();
+  const params=new URLSearchParams({q,folder:'ALL',page:String(state.page),limit:String(state.pageSize)});
+  if(forceRefresh)params.set('refresh','1');
+  const data=await api('/api/search?'+params.toString());
+  state.messages=data.messages||[];
+  setTimedCache(state.searchCache,cacheKey,data);
+  setPaginationData(data);renderMessages();
  }catch(err){state.messages=[];state.totalMessages=0;state.totalPages=0;updatePagination();$('mailList').innerHTML=`<div class="empty">${esc(err.message)}</div>`}
 }
 
@@ -896,7 +954,10 @@ $('clearSearchBtn').addEventListener('click',()=>{
  $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');
  state.searchMode=false;state.page=1;loadInbox(1);
 });
-$('refreshBtn').addEventListener('click',()=>{if(state.searchMode)doSearch(state.page);else loadInbox(state.page)});
+$('refreshBtn').addEventListener('click',()=>{
+ clearListCachesForActiveAccount();
+ if(state.searchMode)doSearch(state.page,true);else loadInbox(state.page,true);
+});
 
 /* OPEN MESSAGE */
 async function openMessage(uid,folder){
@@ -945,7 +1006,8 @@ async function actionMessages(action,items){
  const groups={};items.forEach(item=>{const f=item.folder||state.currentFolder;(groups[f]||(groups[f]=[])).push(item.uid)});
  try{
   for(const [folder,uids] of Object.entries(groups))await api('/api/message/action',{method:'POST',body:JSON.stringify({folder,uids,action})});
-  toast('Aksi berhasil dilakukan.');if(state.searchMode)await doSearch(state.page);else await loadInbox(state.page);
+  clearListCachesForActiveAccount();
+  toast('Aksi berhasil dilakukan.');if(state.searchMode)await doSearch(state.page,true);else await loadInbox(state.page,true);
  }catch(err){toast(err.message)}
 }
 function selectedItems(){return [...state.selected].map(key=>{const split=key.lastIndexOf('::');return{folder:key.slice(0,split),uid:key.slice(split+2)}})}
