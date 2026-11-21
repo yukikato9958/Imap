@@ -33,8 +33,12 @@ const tlsOptions = {
 };
 
 // ========================================
-// MESSAGE CACHE
+// CACHE (INBOX + SEARCH + MESSAGE)
 // ========================================
+
+const INBOX_CACHE = new Map();
+const INBOX_CACHE_TTL = 30 * 1000;
+const INBOX_CACHE_MAX = 60;
 
 const MESSAGE_CACHE = new Map();
 const MESSAGE_CACHE_TTL = 300000;
@@ -44,62 +48,60 @@ const SEARCH_CACHE = new Map();
 const SEARCH_CACHE_TTL = 90 * 1000;
 const SEARCH_CACHE_MAX = 20;
 
-function getCachedSearch(key) {
-    const item = SEARCH_CACHE.get(key);
-
+function getCacheEntry(map, key) {
+    const item = map.get(key);
     if (!item) return null;
-
     if (Date.now() > item.expiresAt) {
-        SEARCH_CACHE.delete(key);
+        map.delete(key);
         return null;
     }
-
-    SEARCH_CACHE.delete(key);
-    SEARCH_CACHE.set(key, item);
-
+    map.delete(key);
+    map.set(key, item);
     return item.data;
+}
+
+function setCacheEntry(map, maxSize, ttl, key, data) {
+    map.delete(key);
+    while (map.size >= maxSize) {
+        map.delete(map.keys().next().value);
+    }
+    map.set(key, {
+        data,
+        expiresAt: Date.now() + ttl
+    });
+}
+
+function getCachedInbox(key) {
+    return getCacheEntry(INBOX_CACHE, key);
+}
+
+function setCachedInbox(key, data) {
+    setCacheEntry(INBOX_CACHE, INBOX_CACHE_MAX, INBOX_CACHE_TTL, key, data);
+}
+
+function clearInboxCacheForAccount(config, folder) {
+    const prefix = `${config.username}:${config.host}:`;
+    for (const key of INBOX_CACHE.keys()) {
+        if (key.startsWith(prefix) && (!folder || key.includes(`:${folder}:`))) {
+            INBOX_CACHE.delete(key);
+        }
+    }
+}
+
+function getCachedSearch(key) {
+    return getCacheEntry(SEARCH_CACHE, key);
 }
 
 function setCachedSearch(key, data) {
-    SEARCH_CACHE.delete(key);
-
-    while (SEARCH_CACHE.size >= SEARCH_CACHE_MAX) {
-        SEARCH_CACHE.delete(SEARCH_CACHE.keys().next().value);
-    }
-
-    SEARCH_CACHE.set(key, {
-        data,
-        expiresAt: Date.now() + SEARCH_CACHE_TTL
-    });
+    setCacheEntry(SEARCH_CACHE, SEARCH_CACHE_MAX, SEARCH_CACHE_TTL, key, data);
 }
 
 function getCachedMessage(key) {
-    const item = MESSAGE_CACHE.get(key);
-
-    if (!item) return null;
-
-    if (Date.now() > item.expiresAt) {
-        MESSAGE_CACHE.delete(key);
-        return null;
-    }
-
-    MESSAGE_CACHE.delete(key);
-    MESSAGE_CACHE.set(key, item);
-
-    return item.data;
+    return getCacheEntry(MESSAGE_CACHE, key);
 }
 
 function setCachedMessage(key, data) {
-    MESSAGE_CACHE.delete(key);
-
-    while (MESSAGE_CACHE.size >= MESSAGE_CACHE_MAX) {
-        MESSAGE_CACHE.delete(MESSAGE_CACHE.keys().next().value);
-    }
-
-    MESSAGE_CACHE.set(key, {
-        data,
-        expiresAt: Date.now() + MESSAGE_CACHE_TTL
-    });
+    setCacheEntry(MESSAGE_CACHE, MESSAGE_CACHE_MAX, MESSAGE_CACHE_TTL, key, data);
 }
 
 // ========================================
@@ -324,7 +326,6 @@ async function withImap(config, callback) {
     }
 }
 
-// Close connections that have been idle for too long.
 const imapCleanupTimer = setInterval(() => {
     const now = Date.now();
 
@@ -464,6 +465,8 @@ app.get('/health', (req, res) => {
         status: 'ok',
         app: 'Danke Mail',
         cache: MESSAGE_CACHE.size,
+        inboxCache: INBOX_CACHE.size,
+        searchCache: SEARCH_CACHE.size,
         imapConnections: IMAP_POOL.size
     });
 });
@@ -473,6 +476,8 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
         app: 'Danke Mail',
         cache: MESSAGE_CACHE.size,
+        inboxCache: INBOX_CACHE.size,
+        searchCache: SEARCH_CACHE.size,
         imapConnections: IMAP_POOL.size
     });
 });
@@ -583,7 +588,7 @@ app.get('/api/folders', async (req, res) => {
 
 // ========================================
 // INBOX / ALL FOLDERS
-// PAGINATION
+// PAGINATION (WITH CACHE)
 // ========================================
 
 app.get('/api/inbox', async (req, res) => {
@@ -597,6 +602,16 @@ app.get('/api/inbox', async (req, res) => {
 
     const folder = normalizeFolder(req.query.folder);
     const { page, limit } = getPagination(req.query);
+    const bypassCache = req.query.refresh === '1';
+    const cacheKey = `${config.username}:${config.host}:${folder}:${page}:${limit}`;
+
+    if (!bypassCache) {
+        const cached = getCachedInbox(cacheKey);
+        if (cached) {
+            res.set('X-Danke-Inbox-Cache', 'HIT');
+            return res.json(cached);
+        }
+    }
 
     try {
         const result = await withImap(config, async client => {
@@ -666,6 +681,8 @@ app.get('/api/inbox', async (req, res) => {
             }
         });
 
+        setCachedInbox(cacheKey, result);
+        res.set('X-Danke-Inbox-Cache', 'MISS');
         res.json(result);
     } catch (err) {
         sendError(res, err, 'Folder message loading');
@@ -673,8 +690,11 @@ app.get('/api/inbox', async (req, res) => {
 });
 
 // ========================================
-// SEARCH - OPTIMIZED
+// SEARCH - FASTER POOL & BOUNDED FOLDERS
 // ========================================
+
+const MAX_SEARCH_UIDS_PER_FOLDER = 80;
+const MAX_SEARCH_FOLDERS = 6;
 
 app.get('/api/search', async (req, res) => {
     const config = getSession(req);
@@ -688,6 +708,7 @@ app.get('/api/search', async (req, res) => {
     const query = String(req.query.q || '').trim();
     const requestedFolder = String(req.query.folder || 'ALL');
     const { page, limit } = getPagination(req.query);
+    const bypassCache = req.query.refresh === '1';
 
     if (!query || query.length > 200) {
         return res.status(400).json({
@@ -705,101 +726,80 @@ app.get('/api/search', async (req, res) => {
         .digest('hex');
 
     try {
-        let allResults = getCachedSearch(cacheKey);
+        let allResults = bypassCache ? null : getCachedSearch(cacheKey);
 
         if (!allResults) {
-            const folders = await withImap(config, async client => {
+            allResults = await withImap(config, async client => {
                 const mailboxes = await client.list();
 
-                const selected = requestedFolder.toUpperCase() === 'ALL'
+                let selected = requestedFolder.toUpperCase() === 'ALL'
                     ? mailboxes.filter(isSelectable)
                     : mailboxes.filter(mailbox =>
                         mailbox.path === requestedFolder &&
                         isSelectable(mailbox)
                     );
 
-                return selected.map(mailbox => mailbox.path);
-            });
+                // Prioritaskan INBOX di urutan pertama
+                selected.sort((a, b) => {
+                    const aInbox = String(a.path).toUpperCase() === 'INBOX' ? -1 : 0;
+                    const bInbox = String(b.path).toUpperCase() === 'INBOX' ? -1 : 0;
+                    return aInbox - bInbox;
+                });
 
-            const workerCount = Math.min(3, folders.length);
-            let nextFolder = 0;
-            const collected = [];
+                const folderPaths = selected
+                    .slice(0, MAX_SEARCH_FOLDERS)
+                    .map(mailbox => mailbox.path);
 
-            const workers = Array.from({ length: workerCount }, async () => {
-                const client = createImapClient(config);
-                let connected = false;
+                const collected = [];
 
-                try {
-                    await client.connect();
-                    connected = true;
+                for (const folder of folderPaths) {
+                    let lock;
+                    try {
+                        lock = await client.getMailboxLock(folder);
 
-                    while (true) {
-                        const index = nextFolder++;
+                        const uids = await client.search(
+                            { text: query },
+                            { uid: true }
+                        );
 
-                        if (index >= folders.length) break;
+                        if (!uids || !uids.length) continue;
 
-                        const folder = folders[index];
-                        let lock;
+                        // Ambil UID terbaru saja agar tidak berat pada folder besar
+                        const recentUids = uids.slice(-MAX_SEARCH_UIDS_PER_FOLDER);
 
-                        try {
-                            lock = await client.getMailboxLock(folder);
+                        const messages = await client.fetchAll(
+                            recentUids,
+                            {
+                                uid: true,
+                                envelope: true,
+                                flags: true,
+                                internalDate: true
+                            },
+                            { uid: true }
+                        );
 
-                            const uids = await client.search(
-                                { text: query },
-                                { uid: true }
-                            );
-
-                            if (!uids || !uids.length) continue;
-
-                            const messages = await client.fetchAll(
-                                uids,
-                                {
-                                    uid: true,
-                                    envelope: true,
-                                    flags: true,
-                                    internalDate: true
-                                },
-                                { uid: true }
-                            );
-
-                            for (const message of messages) {
-                                collected.push(formatMessage(message, folder));
-                            }
-                        } catch (err) {
-                            console.error(
-                                'Search folder:',
-                                folder,
-                                err.message
-                            );
-                        } finally {
-                            if (lock) lock.release();
+                        for (const message of messages) {
+                            collected.push(formatMessage(message, folder));
                         }
-                    }
-                } finally {
-                    if (connected) {
-                        try {
-                            await client.logout();
-                        } catch {
-                            try {
-                                client.close();
-                            } catch {}
-                        }
-                    } else {
-                        try {
-                            client.close();
-                        } catch {}
+                    } catch (err) {
+                        console.error(
+                            'Search folder:',
+                            folder,
+                            err.message
+                        );
+                    } finally {
+                        if (lock) lock.release();
                     }
                 }
+
+                collected.sort((a, b) =>
+                    new Date(b.date || 0).getTime() -
+                    new Date(a.date || 0).getTime()
+                );
+
+                return collected;
             });
 
-            await Promise.all(workers);
-
-            collected.sort((a, b) =>
-                new Date(b.date || 0).getTime() -
-                new Date(a.date || 0).getTime()
-            );
-
-            allResults = collected;
             setCachedSearch(cacheKey, allResults);
         }
 
@@ -1020,6 +1020,7 @@ app.post('/api/message/action', async (req, res) => {
         });
 
         clearMessageCache(config, folder, validUIDs);
+        clearInboxCacheForAccount(config, folder);
 
         res.json({
             success: true,
