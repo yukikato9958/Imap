@@ -2,7 +2,7 @@ window.PROVIDERS = [
   {
     id: 'ttcn',
     name: 'TTCN',
-    domains: ['mx3.ttcn.ne.jp'],
+    domains: ['mx3.ttcn.ne.jp', 'mx6.ttcn.ne.jp'],
     imapHost: 'imap2.cm.dream.jp',
     imapPort: 993,
     imapSecure: true,
@@ -54,7 +54,7 @@ window.PROVIDERS = [
   {
     id: 'mb-point',
     name: 'MB Point',
-    domains: ['mb.point.ne.jp'],
+    domains: ['mb.point.ne.jp', 'mh.point.ne.jp'],
     imapHost: 'imap2.cm.dream.jp',
     imapPort: 993,
     imapSecure: true,
@@ -506,6 +506,42 @@ window.PROVIDERS = [
   // SMTP port 587 uses STARTTLS if smtpSecure is false.
 
   {
+    id: 'zaq',
+    name: 'ZAQ / TANET',
+    domains: ['oct.zaq.ne.jp', 'tanet.ne.jp', 'zaq.ne.jp'],
+    matchSubdomains: true,
+    imapHost: 'imap-f.zaq.ne.jp',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'imap-f.zaq.ne.jp is a candidate for oct.zaq.ne.jp and used for TANET/ZAQ regional manuals.'
+  },
+  {
+    id: 'tcn-catv',
+    name: 'Tokyo Cable Network (TCN)',
+    domains: ['tcn-catv.ne.jp'],
+    imapHost: 'imap.tcn-catv.ne.jp',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true
+  },
+  {
+    id: 'mjct',
+    name: 'MJCT',
+    domains: ['mjct.co.jp'],
+    imapHost: '',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecure: true,
+    notes: 'Custom IMAP server required; no authoritative public IMAP hostname confirmed.'
+  },
+  {
     id: 'plala',
     name: 'Plala',
     domains: ['plala.or.jp'],
@@ -624,121 +660,3 @@ window.PROVIDERS = [
   {
     id: 'interlink-mail',
     name: 'INTERLINK Mail',
-    domains: ['imail.moe', 'imail.earth'],
-    imapHost: 'imail.moe',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: 'imail.moe',
-    smtpPort: 587,
-    smtpSecure: false,
-    notes: 'IMAP/SMTP may use imail.moe or imail.earth according to the account. SMTP uses STARTTLS on port 587.'
-  },
-  {
-    id: 'kcn',
-    name: 'KCN (account-specific)',
-    domains: ['kcn.jp', 'kcn.ne.jp'],
-    matchSubdomains: true,
-    imapHost: '',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: '',
-    smtpPort: 465,
-    smtpSecure: true,
-    notes: 'Server address varies by account. Check KCN registration documents. No universal host has been confirmed.'
-  },
-  {
-    id: 'docomo',
-    name: 'NTT Docomo Mail',
-    domains: ['docomo.ne.jp'],
-    imapHost: 'imap.spmode.ne.jp',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: 'smtp.spmode.ne.jp',
-    smtpPort: 465,
-    smtpSecure: true,
-    notes: 'For PC/Android; iPhone/iPad use imap2.spmode.ne.jp. Requires d account ID and IMAP-specific password.'
-  },
-  {
-    id: 'softbank',
-    name: 'SoftBank E-Mail(i)',
-    domains: ['i.softbank.jp'],
-    imapHost: 'imap.softbank.jp',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: 'smtp.softbank.jp',
-    smtpPort: 465,
-    smtpSecure: true,
-    notes: 'For E-Mail(i) accounts, not necessarily @softbank.ne.jp MMS.'
-  },
-  {
-    id: 'ymobile',
-    name: 'Y!mobile Mail',
-    domains: ['yahoo.ne.jp'],
-    imapHost: 'ymobileimap.mail.yahoo.ne.jp',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: 'ymobilesmtp.mail.yahoo.ne.jp',
-    smtpPort: 465,
-    smtpSecure: true,
-    notes: 'Y!mobile mail service; provider warns PC mail clients may be unsupported.'
-  },
-  {
-    id: 'rakumail',
-    name: 'Rakuten Mobile RakuMail Portability',
-    domains: ['rakumail.jp'],
-    imapHost: 'mail.rakumail.jp',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: 'mail.rakumail.jp',
-    smtpPort: 465,
-    smtpSecure: true,
-    notes: 'External IMAP/SMTP is documented for RakuMail Portability; requires IMAP password and eligible subscription.'
-  },
-  {
-    id: 'au-mail',
-    name: 'au Mail / ezweb',
-    domains: ['ezweb.ne.jp', 'au.com'],
-    imapHost: '',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: '',
-    smtpPort: 465,
-    smtpSecure: true,
-    notes: 'For au Mail Portability, obtain account-specific IMAP/SMTP host and credentials from au My Page. Do not assume a global hostname.'
-  },
-  {
-    id: 'manual',
-    name: 'Other / Manual',
-    domains: [],
-    imapHost: '',
-    imapPort: 993,
-    imapSecure: true,
-    smtpHost: '',
-    smtpPort: 465,
-    smtpSecure: true
-  }
-];
-
-// AUTOMATIC PROVIDER DETECTION
-
-window.detectProvider = function(email) {
-  const value = (email || '').trim().toLowerCase();
-  const atIndex = value.lastIndexOf('@');
-
-  if (atIndex < 1 || atIndex === value.length - 1) {
-    return window.PROVIDERS.find(p => p.id === 'manual');
-  }
-
-  const domain = value.substring(atIndex + 1);
-
-  return window.PROVIDERS.find(provider =>
-    provider.id !== 'manual' &&
-    provider.domains.some(item => {
-      const base = item.toLowerCase();
-
-      return domain === base ||
-        (provider.matchSubdomains &&
-         domain.endsWith('.' + base));
-    })
-  ) || window.PROVIDERS.find(p => p.id === 'manual');
-};
