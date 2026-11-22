@@ -46,7 +46,7 @@ const MESSAGE_CACHE_MAX = 100;
 
 const SEARCH_CACHE = new Map();
 const SEARCH_CACHE_TTL = 90 * 1000;
-const SEARCH_CACHE_MAX = 20;
+const SEARCH_CACHE_MAX = 30;
 
 function getCacheEntry(map, key) {
     const item = map.get(key);
@@ -690,11 +690,22 @@ app.get('/api/inbox', async (req, res) => {
 });
 
 // ========================================
-// SEARCH - FASTER POOL & BOUNDED FOLDERS
+// SEARCH - FAST HEADER/ENVELOPE SEARCH & BOUNDED FOLDERS
 // ========================================
 
-const MAX_SEARCH_UIDS_PER_FOLDER = 80;
-const MAX_SEARCH_FOLDERS = 6;
+const MAX_SEARCH_UIDS_PER_FOLDER = 50;
+const MAX_SEARCH_FOLDERS = 4;
+const MAX_TOTAL_SEARCH_RESULTS = 100;
+
+function folderSearchPriority(mailbox) {
+    const pathUpper = String(mailbox.path || '').toUpperCase();
+    const special = String(mailbox.specialUse || '').toLowerCase();
+    if (pathUpper === 'INBOX' || special === '\\inbox') return 0;
+    if (special === '\\sent' || pathUpper.includes('SENT')) return 1;
+    if (special === '\\archive' || pathUpper.includes('ARCHIVE')) return 2;
+    if (special === '\\trash' || special === '\\junk') return 9;
+    return 3;
+}
 
 app.get('/api/search', async (req, res) => {
     const config = getSession(req);
@@ -706,7 +717,8 @@ app.get('/api/search', async (req, res) => {
     }
 
     const query = String(req.query.q || '').trim();
-    const requestedFolder = String(req.query.folder || 'ALL');
+    const requestedFolder = String(req.query.folder || 'INBOX').trim();
+    const searchBody = req.query.scope === 'body';
     const { page, limit } = getPagination(req.query);
     const bypassCache = req.query.refresh === '1';
 
@@ -721,7 +733,8 @@ app.get('/api/search', async (req, res) => {
             username: config.username,
             host: config.host,
             query: query.toLowerCase(),
-            folder: requestedFolder
+            folder: requestedFolder.toUpperCase(),
+            scope: searchBody ? 'body' : 'header'
         }))
         .digest('hex');
 
@@ -730,42 +743,52 @@ app.get('/api/search', async (req, res) => {
 
         if (!allResults) {
             allResults = await withImap(config, async client => {
-                const mailboxes = await client.list();
+                let folderPaths;
 
-                let selected = requestedFolder.toUpperCase() === 'ALL'
-                    ? mailboxes.filter(isSelectable)
-                    : mailboxes.filter(mailbox =>
-                        mailbox.path === requestedFolder &&
-                        isSelectable(mailbox)
+                if (requestedFolder.toUpperCase() === 'ALL') {
+                    const mailboxes = await client.list();
+                    const selectable = mailboxes.filter(isSelectable);
+
+                    selectable.sort((a, b) =>
+                        folderSearchPriority(a) - folderSearchPriority(b)
                     );
 
-                // Prioritaskan INBOX di urutan pertama
-                selected.sort((a, b) => {
-                    const aInbox = String(a.path).toUpperCase() === 'INBOX' ? -1 : 0;
-                    const bInbox = String(b.path).toUpperCase() === 'INBOX' ? -1 : 0;
-                    return aInbox - bInbox;
-                });
+                    folderPaths = selectable
+                        .slice(0, MAX_SEARCH_FOLDERS)
+                        .map(mailbox => mailbox.path);
+                } else {
+                    // Jika mencari di 1 folder spesifik, tidak perlu memanggil client.list()
+                    folderPaths = [requestedFolder];
+                }
 
-                const folderPaths = selected
-                    .slice(0, MAX_SEARCH_FOLDERS)
-                    .map(mailbox => mailbox.path);
+                const searchCriteria = searchBody
+                    ? { text: query }
+                    : {
+                        or: [
+                            { subject: query },
+                            { from: query }
+                        ]
+                    };
 
                 const collected = [];
 
                 for (const folder of folderPaths) {
+                    if (collected.length >= MAX_TOTAL_SEARCH_RESULTS) break;
+
                     let lock;
                     try {
                         lock = await client.getMailboxLock(folder);
 
                         const uids = await client.search(
-                            { text: query },
+                            searchCriteria,
                             { uid: true }
                         );
 
                         if (!uids || !uids.length) continue;
 
-                        // Ambil UID terbaru saja agar tidak berat pada folder besar
-                        const recentUids = uids.slice(-MAX_SEARCH_UIDS_PER_FOLDER);
+                        const remainingQuota = MAX_TOTAL_SEARCH_RESULTS - collected.length;
+                        const takeCount = Math.min(MAX_SEARCH_UIDS_PER_FOLDER, remainingQuota);
+                        const recentUids = uids.slice(-takeCount);
 
                         const messages = await client.fetchAll(
                             recentUids,
