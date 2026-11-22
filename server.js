@@ -690,12 +690,12 @@ app.get('/api/inbox', async (req, res) => {
 });
 
 // ========================================
-// SEARCH - FAST HEADER/ENVELOPE SEARCH & BOUNDED FOLDERS
+// SEARCH - FULL TEXT (BODY + HEADERS) & BROAD FOLDERS
 // ========================================
 
-const MAX_SEARCH_UIDS_PER_FOLDER = 50;
-const MAX_SEARCH_FOLDERS = 4;
-const MAX_TOTAL_SEARCH_RESULTS = 100;
+const MAX_SEARCH_UIDS_PER_FOLDER = 300;
+const MAX_SEARCH_FOLDERS = 12;
+const MAX_TOTAL_SEARCH_RESULTS = 500;
 
 function folderSearchPriority(mailbox) {
     const pathUpper = String(mailbox.path || '').toUpperCase();
@@ -717,8 +717,7 @@ app.get('/api/search', async (req, res) => {
     }
 
     const query = String(req.query.q || '').trim();
-    const requestedFolder = String(req.query.folder || 'INBOX').trim();
-    const searchBody = req.query.scope === 'body';
+    const requestedFolder = String(req.query.folder || 'ALL').trim();
     const { page, limit } = getPagination(req.query);
     const bypassCache = req.query.refresh === '1';
 
@@ -733,8 +732,7 @@ app.get('/api/search', async (req, res) => {
             username: config.username,
             host: config.host,
             query: query.toLowerCase(),
-            folder: requestedFolder.toUpperCase(),
-            scope: searchBody ? 'body' : 'header'
+            folder: requestedFolder.toUpperCase()
         }))
         .digest('hex');
 
@@ -757,18 +755,8 @@ app.get('/api/search', async (req, res) => {
                         .slice(0, MAX_SEARCH_FOLDERS)
                         .map(mailbox => mailbox.path);
                 } else {
-                    // Jika mencari di 1 folder spesifik, tidak perlu memanggil client.list()
                     folderPaths = [requestedFolder];
                 }
-
-                const searchCriteria = searchBody
-                    ? { text: query }
-                    : {
-                        or: [
-                            { subject: query },
-                            { from: query }
-                        ]
-                    };
 
                 const collected = [];
 
@@ -780,7 +768,7 @@ app.get('/api/search', async (req, res) => {
                         lock = await client.getMailboxLock(folder);
 
                         const uids = await client.search(
-                            searchCriteria,
+                            { text: query },
                             { uid: true }
                         );
 
