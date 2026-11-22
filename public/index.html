@@ -482,7 +482,7 @@ body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
    <div class="searchbox">
     <div class="search-input-wrap">
      <span class="search-icon">⌕</span>
-     <input id="searchInput" placeholder="Search subject or sender..." autocomplete="off">
+     <input id="searchInput" placeholder="Search all folders..." autocomplete="off">
      <div id="searchHistory" class="hidden"></div>
     </div>
     <button class="primary search-btn" id="searchBtn" type="button">Search</button>
@@ -505,7 +505,6 @@ body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
      <button id="readBtn">Mark read</button>
      <button id="unreadBtn">Mark unread</button>
      <button id="deleteBtn" class="danger">Delete</button>
-     <button id="searchAllBtn" class="hidden">Search all folders</button>
      <button id="clearSearchBtn" class="hidden">Clear search</button>
     </div>
     <div class="mail-list" id="mailList"><div class="empty"><div class="big">✉</div>Loading messages...</div></div>
@@ -644,7 +643,7 @@ const $=id=>document.getElementById(id);
 const CLIENT_CACHE_TTL=90*1000;
 const state={
  accounts:[],activeId:null,folders:[],currentFolder:'INBOX',
- messages:[],selected:new Set(),searchMode:false,searchAllFolders:false,searchQuery:'',
+ messages:[],selected:new Set(),searchMode:false,searchQuery:'',
  currentMessage:null,messageCache:new Map(),
  inboxCache:new Map(),searchCache:new Map(),
  page:1,pageSize:50,totalMessages:0,totalPages:0,
@@ -787,8 +786,8 @@ $('accountSwitch').addEventListener('click',()=>{
  const options=state.accounts.map((a,i)=>`${i+1}. ${a.email}`).join('\n');
  const choice=prompt('Pilih nomor akun:\n'+options),index=Number(choice)-1;
  if(Number.isInteger(index)&&state.accounts[index]){
-  state.activeId=state.accounts[index].id;state.currentFolder='INBOX';state.page=1;state.searchMode=false;state.searchAllFolders=false;state.searchQuery='';state.selected.clear();
-  $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');$('searchAllBtn').classList.add('hidden');
+  state.activeId=state.accounts[index].id;state.currentFolder='INBOX';state.page=1;state.searchMode=false;state.searchQuery='';state.selected.clear();
+  $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');
   saveAccounts();renderAccount();loadFolders().then(()=>loadInbox(1)).catch(e=>toast(e.message));
  }
 });
@@ -803,8 +802,8 @@ $('logoutBtn').addEventListener('click',async()=>{
  state.accounts=state.accounts.filter(x=>x.id!==state.activeId);
  state.activeId=state.accounts[0]?.id||null;
  saveAccounts();
- $('searchInput').value='';$('searchHistory').classList.add('hidden');$('searchAllBtn').classList.add('hidden');
- state.searchMode=false;state.searchAllFolders=false;state.searchQuery='';state.page=1;
+ $('searchInput').value='';$('searchHistory').classList.add('hidden');
+ state.searchMode=false;state.searchQuery='';state.page=1;
  if(state.activeId){state.currentFolder='INBOX';renderAccount();await loadFolders();await loadInbox(1)}
  else showLogin();
 });
@@ -831,8 +830,8 @@ function renderFolders(){
  list.innerHTML=state.folders.map((f,i)=>{const type=folderType(f),active=state.currentFolder===f.path&&!state.searchMode;
  return `<button class="folder-btn ${active?'active':''}" data-folder-index="${i}"><span>${folderIcons[type]||'▰'}</span><span>${esc(f.name||f.path)}</span></button>`}).join('');
  list.querySelectorAll('[data-folder-index]').forEach(btn=>btn.addEventListener('click',()=>{
-  const f=state.folders[Number(btn.dataset.folderIndex)];state.currentFolder=f.path;state.page=1;state.searchMode=false;state.searchAllFolders=false;state.searchQuery='';state.selected.clear();
-  $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');$('searchAllBtn').classList.add('hidden');
+  const f=state.folders[Number(btn.dataset.folderIndex)];state.currentFolder=f.path;state.page=1;state.searchMode=false;state.searchQuery='';state.selected.clear();
+  $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');
   closeSidebar();renderFolders();loadInbox(1);
  }));
 }
@@ -857,9 +856,9 @@ function setPaginationData(data){
 
 /* MESSAGE LIST / INBOX (WITH FAST CLIENT CACHE) */
 async function loadInbox(page=1,forceRefresh=false){
- state.page=Math.max(1,Number(page)||1);state.selected.clear();state.searchMode=false;state.searchAllFolders=false;state.searchQuery='';
+ state.page=Math.max(1,Number(page)||1);state.selected.clear();state.searchMode=false;state.searchQuery='';
  $('pageTitle').textContent=titleForFolder();$('pageSubtitle').textContent=activeAccount()?.email||'';
- $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');$('searchAllBtn').classList.add('hidden');
+ $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');
  const cacheKey=(activeAccount()?.id||'default')+':'+state.currentFolder+':'+state.page+':'+state.pageSize;
  const cached=!forceRefresh?getTimedCache(state.inboxCache,cacheKey):null;
  if(cached){
@@ -890,7 +889,7 @@ function renderMessages(){
  list.querySelectorAll('[data-select-key]').forEach(cb=>cb.addEventListener('change',()=>{if(cb.checked)state.selected.add(cb.dataset.selectKey);else state.selected.delete(cb.dataset.selectKey)}));
 }
 
-/* SEARCH: FAST ACTIVE-FOLDER DEFAULT + OPTIONAL ALL-FOLDERS + CACHE */
+/* SEARCH: ALL FOLDERS + ACCOUNT-SPECIFIC HISTORY + CACHE */
 const SEARCH_HISTORY_LIMIT=20;
 function searchHistoryKey(){const a=activeAccount();return a?'danke_search_history_'+a.id:null}
 function getSearchHistory(){const key=searchHistoryKey();if(!key)return [];try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
@@ -906,7 +905,7 @@ function renderSearchHistory(){
  box.innerHTML=history.map((q,i)=>`<div class="search-history-item" data-history-index="${i}"><span>◷</span><span class="history-word">${esc(q)}</span><button class="history-delete" data-delete-history="${i}" title="Hapus">✕</button></div>`).join('');
  box.querySelectorAll('[data-history-index]').forEach(item=>item.addEventListener('click',e=>{
   if(e.target.closest('[data-delete-history]'))return;
-  const q=history[Number(item.dataset.historyIndex)];$('searchInput').value=q;box.classList.add('hidden');doSearch(1,false,false);
+  const q=history[Number(item.dataset.historyIndex)];$('searchInput').value=q;box.classList.add('hidden');doSearch(1);
  }));
  box.querySelectorAll('[data-delete-history]').forEach(btn=>btn.addEventListener('click',e=>{
   e.stopPropagation();const index=Number(btn.dataset.deleteHistory),updated=getSearchHistory();updated.splice(index,1);
@@ -916,32 +915,27 @@ function renderSearchHistory(){
 $('searchInput').addEventListener('focus',renderSearchHistory);
 $('searchInput').addEventListener('input',()=>{renderSearchHistory();$('searchHistory').classList.remove('hidden')});
 document.addEventListener('click',e=>{if(!e.target.closest('.searchbox'))$('searchHistory')?.classList.add('hidden')});
-$('searchBtn').addEventListener('click',()=>{$('searchHistory').classList.add('hidden');doSearch(1,false,false)});
-$('searchAllBtn').addEventListener('click',()=>doSearch(1,false,true));
+$('searchBtn').addEventListener('click',()=>{$('searchHistory').classList.add('hidden');doSearch(1)});
 $('searchInput').addEventListener('keydown',e=>{
- if(e.key==='Enter'){e.preventDefault();$('searchHistory').classList.add('hidden');doSearch(1,false,false)}
+ if(e.key==='Enter'){e.preventDefault();$('searchHistory').classList.add('hidden');doSearch(1)}
  if(e.key==='Escape')$('searchHistory').classList.add('hidden');
 });
-async function doSearch(page=1,forceRefresh=false,allFolders=state.searchAllFolders){
+async function doSearch(page=1,forceRefresh=false){
  const q=$('searchInput').value.trim();
- if(!q){state.page=1;state.searchMode=false;state.searchAllFolders=false;state.searchQuery='';loadInbox(1,forceRefresh);return}
- const targetFolder=allFolders?'ALL':(state.currentFolder||'INBOX');
- const targetLabel=allFolders?'All folders':titleForFolder();
- saveSearchHistory(q);state.page=Math.max(1,Number(page)||1);state.searchMode=true;state.searchAllFolders=Boolean(allFolders);state.searchQuery=q;state.selected.clear();
- $('pageTitle').textContent='Search results';$('pageSubtitle').textContent=`${targetLabel} · ${q}`;
- $('clearSearchBtn').classList.remove('hidden');
- $('searchAllBtn').classList.toggle('hidden',Boolean(allFolders));
+ if(!q){state.page=1;state.searchMode=false;state.searchQuery='';loadInbox(1,forceRefresh);return}
+ saveSearchHistory(q);state.page=Math.max(1,Number(page)||1);state.searchMode=true;state.searchQuery=q;state.selected.clear();
+ $('pageTitle').textContent='Search results';$('pageSubtitle').textContent='All folders · '+q;$('clearSearchBtn').classList.remove('hidden');
  $('listView').classList.remove('hidden');$('messageView').classList.add('hidden');
- const cacheKey=(activeAccount()?.id||'default')+':'+targetFolder.toUpperCase()+':'+q.toLowerCase()+':'+state.page+':'+state.pageSize;
+ const cacheKey=(activeAccount()?.id||'default')+':'+q.toLowerCase()+':'+state.page+':'+state.pageSize;
  const cached=!forceRefresh?getTimedCache(state.searchCache,cacheKey):null;
  if(cached){
   state.messages=cached.messages||[];
   setPaginationData(cached);renderMessages();
   return;
  }
- $('mailList').innerHTML=`<div class="empty">Searching ${esc(targetLabel)}...</div>`;
+ $('mailList').innerHTML='<div class="empty">Searching all folders...</div>';
  try{
-  const params=new URLSearchParams({q,folder:targetFolder,page:String(state.page),limit:String(state.pageSize)});
+  const params=new URLSearchParams({q,folder:'ALL',page:String(state.page),limit:String(state.pageSize)});
   if(forceRefresh)params.set('refresh','1');
   const data=await api('/api/search?'+params.toString());
   state.messages=data.messages||[];
@@ -955,8 +949,8 @@ $('prevPageBtn').addEventListener('click',()=>{if(state.page<=1)return;const nex
 $('nextPageBtn').addEventListener('click',()=>{const pages=state.totalPages||Math.ceil(state.totalMessages/state.pageSize);if(state.page>=pages)return;const nextPage=state.page+1;if(state.searchMode)doSearch(nextPage);else loadInbox(nextPage)});
 $('pageSizeSelect').addEventListener('change',()=>{state.pageSize=Number($('pageSizeSelect').value)||50;state.page=1;if(state.searchMode)doSearch(1);else loadInbox(1)});
 $('clearSearchBtn').addEventListener('click',()=>{
- $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');$('searchAllBtn').classList.add('hidden');
- state.searchMode=false;state.searchAllFolders=false;state.page=1;loadInbox(1);
+ $('searchInput').value='';$('searchHistory').classList.add('hidden');$('clearSearchBtn').classList.add('hidden');
+ state.searchMode=false;state.page=1;loadInbox(1);
 });
 $('refreshBtn').addEventListener('click',()=>{
  clearListCachesForActiveAccount();
