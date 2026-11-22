@@ -44,7 +44,7 @@ window.PROVIDERS = [
     id: 'dream',
     name: 'Dream.jp',
     domains: ['dream.jp'],
-    imapHost: 'imap.cm.dream.jp',
+    imapHost: 'imap2.cm.dream.jp',
     imapPort: 993,
     imapSecure: true,
     smtpHost: 'vsmtp.cm.dream.jp',
