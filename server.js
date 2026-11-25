@@ -1,6 +1,9 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const dns = require('dns').promises;
+const net = require('net');
+const tls = require('tls');
 const { ImapFlow } = require('imapflow');
 const nodemailer = require('nodemailer');
 const { simpleParser } = require('mailparser');
@@ -483,11 +486,995 @@ app.get('/api/health', (req, res) => {
 });
 
 // ========================================
-// PROVIDERS
+// PROVIDERS & IMAP/SMTP AUTO-DISCOVERY
 // ========================================
+
+const AUTODISCOVER_CACHE = new Map();
+const AUTODISCOVER_CACHE_TTL = 15 * 60 * 1000;
+const AUTODISCOVER_CACHE_MAX = 200;
+
+const AUTODISCOVER_RATE = new Map();
+const AUTODISCOVER_RATE_WINDOW = 60 * 1000;
+const AUTODISCOVER_RATE_MAX = 30;
+
+const MULTI_PART_TLDS = new Set([
+    'co.jp', 'ne.jp', 'or.jp', 'ac.jp', 'go.jp', 'gr.jp', 'ed.jp', 'ad.jp',
+    'co.uk', 'org.uk', 'ac.uk', 'me.uk',
+    'com.au', 'net.au', 'org.au',
+    'co.id', 'or.id', 'ac.id', 'go.id', 'web.id', 'my.id', 'sch.id',
+    'com.br', 'com.cn', 'com.tw', 'com.hk', 'com.sg', 'com.my', 'com.mx', 'com.tr',
+    'co.kr', 'co.nz', 'co.za', 'co.in', 'net.in', 'org.in'
+]);
+
+const MX_PROVIDER_RULES = [
+    {
+        pattern: /(^|\.)(google\.com|googlemail\.com)$/i,
+        name: 'Google Workspace / Gmail',
+        imap: { host: 'imap.gmail.com', port: 993, secure: true },
+        smtp: { host: 'smtp.gmail.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(protection\.outlook\.com|eo\.outlook\.com|mail\.outlook\.com)$/i,
+        name: 'Microsoft 365 / Outlook',
+        imap: { host: 'outlook.office365.com', port: 993, secure: true },
+        smtp: { host: 'smtp.office365.com', port: 587, secure: false }
+    },
+    {
+        pattern: /(^|\.)zoho\.eu$/i,
+        name: 'Zoho Mail EU',
+        imap: { host: 'imap.zoho.eu', port: 993, secure: true },
+        smtp: { host: 'smtp.zoho.eu', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)zoho\.in$/i,
+        name: 'Zoho Mail IN',
+        imap: { host: 'imap.zoho.in', port: 993, secure: true },
+        smtp: { host: 'smtp.zoho.in', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)zoho\.jp$/i,
+        name: 'Zoho Mail JP',
+        imap: { host: 'imap.zoho.jp', port: 993, secure: true },
+        smtp: { host: 'smtp.zoho.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)zoho\.com\.au$/i,
+        name: 'Zoho Mail AU',
+        imap: { host: 'imap.zoho.com.au', port: 993, secure: true },
+        smtp: { host: 'smtp.zoho.com.au', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(zoho\.com|zohomail\.com)$/i,
+        name: 'Zoho Mail',
+        imap: { host: 'imap.zoho.com', port: 993, secure: true },
+        smtp: { host: 'smtp.zoho.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)icloud\.com$/i,
+        name: 'iCloud Mail',
+        imap: { host: 'imap.mail.me.com', port: 993, secure: true },
+        smtp: { host: 'smtp.mail.me.com', port: 587, secure: false }
+    },
+    {
+        pattern: /(^|\.)yahoodns\.net$/i,
+        name: 'Yahoo Mail',
+        imap: { host: 'imap.mail.yahoo.com', port: 993, secure: true },
+        smtp: { host: 'smtp.mail.yahoo.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)messagingengine\.com$/i,
+        name: 'Fastmail',
+        imap: { host: 'imap.fastmail.com', port: 993, secure: true },
+        smtp: { host: 'smtp.fastmail.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(yandex\.net|yandex\.ru)$/i,
+        name: 'Yandex Mail',
+        imap: { host: 'imap.yandex.com', port: 993, secure: true },
+        smtp: { host: 'smtp.yandex.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)mail\.ru$/i,
+        name: 'Mail.ru',
+        imap: { host: 'imap.mail.ru', port: 993, secure: true },
+        smtp: { host: 'smtp.mail.ru', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)migadu\.com$/i,
+        name: 'Migadu',
+        imap: { host: 'imap.migadu.com', port: 993, secure: true },
+        smtp: { host: 'smtp.migadu.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)mose-mail\.jp$/i,
+        name: 'Mose-Mail',
+        imap: { host: 'mbox.mose-mail.jp', port: 993, secure: true },
+        smtp: { host: 'mbox.mose-mail.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(cm\.dream\.jp|dream\.jp)$/i,
+        name: 'Dream.jp / DTI',
+        imap: { host: 'imap2.cm.dream.jp', port: 993, secure: true },
+        smtp: { host: 'vsmtp2.cm.dream.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)lolipop\.jp$/i,
+        name: 'Lolipop Mail',
+        imap: { host: 'imap.lolipop.jp', port: 993, secure: true },
+        smtp: { host: 'smtp.lolipop.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /^[a-z0-9-]+\.sakura\.ne\.jp$/i,
+        name: 'Sakura Internet',
+        resolve: exchange => ({
+            imap: { host: exchange, port: 993, secure: true },
+            smtp: { host: exchange, port: 587, secure: false }
+        })
+    },
+    {
+        pattern: /^sv\d+\.xserver\.jp$/i,
+        name: 'Xserver',
+        resolve: exchange => ({
+            imap: { host: exchange, port: 993, secure: true },
+            smtp: { host: exchange, port: 465, secure: true }
+        })
+    },
+    {
+        pattern: /(^|\.)biglobe\.ne\.jp$/i,
+        name: 'BIGLOBE',
+        imap: { host: 'mail.biglobe.ne.jp', port: 993, secure: true },
+        smtp: { host: 'mail.biglobe.ne.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)ocn\.ne\.jp$/i,
+        name: 'OCN',
+        imap: { host: 'imap.ocn.ne.jp', port: 993, secure: true },
+        smtp: { host: 'smtp.ocn.ne.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)so-net\.ne\.jp$/i,
+        name: 'So-net',
+        imap: { host: 'imap.so-net.ne.jp', port: 993, secure: true },
+        smtp: { host: 'mail.so-net.ne.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)nifty\.com$/i,
+        name: '@nifty',
+        imap: { host: 'imap.nifty.com', port: 993, secure: true },
+        smtp: { host: 'smtp.nifty.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)plala\.or\.jp$/i,
+        name: 'Plala',
+        imap: { host: 'imap.plala.or.jp', port: 993, secure: true },
+        smtp: { host: 'secure.plala.or.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)eonet\.ne\.jp$/i,
+        name: 'eo / eonet',
+        imap: { host: 'imaps.eonet.ne.jp', port: 993, secure: true },
+        smtp: { host: 'smtps.eonet.ne.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)iijmio-mail\.jp$/i,
+        name: 'IIJmio Safety Mail',
+        imap: { host: 'imap.iijmio-mail.jp', port: 993, secure: true },
+        smtp: { host: 'mbox.iijmio-mail.jp', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(kundenserver\.de|ionos\.de)$/i,
+        name: 'IONOS / 1&1 DE',
+        imap: { host: 'imap.ionos.de', port: 993, secure: true },
+        smtp: { host: 'smtp.ionos.de', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(ionos\.com|perfora\.net)$/i,
+        name: 'IONOS',
+        imap: { host: 'imap.ionos.com', port: 993, secure: true },
+        smtp: { host: 'smtp.ionos.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(strato\.de|rzone\.de)$/i,
+        name: 'STRATO',
+        imap: { host: 'imap.strato.de', port: 993, secure: true },
+        smtp: { host: 'smtp.strato.de', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(t-online\.de)$/i,
+        name: 'T-Online / Telekom',
+        imap: { host: 'secureimap.t-online.de', port: 993, secure: true },
+        smtp: { host: 'securesmtp.t-online.de', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)hostinger\.com$/i,
+        name: 'Hostinger Mail',
+        imap: { host: 'imap.hostinger.com', port: 993, secure: true },
+        smtp: { host: 'smtp.hostinger.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)titan\.email$/i,
+        name: 'Titan Email',
+        imap: { host: 'imap.titan.email', port: 993, secure: true },
+        smtp: { host: 'smtp.titan.email', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)privateemail\.com$/i,
+        name: 'Namecheap Private Email',
+        imap: { host: 'mail.privateemail.com', port: 993, secure: true },
+        smtp: { host: 'mail.privateemail.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)secureserver\.net$/i,
+        name: 'GoDaddy Workspace',
+        imap: { host: 'imap.secureserver.net', port: 993, secure: true },
+        smtp: { host: 'smtpout.secureserver.net', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(ovh\.net|ovh\.ca)$/i,
+        name: 'OVH Mail',
+        imap: { host: 'ssl0.ovh.net', port: 993, secure: true },
+        smtp: { host: 'ssl0.ovh.net', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)emailsrvr\.com$/i,
+        name: 'Rackspace Email',
+        imap: { host: 'secure.emailsrvr.com', port: 993, secure: true },
+        smtp: { host: 'secure.emailsrvr.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)infomaniak\.ch$/i,
+        name: 'Infomaniak',
+        imap: { host: 'mail.infomaniak.com', port: 993, secure: true },
+        smtp: { host: 'mail.infomaniak.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)posteo\.de$/i,
+        name: 'Posteo',
+        imap: { host: 'posteo.de', port: 993, secure: true },
+        smtp: { host: 'posteo.de', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)mailbox\.org$/i,
+        name: 'mailbox.org',
+        imap: { host: 'imap.mailbox.org', port: 993, secure: true },
+        smtp: { host: 'smtp.mailbox.org', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)gandi\.net$/i,
+        name: 'Gandi Mail',
+        imap: { host: 'mail.gandi.net', port: 993, secure: true },
+        smtp: { host: 'mail.gandi.net', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(mxhichina\.com|alibaba-inc\.com)$/i,
+        name: 'Alibaba / Aliyun Mail',
+        imap: { host: 'imap.qiye.aliyun.com', port: 993, secure: true },
+        smtp: { host: 'smtp.qiye.aliyun.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)qq\.com$/i,
+        name: 'Tencent Exmail / QQ',
+        imap: { host: 'imap.exmail.qq.com', port: 993, secure: true },
+        smtp: { host: 'smtp.exmail.qq.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(163\.com|netease\.com)$/i,
+        name: 'NetEase Mail',
+        imap: { host: 'imap.qiye.163.com', port: 993, secure: true },
+        smtp: { host: 'smtp.qiye.163.com', port: 465, secure: true }
+    },
+    {
+        pattern: /(^|\.)(naver\.com|worksmobile\.com)$/i,
+        name: 'Naver Mail',
+        imap: { host: 'imap.naver.com', port: 993, secure: true },
+        smtp: { host: 'smtp.naver.com', port: 465, secure: true }
+    }
+];
+
+function isValidHostname(host) {
+    if (!host || typeof host !== 'string') return false;
+    const clean = host.trim().toLowerCase().replace(/\.$/, '');
+    if (!clean || clean.length > 253) return false;
+    if (net.isIP(clean) !== 0) return false;
+    if (
+        clean === 'localhost' ||
+        clean.endsWith('.localhost') ||
+        clean.endsWith('.local') ||
+        clean.endsWith('.internal') ||
+        clean.endsWith('.lan') ||
+        clean.endsWith('.home.arpa')
+    ) {
+        return false;
+    }
+    return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(clean);
+}
+
+function getBaseDomain(domain) {
+    const parts = domain.toLowerCase().split('.').filter(Boolean);
+    if (parts.length <= 2) return domain.toLowerCase();
+    const lastTwo = parts.slice(-2).join('.');
+    if (MULTI_PART_TLDS.has(lastTwo)) {
+        return parts.length >= 3 ? parts.slice(-3).join('.') : domain.toLowerCase();
+    }
+    return lastTwo;
+}
+
+function isPrivateIp(ip) {
+    if (!ip || typeof ip !== 'string') return true;
+    const normalized = ip.toLowerCase().trim();
+
+    if (normalized.startsWith('::ffff:')) {
+        return isPrivateIp(normalized.slice(7));
+    }
+
+    if (net.isIPv4(normalized)) {
+        const parts = normalized.split('.').map(Number);
+        if (parts.length !== 4 || parts.some(Number.isNaN)) return true;
+        const [a, b] = parts;
+        if (a === 0 || a === 10 || a === 127) return true;
+        if (a === 169 && b === 254) return true;
+        if (a === 172 && b >= 16 && b <= 31) return true;
+        if (a === 192 && b === 168) return true;
+        if (a === 100 && b >= 64 && b <= 127) return true;
+        if (a >= 224) return true;
+        return false;
+    }
+
+    if (net.isIPv6(normalized)) {
+        if (normalized === '::' || normalized === '::1') return true;
+        if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+        if (/^fe[89ab]/i.test(normalized)) return true;
+        if (normalized.startsWith('ff')) return true;
+        return false;
+    }
+
+    return true;
+}
+
+function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Timeout')), ms);
+        promise.then(
+            val => {
+                clearTimeout(timer);
+                resolve(val);
+            },
+            err => {
+                clearTimeout(timer);
+                reject(err);
+            }
+        );
+    });
+}
+
+async function resolvePublicHost(host) {
+    const clean = String(host || '').trim().toLowerCase().replace(/\.$/, '');
+    if (!isValidHostname(clean)) return false;
+
+    try {
+        const records = await withTimeout(dns.lookup(clean, { all: true }), 2500);
+        if (!Array.isArray(records) || !records.length) return false;
+        return records.every(r => !isPrivateIp(r.address));
+    } catch {
+        return false;
+    }
+}
+
+async function lookupSrvForDomain(domain) {
+    const queries = [
+        { name: `_imaps._tcp.${domain}`, type: 'imap', secure: true, defaultPort: 993 },
+        { name: `_imap._tcp.${domain}`, type: 'imap', secure: false, defaultPort: 143 },
+        { name: `_submissions._tcp.${domain}`, type: 'smtp', secure: true, defaultPort: 465 },
+        { name: `_submission._tcp.${domain}`, type: 'smtp', secure: false, defaultPort: 587 }
+    ];
+
+    const settled = await Promise.all(
+        queries.map(async q => {
+            try {
+                const records = await withTimeout(dns.resolveSrv(q.name), 3000);
+                const valid = (records || [])
+                    .filter(r => r && r.name && r.name !== '.' && isValidHostname(r.name))
+                    .sort((a, b) => (a.priority - b.priority) || (b.weight - a.weight));
+                if (!valid.length) return null;
+                const best = valid[0];
+                const port = Number(best.port) || q.defaultPort;
+                return {
+                    type: q.type,
+                    host: best.name.toLowerCase().replace(/\.$/, ''),
+                    port,
+                    secure: q.secure
+                };
+            } catch {
+                return null;
+            }
+        })
+    );
+
+    const imap = settled.find(x => x && x.type === 'imap' && x.secure) ||
+        settled.find(x => x && x.type === 'imap') ||
+        null;
+    const smtp = settled.find(x => x && x.type === 'smtp' && x.secure) ||
+        settled.find(x => x && x.type === 'smtp') ||
+        null;
+
+    if (!imap && !smtp) return null;
+    return {
+        imap: imap ? { host: imap.host, port: imap.port, secure: imap.secure } : null,
+        smtp: smtp ? { host: smtp.host, port: smtp.port, secure: smtp.secure } : null
+    };
+}
+
+function parseAutoconfigXml(xml, domain) {
+    if (!xml || typeof xml !== 'string' || !xml.includes('<clientConfig')) {
+        return null;
+    }
+
+    const extractTag = (block, tag) => {
+        const match = block.match(new RegExp(`<${tag}[^>]*>([^<]+)<\\/${tag}>`, 'i'));
+        return match ? match[1].trim() : '';
+    };
+
+    const parseServers = (tagName, serverType, defaultSecurePort, defaultPlainPort) => {
+        const regex = new RegExp(
+            `<${tagName}[^>]*type=["']${serverType}["'][^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+            'gi'
+        );
+        const list = [];
+        let match;
+        while ((match = regex.exec(xml)) !== null) {
+            const block = match[1];
+            const rawHost = extractTag(block, 'hostname')
+                .replace(/%EMAILDOMAIN%/gi, domain)
+                .toLowerCase()
+                .replace(/\.$/, '');
+            if (!isValidHostname(rawHost)) continue;
+
+            const socketType = extractTag(block, 'socketType').toUpperCase();
+            const secure = socketType === 'SSL';
+            const rawPort = Number(extractTag(block, 'port'));
+            const port = Number.isInteger(rawPort) && rawPort >= 1 && rawPort <= 65535
+                ? rawPort
+                : (secure ? defaultSecurePort : defaultPlainPort);
+
+            list.push({
+                host: rawHost,
+                port,
+                secure,
+                socketType: socketType || (secure ? 'SSL' : 'STARTTLS')
+            });
+        }
+
+        list.sort((a, b) => {
+            if (a.secure !== b.secure) return a.secure ? -1 : 1;
+            const aStarttls = a.socketType === 'STARTTLS' ? 0 : 1;
+            const bStarttls = b.socketType === 'STARTTLS' ? 0 : 1;
+            return aStarttls - bStarttls;
+        });
+
+        return list;
+    };
+
+    const imaps = parseServers('incomingServer', 'imap', 993, 143);
+    const smtps = parseServers('outgoingServer', 'smtp', 465, 587);
+
+    if (!imaps.length && !smtps.length) return null;
+
+    const providerName =
+        extractTag(xml, 'displayShortName') ||
+        extractTag(xml, 'displayName') ||
+        '';
+
+    return {
+        providerName,
+        imap: imaps[0] ? { host: imaps[0].host, port: imaps[0].port, secure: imaps[0].secure } : null,
+        smtp: smtps[0] ? { host: smtps[0].host, port: smtps[0].port, secure: smtps[0].secure } : null,
+        candidates: imaps.map(x => ({ host: x.host, port: x.port, secure: x.secure }))
+    };
+}
+
+async function fetchAutoconfigXml(url, domain, checkPublicHost = false) {
+    try {
+        if (checkPublicHost) {
+            const parsedUrl = new URL(url);
+            const ok = await resolvePublicHost(parsedUrl.hostname);
+            if (!ok) return null;
+        }
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3800);
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                redirect: checkPublicHost ? 'manual' : 'follow',
+                signal: controller.signal,
+                headers: { 'User-Agent': 'DankeMail-Autodiscover/1.0' }
+            });
+            if (!response.ok) return null;
+            const text = await response.text();
+            return parseAutoconfigXml(text, domain);
+        } finally {
+            clearTimeout(timer);
+        }
+    } catch {
+        return null;
+    }
+}
+
+async function lookupAutoconfig(domain, baseDomain, email) {
+    const encodedEmail = encodeURIComponent(email || `user@${domain}`);
+    const domainUrls = [
+        `https://autoconfig.${domain}/mail/config-v1.1.xml?emailaddress=${encodedEmail}`,
+        `https://${domain}/.well-known/autoconfig/mail/config-v1.1.xml`
+    ];
+    const ispdbUrls = [
+        `https://autoconfig.thunderbird.net/v1.1/${encodeURIComponent(domain)}`
+    ];
+    if (baseDomain && baseDomain !== domain) {
+        ispdbUrls.push(`https://autoconfig.thunderbird.net/v1.1/${encodeURIComponent(baseDomain)}`);
+    }
+
+    const [domainResults, ispdbResults] = await Promise.all([
+        Promise.all(domainUrls.map(url => fetchAutoconfigXml(url, domain, true))),
+        Promise.all(ispdbUrls.map(url => fetchAutoconfigXml(url, domain, false)))
+    ]);
+
+    const domainMatch = domainResults.find(r => r && r.imap);
+    if (domainMatch) {
+        return { ...domainMatch, source: 'autoconfig', sourceLabel: 'Domain Autoconfig' };
+    }
+
+    const ispdbMatch = ispdbResults.find(r => r && r.imap);
+    if (ispdbMatch) {
+        return { ...ispdbMatch, source: 'ispdb', sourceLabel: 'Mozilla ISPDB' };
+    }
+
+    return null;
+}
+
+async function lookupMx(domain, baseDomain) {
+    const tryMx = async d => {
+        try {
+            const records = await withTimeout(dns.resolveMx(d), 3000);
+            return (records || [])
+                .filter(r => r && r.exchange && isValidHostname(r.exchange))
+                .sort((a, b) => a.priority - b.priority)
+                .map(r => r.exchange.toLowerCase().replace(/\.$/, ''));
+        } catch {
+            return [];
+        }
+    };
+
+    const primary = await tryMx(domain);
+    if (primary.length) return primary;
+    if (baseDomain && baseDomain !== domain) {
+        return await tryMx(baseDomain);
+    }
+    return [];
+}
+
+function matchMxProvider(mxHosts) {
+    for (const exchange of mxHosts) {
+        for (const rule of MX_PROVIDER_RULES) {
+            if (rule.pattern.test(exchange)) {
+                const resolved = rule.resolve ? rule.resolve(exchange) : rule;
+                return {
+                    providerName: rule.name,
+                    imap: resolved.imap ? { ...resolved.imap } : null,
+                    smtp: resolved.smtp ? { ...resolved.smtp } : null,
+                    mxHost: exchange
+                };
+            }
+        }
+    }
+    return null;
+}
+
+function probeBanner(host, port, secure, bannerRegex, timeoutMs) {
+    return new Promise(resolve => {
+        let settled = false;
+        let buffer = '';
+        let socket;
+
+        const finish = value => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (socket) {
+                try {
+                    socket.removeAllListeners();
+                    socket.on('error', () => {});
+                    socket.destroy();
+                } catch {}
+            }
+            resolve(value);
+        };
+
+        const timer = setTimeout(() => finish(null), timeoutMs);
+
+        try {
+            socket = secure
+                ? tls.connect({
+                    host,
+                    port,
+                    servername: host,
+                    rejectUnauthorized: false,
+                    minDHSize: 512,
+                    ciphers: 'DEFAULT@SECLEVEL=0'
+                })
+                : net.createConnection({ host, port });
+
+            socket.setEncoding('utf8');
+
+            socket.on('data', chunk => {
+                buffer += chunk;
+                const lineBreak = buffer.indexOf('\n');
+                const line = (lineBreak >= 0 ? buffer.slice(0, lineBreak) : buffer).trim();
+                if (bannerRegex.test(line)) {
+                    finish({
+                        host,
+                        port,
+                        secure,
+                        tlsAuthorized: secure ? Boolean(socket.authorized) : null
+                    });
+                } else if (lineBreak >= 0 || buffer.length > 512) {
+                    finish(null);
+                }
+            });
+
+            socket.on('error', () => finish(null));
+            socket.on('timeout', () => finish(null));
+            socket.on('end', () => finish(null));
+            socket.on('close', () => finish(null));
+        } catch {
+            finish(null);
+        }
+    });
+}
+
+function buildImapCandidates(domain, baseDomain, mxHosts) {
+    const raw = [
+        `imap.${domain}`,
+        `imaps.${domain}`,
+        `mail.${domain}`,
+        `imap.mail.${domain}`,
+        `secureimap.${domain}`,
+        `mbox.${domain}`,
+        domain
+    ];
+
+    if (baseDomain && baseDomain !== domain) {
+        raw.push(
+            `imap.${baseDomain}`,
+            `imaps.${baseDomain}`,
+            `mail.${baseDomain}`,
+            `imap.mail.${baseDomain}`,
+            baseDomain
+        );
+    }
+
+    for (const mx of (mxHosts || []).slice(0, 2)) {
+        raw.push(mx);
+        const mxBase = getBaseDomain(mx);
+        if (mxBase && mxBase !== domain && mxBase !== baseDomain) {
+            raw.push(`imap.${mxBase}`, `imaps.${mxBase}`, `mail.${mxBase}`);
+        }
+    }
+
+    const seen = new Set();
+    const result = [];
+    for (const host of raw) {
+        const clean = String(host || '').trim().toLowerCase().replace(/\.$/, '');
+        if (!clean || seen.has(clean) || !isValidHostname(clean)) continue;
+        seen.add(clean);
+        result.push(clean);
+        if (result.length >= 14) break;
+    }
+    return result;
+}
+
+function buildSmtpCandidates(domain, baseDomain, detectedImapHost) {
+    const raw = [];
+
+    if (detectedImapHost) {
+        if (/^imaps?\./i.test(detectedImapHost)) {
+            raw.push(detectedImapHost.replace(/^imaps\./i, 'smtps.'));
+            raw.push(detectedImapHost.replace(/^imaps?\./i, 'smtp.'));
+            raw.push(detectedImapHost.replace(/^imaps?\./i, 'mail.'));
+        } else if (/^secureimap\./i.test(detectedImapHost)) {
+            raw.push(detectedImapHost.replace(/^secureimap\./i, 'securesmtp.'));
+        }
+    }
+
+    raw.push(
+        `smtp.${domain}`,
+        `smtps.${domain}`,
+        `mail.${domain}`,
+        `smtp.mail.${domain}`,
+        `securesmtp.${domain}`,
+        domain
+    );
+
+    if (detectedImapHost) {
+        raw.push(detectedImapHost);
+    }
+
+    if (baseDomain && baseDomain !== domain) {
+        raw.push(
+            `smtp.${baseDomain}`,
+            `smtps.${baseDomain}`,
+            `mail.${baseDomain}`
+        );
+    }
+
+    const seen = new Set();
+    const result = [];
+    for (const host of raw) {
+        const clean = String(host || '').trim().toLowerCase().replace(/\.$/, '');
+        if (!clean || seen.has(clean) || !isValidHostname(clean)) continue;
+        seen.add(clean);
+        result.push(clean);
+        if (result.length >= 10) break;
+    }
+    return result;
+}
+
+async function probeImapCandidates(domain, baseDomain, mxHosts) {
+    const candidates = buildImapCandidates(domain, baseDomain, mxHosts);
+    const dnsChecks = await Promise.all(
+        candidates.map(async (host, idx) => ({
+            host,
+            idx,
+            ok: await resolvePublicHost(host)
+        }))
+    );
+    const validHosts = dnsChecks.filter(x => x.ok);
+    if (!validHosts.length) return [];
+
+    const imapBannerRegex = /^\*\s+(OK|PREAUTH)\b/i;
+
+    const tlsResults = await Promise.all(
+        validHosts.map(async item => {
+            const res = await probeBanner(item.host, 993, true, imapBannerRegex, 4000);
+            return res ? { ...res, idx: item.idx } : null;
+        })
+    );
+
+    const validTls = tlsResults.filter(Boolean);
+    if (validTls.length) {
+        validTls.sort((a, b) => {
+            if (a.tlsAuthorized !== b.tlsAuthorized) return a.tlsAuthorized ? -1 : 1;
+            return a.idx - b.idx;
+        });
+        return validTls.map(({ host, port, secure, tlsAuthorized }) => ({
+            host,
+            port,
+            secure,
+            tlsAuthorized
+        }));
+    }
+
+    const plainResults = await Promise.all(
+        validHosts.map(async item => {
+            const res = await probeBanner(item.host, 143, false, imapBannerRegex, 3500);
+            return res ? { ...res, idx: item.idx } : null;
+        })
+    );
+
+    return plainResults
+        .filter(Boolean)
+        .sort((a, b) => a.idx - b.idx)
+        .map(({ host, port, secure }) => ({ host, port, secure }));
+}
+
+async function probeSmtpCandidates(domain, baseDomain, detectedImapHost) {
+    const candidates = buildSmtpCandidates(domain, baseDomain, detectedImapHost);
+    const dnsChecks = await Promise.all(
+        candidates.map(async (host, idx) => ({
+            host,
+            idx,
+            ok: await resolvePublicHost(host)
+        }))
+    );
+    const validHosts = dnsChecks.filter(x => x.ok);
+    if (!validHosts.length) return null;
+
+    const smtpBannerRegex = /^220[\s-]/;
+
+    const tlsResults = await Promise.all(
+        validHosts.map(async item => {
+            const res = await probeBanner(item.host, 465, true, smtpBannerRegex, 3500);
+            return res ? { ...res, idx: item.idx } : null;
+        })
+    );
+
+    const validTls = tlsResults.filter(Boolean);
+    if (validTls.length) {
+        validTls.sort((a, b) => {
+            if (a.tlsAuthorized !== b.tlsAuthorized) return a.tlsAuthorized ? -1 : 1;
+            return a.idx - b.idx;
+        });
+        const best = validTls[0];
+        return { host: best.host, port: best.port, secure: best.secure };
+    }
+
+    const starttlsResults = await Promise.all(
+        validHosts.map(async item => {
+            const res = await probeBanner(item.host, 587, false, smtpBannerRegex, 3500);
+            return res ? { ...res, idx: item.idx } : null;
+        })
+    );
+
+    const validStarttls = starttlsResults.filter(Boolean).sort((a, b) => a.idx - b.idx);
+    if (validStarttls.length) {
+        const best = validStarttls[0];
+        return { host: best.host, port: best.port, secure: best.secure };
+    }
+
+    return null;
+}
+
+async function autodiscoverMailConfig(emailInput, force = false) {
+    const raw = String(emailInput || '').trim().toLowerCase();
+    const at = raw.lastIndexOf('@');
+    const domain = at >= 0 ? raw.slice(at + 1) : raw;
+
+    if (!isValidHostname(domain)) {
+        return {
+            found: false,
+            domain: domain || '',
+            error: 'Domain email tidak valid.',
+            imap: null,
+            smtp: null,
+            candidates: []
+        };
+    }
+
+    if (!force) {
+        const cached = getCacheEntry(AUTODISCOVER_CACHE, domain);
+        if (cached) {
+            return { ...cached, cached: true };
+        }
+    }
+
+    const baseDomain = getBaseDomain(domain);
+
+    const [srvPrimary, srvBase, autoconfig, mxHosts] = await Promise.all([
+        lookupSrvForDomain(domain),
+        baseDomain !== domain ? lookupSrvForDomain(baseDomain) : Promise.resolve(null),
+        lookupAutoconfig(domain, baseDomain, at > 0 ? raw : `user@${domain}`),
+        lookupMx(domain, baseDomain)
+    ]);
+
+    const srv = (srvPrimary && srvPrimary.imap) ? srvPrimary : (srvBase && srvBase.imap ? srvBase : (srvPrimary || srvBase));
+    const mxMatch = matchMxProvider(mxHosts);
+
+    let imap = null;
+    let smtp = null;
+    let source = null;
+    let sourceLabel = '';
+    let providerName = '';
+    let candidates = [];
+
+    if (autoconfig && autoconfig.source === 'autoconfig' && autoconfig.imap) {
+        imap = autoconfig.imap;
+        smtp = autoconfig.smtp || srv?.smtp || mxMatch?.smtp || null;
+        source = 'autoconfig';
+        sourceLabel = autoconfig.sourceLabel;
+        providerName = autoconfig.providerName || '';
+        candidates = autoconfig.candidates || [imap];
+    } else if (srv && srv.imap) {
+        imap = srv.imap;
+        smtp = srv.smtp || autoconfig?.smtp || mxMatch?.smtp || null;
+        source = 'srv';
+        sourceLabel = 'DNS SRV (RFC 6186)';
+        candidates = [imap];
+    } else if (autoconfig && autoconfig.imap) {
+        imap = autoconfig.imap;
+        smtp = autoconfig.smtp || srv?.smtp || mxMatch?.smtp || null;
+        source = autoconfig.source;
+        sourceLabel = autoconfig.sourceLabel;
+        providerName = autoconfig.providerName || '';
+        candidates = autoconfig.candidates || [imap];
+    } else if (mxMatch && mxMatch.imap) {
+        imap = mxMatch.imap;
+        smtp = mxMatch.smtp || srv?.smtp || null;
+        source = 'mx';
+        sourceLabel = `MX Record (${mxMatch.mxHost})`;
+        providerName = mxMatch.providerName || '';
+        candidates = [imap];
+    } else {
+        const probedImaps = await probeImapCandidates(domain, baseDomain, mxHosts);
+        if (probedImaps.length) {
+            imap = {
+                host: probedImaps[0].host,
+                port: probedImaps[0].port,
+                secure: probedImaps[0].secure
+            };
+            source = 'probe';
+            sourceLabel = 'Live IMAP Probe';
+            candidates = probedImaps.slice(0, 5).map(c => ({
+                host: c.host,
+                port: c.port,
+                secure: c.secure
+            }));
+            smtp = srv?.smtp || autoconfig?.smtp || mxMatch?.smtp || null;
+        }
+    }
+
+    if (imap && !smtp) {
+        smtp = await probeSmtpCandidates(domain, baseDomain, imap.host);
+    }
+
+    const uniqueCandidates = [];
+    const seenKeys = new Set();
+    for (const c of candidates) {
+        if (!c || !c.host) continue;
+        const k = `${c.host}:${c.port}:${c.secure}`;
+        if (seenKeys.has(k)) continue;
+        seenKeys.add(k);
+        uniqueCandidates.push(c);
+    }
+
+    const result = {
+        found: Boolean(imap),
+        domain,
+        providerName: providerName || '',
+        source: source || 'none',
+        sourceLabel,
+        imap,
+        smtp,
+        candidates: uniqueCandidates
+    };
+
+    setCacheEntry(AUTODISCOVER_CACHE, AUTODISCOVER_CACHE_MAX, AUTODISCOVER_CACHE_TTL, domain, result);
+    return result;
+}
+
+function checkAutodiscoverRateLimit(ip) {
+    const now = Date.now();
+    const key = ip || 'unknown';
+    let entry = AUTODISCOVER_RATE.get(key);
+    if (!entry || now > entry.resetAt) {
+        entry = { count: 0, resetAt: now + AUTODISCOVER_RATE_WINDOW };
+        AUTODISCOVER_RATE.set(key, entry);
+    }
+    entry.count++;
+    if (AUTODISCOVER_RATE.size > 500) {
+        for (const [k, v] of AUTODISCOVER_RATE) {
+            if (now > v.resetAt) AUTODISCOVER_RATE.delete(k);
+        }
+    }
+    return entry.count <= AUTODISCOVER_RATE_MAX;
+}
 
 app.get('/api/providers', (req, res) => {
     res.json({ providers: [] });
+});
+
+app.post('/api/autodiscover', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    if (!checkAutodiscoverRateLimit(ip)) {
+        return res.status(429).json({
+            error: 'Terlalu banyak permintaan deteksi otomatis. Coba lagi sebentar.'
+        });
+    }
+
+    const { email, domain, force } = req.body || {};
+    const target = String(email || domain || '').trim();
+
+    if (!target) {
+        return res.status(400).json({
+            error: 'Email atau domain diperlukan untuk deteksi otomatis.'
+        });
+    }
+
+    try {
+        const result = await autodiscoverMailConfig(target, Boolean(force));
+        res.json(result);
+    } catch (err) {
+        sendError(res, err, 'IMAP auto-discovery');
+    }
 });
 
 // ========================================
