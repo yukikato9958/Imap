@@ -322,20 +322,30 @@ button{cursor:pointer}
 .detail-subject{font-size:21px;font-weight:700;line-height:1.3;word-break:break-word}
 .thread-msg-card{
   background:var(--surface);border-radius:16px;border:1px solid var(--outline-variant);
-  padding:18px 20px;display:flex;flex-direction:column;gap:14px
+  padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0;width:100%
 }
 [data-cartoon="true"] .thread-msg-card{border:2px solid var(--outline);box-shadow:4px 4px 0 var(--outline)}
+.msg-detail-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap
+}
+.msg-detail-sender-wrap{
+  display:flex;gap:12px;align-items:flex-start;flex:1 1 240px;min-width:0
+}
+.msg-detail-sender-info{flex:1;min-width:0}
+.msg-detail-sender-name{font-weight:700;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
+.msg-detail-sender-email{font-weight:400;font-size:12.5px;color:var(--on-surface-variant);overflow-wrap:anywhere}
+.msg-detail-recipients{font-size:12px;color:var(--on-surface-variant);margin-top:3px;line-height:1.4;overflow-wrap:anywhere}
+.msg-detail-meta{
+  display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto
+}
 .tracker-banner{
   display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding:10px 14px;border-radius:12px;background:var(--secondary-container);
   color:var(--on-secondary-container);font-size:12.5px
 }
 [data-cartoon="true"] .tracker-banner{border:1.5px solid var(--outline)}
-.translated-box{
-  padding:14px;border-radius:12px;background:var(--surface-low);
-  border:1.5px solid var(--outline-variant);white-space:pre-wrap;font-size:14px;line-height:1.6
-}
-.email-body-wrap iframe{width:100%;min-height:420px;border:0;border-radius:10px;background:#fff}
+.email-body-wrap{min-width:0;width:100%;overflow-x:auto}
+.email-body-wrap iframe{width:100%;min-height:420px;border:0;border-radius:10px;background:#fff;display:block}
 .email-body-wrap pre{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:14px;line-height:1.65}
 
 .empty-state{
@@ -405,7 +415,11 @@ button{cursor:pointer}
   .app-shell.mobile-reading .list-pane{display:none}
   .app-shell.mobile-reading .detail-pane{display:flex}
   .detail-scroll{padding:14px 14px 32px}
+  .detail-subject{font-size:18px}
   .thread-msg-card{padding:14px}
+  .msg-detail-head{flex-direction:column;gap:8px}
+  .msg-detail-sender-wrap{flex:none;width:100%}
+  .msg-detail-meta{width:100%;justify-content:space-between;margin-left:0;padding-top:6px;border-top:1px solid var(--outline-variant)}
   .theme-grid{grid-template-columns:1fr}
   .list-header{padding-top:max(12px,env(safe-area-inset-top))}
 }
@@ -669,7 +683,7 @@ button{cursor:pointer}
     <div class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
       <h3 style="color:var(--on-bg)">Pilih email untuk membaca</h3>
-      <p style="max-width:320px;font-size:13.5px">Klik salah satu pesan di daftar sebelah kiri untuk melihat isi pesan, menerjemahkan, atau membalas email.</p>
+      <p style="max-width:320px;font-size:13.5px">Klik salah satu pesan di daftar sebelah kiri untuk melihat isi pesan atau membalas email.</p>
     </div>
   </section>
 </section>
@@ -869,7 +883,7 @@ const state={
   accounts:[],activeId:null,folders:[],currentFolder:'INBOX',
   messages:[],filter:'ALL',selectMode:false,selected:new Set(),
   searchMode:false,searchQuery:'',searchScope:'CURRENT',searchIncludeBody:false,searchDurationMs:0,
-  currentMessage:null,activeMessageKey:'',allowExternalImages:false,translationText:'',
+  currentMessage:null,activeMessageKey:'',allowExternalImages:false,
   messageCache:new Map(),inboxCache:new Map(),searchCache:new Map(),
   page:1,pageSize:30,totalMessages:0,totalPages:0,
   themeId:'CARTOON_POP',selectedAvatarColor:AVATAR_COLORS[0]
@@ -1696,7 +1710,7 @@ function renderEmptyDetail(){
   $('messageView').innerHTML=`<div class="empty-state">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
     <h3 style="color:var(--on-bg)">Pilih email untuk membaca</h3>
-    <p style="max-width:320px;font-size:13.5px">Klik salah satu pesan di daftar sebelah kiri untuk melihat isi pesan, menerjemahkan, atau membalas email.</p>
+    <p style="max-width:320px;font-size:13.5px">Klik salah satu pesan di daftar sebelah kiri untuk melihat isi pesan atau membalas email.</p>
   </div>`;
 }
 
@@ -1706,7 +1720,6 @@ async function openMessage(uid,folder){
   const cacheKey=msgFolder+':'+uid;
   state.activeMessageKey=listKey;
   state.allowExternalImages=false;
-  state.translationText='';
   $('dashboard').classList.add('mobile-reading');
   const listMsg=state.messages.find(m=>Number(m.uid)===Number(uid)&&(m.folder||state.currentFolder)===msgFolder);
   const flagged=Boolean(listMsg&&(listMsg.flagged||(listMsg.flags||[]).includes('\\Flagged')));
@@ -1767,17 +1780,16 @@ function renderMessage(){
       </div>
 
       <div class="thread-msg-card">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <div style="display:flex;gap:12px;align-items:center;min-width:0;flex:1">
+        <div class="msg-detail-head">
+          <div class="msg-detail-sender-wrap">
             <div class="msg-avatar" style="background:${avBg}">${esc(sender.initials)}</div>
-            <div style="min-width:0">
-              <div style="font-weight:700;font-size:14.5px;word-break:break-word">${esc(sender.name)} ${sender.email?`<span style="font-weight:400;font-size:12.5px;color:var(--on-surface-variant)">&lt;${esc(sender.email)}&gt;</span>`:''}</div>
-              <div style="font-size:12px;color:var(--on-surface-variant);margin-top:2px;word-break:break-word">Kepada: ${esc(m.to||'-')}${m.cc?` • Cc: ${esc(m.cc)}`:''}</div>
+            <div class="msg-detail-sender-info">
+              <div class="msg-detail-sender-name">${esc(sender.name)} ${sender.email?`<span class="msg-detail-sender-email">&lt;${esc(sender.email)}&gt;</span>`:''}</div>
+              <div class="msg-detail-recipients">Kepada: ${esc(m.to||'-')}${m.cc?` • Cc: ${esc(m.cc)}`:''}</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="msg-detail-meta">
             <span style="font-size:12px;color:var(--on-surface-variant)">${esc(formatFullTime(m.date))}</span>
-            <button type="button" class="btn btn-outline" id="translateMsgBtn" style="padding:4px 9px;font-size:11.5px">${state.translationText?'Asli':'Terjemahkan'}</button>
             <button type="button" class="icon-btn" id="detailStarBtn" title="${m.flagged?'Hapus Bintang':'Beri Bintang'}">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="${m.flagged?'#D97706':'none'}" stroke="${m.flagged?'#D97706':'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </button>
@@ -1789,7 +1801,7 @@ function renderMessage(){
           <button type="button" class="btn btn-outline" id="allowImagesBtn" style="padding:4px 10px;font-size:11.5px">Tampilkan Gambar</button>
         </div>`:''}
 
-        ${state.translationText?`<div class="translated-box"><div style="font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px">Terjemahan (Bahasa Indonesia):</div>${esc(state.translationText)}</div>`:'<div class="email-body-wrap" id="messageBody"></div>'}
+        <div class="email-body-wrap" id="messageBody"></div>
       </div>
     </div>`;
 
@@ -1799,17 +1811,6 @@ function renderMessage(){
   $('deleteMessage').onclick=()=>actionMessages('delete',[{uid:m.uid,folder:m.folder}]).then(()=>{state.currentMessage=null;state.activeMessageKey='';renderEmptyDetail()});
   $('markUnreadMessage').onclick=()=>actionMessages('unread',[{uid:m.uid,folder:m.folder}]);
   $('allowImagesBtn')?.addEventListener('click',()=>{state.allowExternalImages=true;renderMessage()});
-
-  $('translateMsgBtn').onclick=async()=>{
-    if(state.translationText){state.translationText='';renderMessage();return}
-    const btn=$('translateMsgBtn');btn.disabled=true;btn.textContent='Menerjemahkan...';
-    try{
-      const plain=m.text||(m.html||'').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-      const res=await api('/api/translate',{method:'POST',body:JSON.stringify({text:plain,targetLang:'id'})});
-      if(res.translatedText){state.translationText=res.translatedText;renderMessage()}
-      else toast('Teks kosong atau gagal diterjemahkan.');
-    }catch(err){toast('Gagal menerjemahkan: '+err.message);btn.disabled=false;btn.textContent='Terjemahkan'}
-  };
 
   const openReplyModal=mode=>{
     const subj=(m.subject||'').replace(/^(Re|Fwd):\s*/i,'');
@@ -1827,21 +1828,19 @@ function renderMessage(){
   $('replyAllMessage').onclick=()=>openReplyModal('REPLY_ALL');
   $('forwardMessage').onclick=()=>openReplyModal('FORWARD');
 
-  if(!state.translationText){
-    const body=$('messageBody');
-    if(displayHtml){
-      const iframe=document.createElement('iframe');
-      iframe.setAttribute('sandbox','allow-same-origin');
-      iframe.addEventListener('load',()=>{
-        try{const h=iframe.contentDocument.documentElement.scrollHeight;if(h)iframe.style.height=(h+24)+'px'}catch{}
-      });
-      iframe.srcdoc='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:14px/1.6 Inter,Arial,sans-serif;margin:12px;color:#1a1a1a;overflow-wrap:anywhere}img{max-width:100%;height:auto}a{color:#1E88E5}</style></head><body>'+displayHtml+'</body></html>';
-      body.appendChild(iframe);
-    }else{
-      const pre=document.createElement('pre');
-      pre.textContent=m.text||'(Tidak ada isi pesan)';
-      body.appendChild(pre);
-    }
+  const body=$('messageBody');
+  if(displayHtml){
+    const iframe=document.createElement('iframe');
+    iframe.setAttribute('sandbox','allow-same-origin');
+    iframe.addEventListener('load',()=>{
+      try{const h=iframe.contentDocument.documentElement.scrollHeight;if(h)iframe.style.height=(h+24)+'px'}catch{}
+    });
+    iframe.srcdoc='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:14px/1.6 Inter,Arial,sans-serif;margin:12px;color:#1a1a1a;overflow-wrap:anywhere}img{max-width:100%;height:auto}a{color:#1E88E5}</style></head><body>'+displayHtml+'</body></html>';
+    body.appendChild(iframe);
+  }else{
+    const pre=document.createElement('pre');
+    pre.textContent=m.text||'(Tidak ada isi pesan)';
+    body.appendChild(pre);
   }
 }
 
