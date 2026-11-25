@@ -453,6 +453,7 @@ body{min-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
     <div class="field">
      <label>SMTP HOST</label>
      <input id="smtpHost" placeholder="smtp.example.com (opsional)">
+     <div id="smtpCandidates" class="candidate-chips hidden"></div>
     </div>
     <div class="row">
      <div class="field">
@@ -785,6 +786,12 @@ function clearImapCandidates(){
  box.innerHTML='';
  box.classList.add('hidden');
 }
+function clearSmtpCandidates(){
+ const box=$('smtpCandidates');
+ if(!box)return;
+ box.innerHTML='';
+ box.classList.add('hidden');
+}
 function renderImapCandidates(candidates){
  const box=$('imapCandidates');
  if(!box)return;
@@ -810,6 +817,31 @@ function renderImapCandidates(candidates){
   renderImapCandidates(candidates);
  }));
 }
+function renderSmtpCandidates(candidates){
+ const box=$('smtpCandidates');
+ if(!box)return;
+ if(!Array.isArray(candidates)||candidates.length<=1){
+  clearSmtpCandidates();
+  return;
+ }
+ const currentHost=$('smtpHost').value.trim().toLowerCase();
+ const currentPort=Number($('smtpPort').value)||465;
+ box.innerHTML=candidates.map((c,idx)=>{
+  const active=c.host.toLowerCase()===currentHost&&Number(c.port)===currentPort;
+  const sec=c.secure!==false?'SSL':'STARTTLS';
+  return `<button type="button" class="candidate-chip ${active?'active':''}" data-smtp-candidate-idx="${idx}">${esc(c.host)}:${esc(c.port)} (${sec})</button>`;
+ }).join('');
+ box.classList.remove('hidden');
+ box.querySelectorAll('[data-smtp-candidate-idx]').forEach(btn=>btn.addEventListener('click',()=>{
+  const c=candidates[Number(btn.dataset.smtpCandidateIdx)];
+  if(!c)return;
+  userEditedSmtp=true;
+  $('smtpHost').value=c.host;
+  $('smtpPort').value=c.port||465;
+  $('smtpSecure').value=String(c.secure!==false);
+  renderSmtpCandidates(candidates);
+ }));
+}
 function cancelPendingAutoDetect(){
  clearTimeout(autoDetectTimer);
  autoDetectTimer=null;
@@ -820,29 +852,45 @@ function cancelPendingAutoDetect(){
  }
 }
 function applyAutoDetectResult(data,provider,forceOverwrite=false){
- if(!data||!data.found||!data.imap||!data.imap.host){
+ const hasImap=Boolean(data&&data.imap&&data.imap.host);
+ const hasSmtp=Boolean(data&&data.smtp&&data.smtp.host);
+ if(!hasImap&&!hasSmtp){
   clearImapCandidates();
+  clearSmtpCandidates();
   const baseNote=provider?.notes?` (${provider.notes})`:'';
-  setProviderNote(`Host IMAP untuk ${data?.domain||'domain ini'} tidak ditemukan otomatis. Silakan isi host IMAP secara manual.${baseNote}`,'not-found');
+  setProviderNote(`Host IMAP/SMTP untuk ${data?.domain||'domain ini'} tidak ditemukan otomatis. Silakan isi manual.${baseNote}`,'not-found');
   return false;
  }
- const shouldSetImap=forceOverwrite||!userEditedImap||!$('imapHost').value.trim();
+ const presetHasImap=Boolean(provider&&provider.id!=='manual'&&provider.imapHost);
+ const shouldSetImap=hasImap&&(forceOverwrite||(!presetHasImap&&(!userEditedImap||!$('imapHost').value.trim())));
  if(shouldSetImap){
   $('imapHost').value=data.imap.host;
   $('imapPort').value=data.imap.port||993;
   $('imapSecure').value=String(data.imap.secure!==false);
  }
- if(data.smtp&&data.smtp.host&&(forceOverwrite||!userEditedSmtp||!$('smtpHost').value.trim())){
+ const shouldSetSmtp=hasSmtp&&(forceOverwrite||!userEditedSmtp||!$('smtpHost').value.trim());
+ if(shouldSetSmtp){
   $('smtpHost').value=data.smtp.host;
   $('smtpPort').value=data.smtp.port||465;
   $('smtpSecure').value=String(data.smtp.secure!==false);
  }
- const secLabel=data.imap.secure!==false?'SSL/TLS':'STARTTLS';
- const via=data.sourceLabel?` via ${data.sourceLabel}`:'';
  const provInfo=data.providerName?` [${data.providerName}]`:'';
- const smtpInfo=data.smtp?.host?` · SMTP: ${data.smtp.host}:${data.smtp.port||465}`:'';
- setProviderNote(`Auto-detect${provInfo}: ${data.imap.host}:${data.imap.port||993} (${secLabel})${smtpInfo}${via}`,'detected');
- renderImapCandidates(data.candidates||[]);
+ const parts=[];
+ if(hasImap&&(shouldSetImap||!presetHasImap)){
+  const secLabel=data.imap.secure!==false?'SSL/TLS':'STARTTLS';
+  parts.push(`IMAP: ${data.imap.host}:${data.imap.port||993} (${secLabel})`);
+ }else if(presetHasImap){
+  parts.push(`IMAP preset: ${provider.imapHost}`);
+ }
+ if(hasSmtp){
+  const smtpSec=data.smtp.secure!==false?'SSL/TLS':'STARTTLS';
+  const smtpTag=data.smtp.inferred?' (DNS fallback)':'';
+  parts.push(`SMTP: ${data.smtp.host}:${data.smtp.port||465} (${smtpSec})${smtpTag}`);
+ }
+ const via=data.sourceLabel?` · via ${data.sourceLabel}`:'';
+ setProviderNote(`Auto-detect${provInfo}: ${parts.join(' · ')}${via}`,'detected');
+ renderImapCandidates(presetHasImap&&!forceOverwrite?[]:(data.candidates||[]));
+ renderSmtpCandidates(data.smtpCandidates||[]);
  return true;
 }
 async function runAutoDetect(email,{force=false,forceOverwrite=false}={}){
@@ -878,8 +926,10 @@ async function runAutoDetect(email,{force=false,forceOverwrite=false}={}){
   autoDetectClientCache.set(domain,data);
   applyAutoDetectResult(data,provider,forceOverwrite);
   if(force){
-   if(data.found&&data.imap?.host)toast(`IMAP host ditemukan: ${data.imap.host}`);
-   else toast(`Host IMAP untuk ${domain} tidak ditemukan otomatis.`);
+   if(data.imap?.host&&data.smtp?.host)toast(`IMAP (${data.imap.host}) & SMTP (${data.smtp.host}) terdeteksi.`);
+   else if(data.imap?.host)toast(`IMAP host ditemukan: ${data.imap.host}`);
+   else if(data.smtp?.host)toast(`SMTP host ditemukan: ${data.smtp.host}`);
+   else toast(`Host IMAP/SMTP untuk ${domain} tidak ditemukan otomatis.`);
   }
   return data;
  }catch(err){
@@ -907,7 +957,8 @@ function applyProvider(p){
  $('provider').value=p.id;$('imapHost').value=p.imapHost||'';$('imapPort').value=p.imapPort||993;$('imapSecure').value=String(p.imapSecure!==false);
  $('smtpHost').value=p.smtpHost||'';$('smtpPort').value=p.smtpPort||465;$('smtpSecure').value=String(p.smtpSecure!==false);
  clearImapCandidates();
- setProviderNote(p.notes||(p.id==='manual'?'Host IMAP akan dideteksi otomatis atau dapat diisi manual sesuai provider email kamu.':'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu'));
+ clearSmtpCandidates();
+ setProviderNote(p.notes||(p.id==='manual'?'Host IMAP dan SMTP akan dideteksi otomatis atau dapat diisi manual sesuai provider email kamu.':'Preset '+p.name+' dipilih. Pastikan pengaturan sesuai akun email kamu'));
 }
 function detectFromEmail(){
  const email=$('email').value;
@@ -919,7 +970,7 @@ function detectFromEmail(){
  }
  const p=window.detectProvider(email);
  applyProvider(p);
- if(p&&p.imapHost){
+ if(p&&p.imapHost&&p.smtpHost){
   cancelPendingAutoDetect();
   const btn=$('autoDetectBtn');
   if(btn){btn.disabled=false;btn.textContent='Auto Detect'}
@@ -934,7 +985,8 @@ function detectFromEmail(){
   applyAutoDetectResult(autoDetectClientCache.get(domain),p,false);
   return;
  }
- setProviderNote(`Provider belum memiliki host IMAP. Menyiapkan deteksi otomatis untuk ${domain}...`,'detecting');
+ const missingLabel=(p&&p.imapHost)?'SMTP':'IMAP & SMTP';
+ setProviderNote(`Menyiapkan deteksi otomatis ${missingLabel} untuk ${domain}...`,'detecting');
  autoDetectTimer=setTimeout(()=>{runAutoDetect(email)},550);
 }
 function initProviderForm(){fillProviderSelect();if(window.PROVIDERS.length)applyProvider(window.PROVIDERS[0])}
@@ -944,7 +996,7 @@ $('email').addEventListener('blur',()=>{
  const email=$('email').value;
  const domain=extractEmailDomain(email);
  const p=window.detectProvider(email);
- if(domain&&(!p||!p.imapHost)&&!$('imapHost').value.trim()){
+ if(domain&&((!p||!p.imapHost)&&!$('imapHost').value.trim()||(!p||!p.smtpHost)&&!$('smtpHost').value.trim())){
   runAutoDetect(email);
  }
 });
