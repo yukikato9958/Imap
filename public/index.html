@@ -401,27 +401,36 @@ button{cursor:pointer}
 }
 @media(max-width:860px){
   .mobile-only{display:inline-flex}
-  .app-shell{grid-template-columns:1fr;position:relative}
+  .login-topbar{padding-top:max(44px,calc(12px + env(safe-area-inset-top,32px)))}
+  .app-shell{
+    grid-template-columns:1fr;position:relative;
+    padding-top:max(42px,env(safe-area-inset-top,42px));
+    padding-bottom:max(8px,env(safe-area-inset-bottom,8px));
+    background:var(--surface)
+  }
   .sidebar{
     position:fixed;top:0;bottom:0;left:-280px;width:270px;z-index:110;
     transition:left .2s ease;box-shadow:0 12px 40px rgba(0,0,0,.35);
-    padding-top:max(16px,env(safe-area-inset-top))
+    padding-top:max(48px,calc(14px + env(safe-area-inset-top,34px)));
+    padding-bottom:max(16px,env(safe-area-inset-bottom,16px))
   }
   .sidebar.open{left:0}
   .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100}
   .sidebar-overlay.active{display:block}
-  .list-pane{border-right:0}
-  .detail-pane{display:none}
+  .list-pane{border-right:0;height:100%;min-height:0}
+  .list-header{padding-top:10px}
+  .detail-pane{display:none;height:100%;min-height:0}
   .app-shell.mobile-reading .list-pane{display:none}
   .app-shell.mobile-reading .detail-pane{display:flex}
-  .detail-scroll{padding:14px 14px 32px}
+  .detail-toolbar{padding:10px 12px;gap:6px}
+  .detail-toolbar .btn{padding:6px 10px;font-size:12px}
+  .detail-scroll{padding:14px 14px 36px}
   .detail-subject{font-size:18px}
   .thread-msg-card{padding:14px}
   .msg-detail-head{flex-direction:column;gap:8px}
   .msg-detail-sender-wrap{flex:none;width:100%}
   .msg-detail-meta{width:100%;justify-content:space-between;margin-left:0;padding-top:6px;border-top:1px solid var(--outline-variant)}
   .theme-grid{grid-template-columns:1fr}
-  .list-header{padding-top:max(12px,env(safe-area-inset-top))}
 }
 </style>
 </head>
