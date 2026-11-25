@@ -92,8 +92,8 @@ jobs:
                   applicationId 'com.dankemail.app'
                   minSdk 24
                   targetSdk 34
-                  versionCode 3
-                  versionName '3.0.0'
+                  versionCode 4
+                  versionName '3.1.0'
               }
 
               buildTypes {
@@ -224,6 +224,7 @@ jobs:
           import android.content.Intent;
           import android.graphics.Color;
           import android.net.Uri;
+          import android.os.Build;
           import android.os.Bundle;
           import android.view.ViewGroup;
           import android.webkit.CookieManager;
@@ -234,11 +235,14 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.widget.FrameLayout;
+          import android.widget.Toast;
+          import android.window.OnBackInvokedDispatcher;
 
           public class MainActivity extends Activity {
               private static final String START_URL = "${APP_URL}";
               private static final String APP_HOST = Uri.parse(START_URL).getHost();
               private WebView webView;
+              private long lastBackPressMs = 0L;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
@@ -307,6 +311,39 @@ jobs:
                   } else {
                       webView.loadUrl(START_URL);
                   }
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                          OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                          this::handleSmartBack
+                      );
+                  }
+              }
+
+              private void handleSmartBack() {
+                  if (webView == null) {
+                      finish();
+                      return;
+                  }
+                  webView.evaluateJavascript(
+                      "(function(){return typeof window.handleAndroidBack==='function'?window.handleAndroidBack(true):false;})()",
+                      result -> {
+                          if ("true".equals(result)) {
+                              return;
+                          }
+                          if (webView.canGoBack()) {
+                              webView.goBack();
+                              return;
+                          }
+                          long now = System.currentTimeMillis();
+                          if (now - lastBackPressMs < 2000L) {
+                              finish();
+                          } else {
+                              lastBackPressMs = now;
+                              Toast.makeText(this, "Geser / tekan kembali sekali lagi untuk keluar", Toast.LENGTH_SHORT).show();
+                          }
+                      }
+                  );
               }
 
               @Override
@@ -319,11 +356,7 @@ jobs:
 
               @Override
               public void onBackPressed() {
-                  if (webView != null && webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
-                  }
+                  handleSmartBack();
               }
           }
           EOF
