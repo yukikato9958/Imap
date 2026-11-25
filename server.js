@@ -620,6 +620,14 @@ const MX_PROVIDER_RULES = [
         })
     },
     {
+        pattern: /^[a-z0-9.-]+\.shared-server\.net$/i,
+        name: 'CPI Shared Server',
+        resolve: exchange => ({
+            imap: { host: exchange, port: 993, secure: true },
+            smtp: { host: exchange, port: 465, secure: true }
+        })
+    },
+    {
         pattern: /(^|\.)biglobe\.ne\.jp$/i,
         name: 'BIGLOBE',
         imap: { host: 'mail.biglobe.ne.jp', port: 993, secure: true },
@@ -1096,7 +1104,51 @@ function matchMxProvider(mxHosts) {
     return null;
 }
 
-function probeBanner(host, port, secure, bannerRegex, timeoutMs) {
+function extractCertHostnames(cert, originalHost) {
+    if (!cert || typeof cert !== 'object') return [];
+    const orig = String(originalHost || '').trim().toLowerCase().replace(/\.$/, '');
+    const exact = [];
+    const wildcardDerived = [];
+
+    const pushEntry = rawName => {
+        const clean = String(rawName || '').trim().toLowerCase().replace(/\.$/, '');
+        if (!clean) return;
+        if (clean.startsWith('*.')) {
+            const base = clean.slice(2);
+            if (isValidHostname(base)) {
+                wildcardDerived.push(base);
+                wildcardDerived.push(`mail.${base}`);
+            }
+        } else if (isValidHostname(clean)) {
+            exact.push(clean);
+        }
+    };
+
+    if (typeof cert.subjectaltname === 'string') {
+        for (const part of cert.subjectaltname.split(',')) {
+            const trimmed = part.trim();
+            if (/^DNS:/i.test(trimmed)) {
+                pushEntry(trimmed.slice(4));
+            }
+        }
+    }
+
+    if (cert.subject && typeof cert.subject.CN === 'string') {
+        pushEntry(cert.subject.CN);
+    }
+
+    const seen = new Set([orig]);
+    const result = [];
+    for (const h of [...exact, ...wildcardDerived]) {
+        if (!h || seen.has(h)) continue;
+        seen.add(h);
+        result.push(h);
+        if (result.length >= 4) break;
+    }
+    return result;
+}
+
+function probeBanner(host, port, secure, bannerRegex, timeoutMs, strictTls = false) {
     return new Promise(resolve => {
         let settled = false;
         let buffer = '';
@@ -1124,7 +1176,7 @@ function probeBanner(host, port, secure, bannerRegex, timeoutMs) {
                     host,
                     port,
                     servername: host,
-                    rejectUnauthorized: false,
+                    rejectUnauthorized: Boolean(strictTls),
                     minDHSize: 512,
                     ciphers: 'DEFAULT@SECLEVEL=0'
                 })
@@ -1137,11 +1189,18 @@ function probeBanner(host, port, secure, bannerRegex, timeoutMs) {
                 const lineBreak = buffer.indexOf('\n');
                 const line = (lineBreak >= 0 ? buffer.slice(0, lineBreak) : buffer).trim();
                 if (bannerRegex.test(line)) {
+                    let certHosts = [];
+                    if (secure && !socket.authorized) {
+                        try {
+                            certHosts = extractCertHostnames(socket.getPeerCertificate(false), host);
+                        } catch {}
+                    }
                     finish({
                         host,
                         port,
                         secure,
-                        tlsAuthorized: secure ? Boolean(socket.authorized) : null
+                        tlsAuthorized: secure ? Boolean(socket.authorized) : null,
+                        certHosts
                     });
                 } else if (lineBreak >= 0 || buffer.length > 512) {
                     finish(null);
@@ -1156,6 +1215,46 @@ function probeBanner(host, port, secure, bannerRegex, timeoutMs) {
             finish(null);
         }
     });
+}
+
+async function resolveCertHostOverrides(probedItems, port, bannerRegex, timeoutMs = 4000) {
+    const certMap = new Map();
+    for (const item of probedItems || []) {
+        if (!item || !item.secure || item.tlsAuthorized || !Array.isArray(item.certHosts)) continue;
+        for (const certHost of item.certHosts) {
+            if (!certMap.has(certHost)) {
+                certMap.set(certHost, {
+                    certHost,
+                    idx: item.idx,
+                    resolvedFrom: item.host,
+                    kind: item.kind || 'dedicated'
+                });
+            }
+        }
+    }
+
+    if (!certMap.size) return [];
+
+    const entries = [...certMap.values()].slice(0, 6);
+    const verified = await Promise.all(
+        entries.map(async entry => {
+            const ok = await resolvePublicHost(entry.certHost);
+            if (!ok) return null;
+            const res = await probeBanner(entry.certHost, port, true, bannerRegex, timeoutMs, true);
+            if (!res || !res.tlsAuthorized) return null;
+            return {
+                host: res.host,
+                port: res.port,
+                secure: true,
+                tlsAuthorized: true,
+                resolvedFrom: entry.resolvedFrom,
+                idx: entry.idx,
+                kind: 'dedicated'
+            };
+        })
+    );
+
+    return verified.filter(Boolean);
 }
 
 function buildImapCandidates(domain, baseDomain, mxHosts) {
@@ -1199,12 +1298,15 @@ function buildImapCandidates(domain, baseDomain, mxHosts) {
     return result;
 }
 
-function buildSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts) {
+function buildSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts, preferImapHost = false) {
     const dedicated = [];
     const shared = [];
 
     if (detectedImapHost) {
         const cleanImap = detectedImapHost.toLowerCase().replace(/\.$/, '');
+        if (preferImapHost) {
+            dedicated.push(cleanImap);
+        }
         if (/^secureimap\./i.test(cleanImap)) {
             dedicated.push(cleanImap.replace(/^secureimap\./i, 'securesmtp.'));
         } else if (/^imaps([0-9-]*)\./i.test(cleanImap)) {
@@ -1303,16 +1405,28 @@ async function probeImapCandidates(domain, baseDomain, mxHosts) {
 
     const validTls = tlsResults.filter(Boolean);
     if (validTls.length) {
-        validTls.sort((a, b) => {
+        const certOverrides = await resolveCertHostOverrides(validTls, 993, imapBannerRegex, 4000);
+        const combined = [...certOverrides, ...validTls];
+        combined.sort((a, b) => {
             if (a.tlsAuthorized !== b.tlsAuthorized) return a.tlsAuthorized ? -1 : 1;
             return a.idx - b.idx;
         });
-        return validTls.map(({ host, port, secure, tlsAuthorized }) => ({
-            host,
-            port,
-            secure,
-            tlsAuthorized
-        }));
+
+        const seen = new Set();
+        const deduped = [];
+        for (const item of combined) {
+            const key = `${item.host}:${item.port}:${item.secure}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push({
+                host: item.host,
+                port: item.port,
+                secure: item.secure,
+                tlsAuthorized: item.tlsAuthorized,
+                resolvedFrom: item.resolvedFrom || ''
+            });
+        }
+        return deduped;
     }
 
     const plainResults = await Promise.all(
@@ -1328,8 +1442,8 @@ async function probeImapCandidates(domain, baseDomain, mxHosts) {
         .map(({ host, port, secure }) => ({ host, port, secure }));
 }
 
-async function probeSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts) {
-    const candidates = buildSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts);
+async function probeSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts, preferImapHost = false) {
+    const candidates = buildSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts, preferImapHost);
     const dnsChecks = await Promise.all(
         candidates.map(async (item, idx) => ({
             host: item.host,
@@ -1361,28 +1475,34 @@ async function probeSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts
         )
     ]);
 
-    const verified = [...tlsResults, ...starttlsResults].filter(Boolean);
+    const tlsValid = tlsResults.filter(Boolean);
+    const smtpCertOverrides = await resolveCertHostOverrides(tlsValid, 465, smtpBannerRegex, 4000);
+    const verified = [...smtpCertOverrides, ...tlsValid, ...starttlsResults.filter(Boolean)];
     if (verified.length) {
         verified.sort((a, b) => {
-            // Prefer dedicated smtp.* over generic shared hosts
+            // Prefer SSL/TLS 465 with valid cert first, then STARTTLS 587, then unverified 465
+            const rank = x => (x.secure && x.tlsAuthorized ? 0 : !x.secure ? 1 : 2);
+            if (rank(a) !== rank(b)) return rank(a) - rank(b);
+            // Then prefer dedicated smtp.* / cert host over generic shared hosts
             const aDed = a.kind === 'dedicated' ? 0 : 1;
             const bDed = b.kind === 'dedicated' ? 0 : 1;
             if (aDed !== bDed) return aDed - bDed;
-            // Prefer SSL/TLS 465 with valid cert, then STARTTLS 587, then unverified 465
-            const rank = x => (x.secure && x.tlsAuthorized ? 0 : !x.secure ? 1 : 2);
-            if (rank(a) !== rank(b)) return rank(a) - rank(b);
             return a.idx - b.idx;
         });
 
-        const list = verified.slice(0, 5).map(({ host, port, secure }) => ({
-            host,
-            port,
-            secure
-        }));
+        const seen = new Set();
+        const list = [];
+        for (const item of verified) {
+            const k = `${item.host}:${item.port}:${item.secure}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            list.push({ host: item.host, port: item.port, secure: item.secure });
+            if (list.length >= 5) break;
+        }
         return {
             smtp: list[0],
             smtpCandidates: list,
-            smtpSource: 'Live SMTP Probe'
+            smtpSource: smtpCertOverrides.length ? 'Live SMTP Probe (SSL Cert Host)' : 'Live SMTP Probe'
         };
     }
 
@@ -1446,6 +1566,8 @@ async function autodiscoverMailConfig(emailInput, force = false) {
     let providerName = '';
     let candidates = [];
 
+    let imapResolvedFrom = '';
+
     if (autoconfig && autoconfig.source === 'autoconfig' && autoconfig.imap) {
         imap = autoconfig.imap;
         smtp = autoconfig.smtp || srv?.smtp || mxMatch?.smtp || null;
@@ -1481,8 +1603,11 @@ async function autodiscoverMailConfig(emailInput, force = false) {
                 port: probedImaps[0].port,
                 secure: probedImaps[0].secure
             };
+            imapResolvedFrom = probedImaps[0].resolvedFrom || '';
             source = 'probe';
-            sourceLabel = 'Live IMAP Probe';
+            sourceLabel = imapResolvedFrom
+                ? `SSL Cert Host (dari ${imapResolvedFrom})`
+                : 'Live IMAP Probe';
             candidates = probedImaps.slice(0, 5).map(c => ({
                 host: c.host,
                 port: c.port,
@@ -1499,7 +1624,13 @@ async function autodiscoverMailConfig(emailInput, force = false) {
         smtpCandidates = [smtp];
         smtpSource = sourceLabel || 'Autoconfig';
     } else {
-        const probedSmtp = await probeSmtpCandidates(domain, baseDomain, imap?.host || '', mxHosts);
+        const probedSmtp = await probeSmtpCandidates(
+            domain,
+            baseDomain,
+            imap?.host || '',
+            mxHosts,
+            Boolean(imapResolvedFrom)
+        );
         if (probedSmtp && probedSmtp.smtp) {
             smtp = probedSmtp.smtp;
             smtpCandidates = probedSmtp.smtpCandidates || [smtp];
@@ -1642,10 +1773,20 @@ app.post('/api/login', async (req, res) => {
         console.error('Login:', err.message);
 
         const timeout = /timeout|timed out|ETIMEDOUT/i.test(err.message);
+        let friendlyMessage = err.message;
+
+        if (/does not match certificate's altnames/i.test(err.message)) {
+            const dnsMatches = [...err.message.matchAll(/DNS:([a-z0-9.-]+)/gi)]
+                .map(m => m[1])
+                .filter(h => !h.startsWith('*.') && isValidHostname(h));
+            if (dnsMatches.length) {
+                friendlyMessage = `Sertifikat SSL server terdaftar untuk "${dnsMatches[0]}", bukan "${config.host}". Ganti IMAP Host ke "${dnsMatches[0]}" atau klik Auto Detect.`;
+            }
+        }
 
         res.status(timeout ? 504 : 401).json({
             error: timeout ? 'IMAP connection timed out' : 'IMAP login failed',
-            details: { message: err.message }
+            details: { message: friendlyMessage }
         });
     }
 });
