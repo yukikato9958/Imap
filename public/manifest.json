@@ -1,0 +1,19 @@
+{
+  "name": "Danke Mail",
+  "short_name": "Danke Mail",
+  "description": "Danke Mail — Web IMAP & SMTP Client",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFDF5",
+  "theme_color": "#1E88E5",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

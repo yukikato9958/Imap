@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#1E88E5">
 <title>Danke Mail</title>
 <link rel="icon" type="image/png" href="./icon.png">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Danke Mail">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -432,6 +437,9 @@ button{cursor:pointer}
   .msg-detail-meta{width:100%;justify-content:space-between;margin-left:0;padding-top:6px;border-top:1px solid var(--outline-variant)}
   .theme-grid{grid-template-columns:1fr}
 }
+html[data-apk="true"] .app-shell{padding-top:0!important;padding-bottom:0!important}
+html[data-apk="true"] .login-topbar{padding-top:13px!important}
+html[data-apk="true"] .sidebar{padding-top:16px!important}
 </style>
 </head>
 <body>
@@ -1932,6 +1940,12 @@ $('sidebarOverlay').onclick=closeSidebar;
    INIT
    ======================================== */
 (async function init(){
+  if(location.search.includes('apk=1')||/DankeMailAPK/i.test(navigator.userAgent||'')){
+    document.documentElement.dataset.apk='true';
+  }
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
   loadSaved();
   if(activeAccount()){
     showDashboard();renderAccountsSidebar();renderEmptyDetail();
