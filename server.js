@@ -1020,13 +1020,39 @@ async function lookupAutoconfig(domain, baseDomain, email) {
     ]);
 
     const domainMatch = domainResults.find(r => r && r.imap);
+    const ispdbMatch = ispdbResults.find(r => r && r.imap);
+    const anySmtp =
+        domainResults.find(r => r && r.smtp)?.smtp ||
+        ispdbResults.find(r => r && r.smtp)?.smtp ||
+        null;
+
     if (domainMatch) {
-        return { ...domainMatch, source: 'autoconfig', sourceLabel: 'Domain Autoconfig' };
+        return {
+            ...domainMatch,
+            smtp: domainMatch.smtp || anySmtp,
+            source: 'autoconfig',
+            sourceLabel: 'Domain Autoconfig'
+        };
     }
 
-    const ispdbMatch = ispdbResults.find(r => r && r.imap);
     if (ispdbMatch) {
-        return { ...ispdbMatch, source: 'ispdb', sourceLabel: 'Mozilla ISPDB' };
+        return {
+            ...ispdbMatch,
+            smtp: ispdbMatch.smtp || anySmtp,
+            source: 'ispdb',
+            sourceLabel: 'Mozilla ISPDB'
+        };
+    }
+
+    if (anySmtp) {
+        return {
+            providerName: '',
+            imap: null,
+            smtp: anySmtp,
+            candidates: [],
+            source: 'autoconfig',
+            sourceLabel: 'Autoconfig'
+        };
     }
 
     return null;
@@ -1173,49 +1199,84 @@ function buildImapCandidates(domain, baseDomain, mxHosts) {
     return result;
 }
 
-function buildSmtpCandidates(domain, baseDomain, detectedImapHost) {
-    const raw = [];
+function buildSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts) {
+    const dedicated = [];
+    const shared = [];
 
     if (detectedImapHost) {
-        if (/^imaps?\./i.test(detectedImapHost)) {
-            raw.push(detectedImapHost.replace(/^imaps\./i, 'smtps.'));
-            raw.push(detectedImapHost.replace(/^imaps?\./i, 'smtp.'));
-            raw.push(detectedImapHost.replace(/^imaps?\./i, 'mail.'));
-        } else if (/^secureimap\./i.test(detectedImapHost)) {
-            raw.push(detectedImapHost.replace(/^secureimap\./i, 'securesmtp.'));
+        const cleanImap = detectedImapHost.toLowerCase().replace(/\.$/, '');
+        if (/^secureimap\./i.test(cleanImap)) {
+            dedicated.push(cleanImap.replace(/^secureimap\./i, 'securesmtp.'));
+        } else if (/^imaps([0-9-]*)\./i.test(cleanImap)) {
+            dedicated.push(cleanImap.replace(/^imaps([0-9-]*)\./i, 'smtps$1.'));
+            dedicated.push(cleanImap.replace(/^imaps([0-9-]*)\./i, 'smtp$1.'));
+            dedicated.push(cleanImap.replace(/^imaps([0-9-]*)\./i, 'smtpa.'));
+            dedicated.push(cleanImap.replace(/^imaps([0-9-]*)\./i, 'vsmtp$1.'));
+            shared.push(cleanImap.replace(/^imaps([0-9-]*)\./i, 'mail.'));
+        } else if (/^imap([0-9-]*)\./i.test(cleanImap)) {
+            dedicated.push(cleanImap.replace(/^imap([0-9-]*)\./i, 'smtp$1.'));
+            dedicated.push(cleanImap.replace(/^imap([0-9-]*)\./i, 'smtps$1.'));
+            dedicated.push(cleanImap.replace(/^imap([0-9-]*)\./i, 'smtpa.'));
+            dedicated.push(cleanImap.replace(/^imap([0-9-]*)\./i, 'vsmtp$1.'));
+            dedicated.push(cleanImap.replace(/^imap([0-9-]*)\./i, 'smtpout.'));
+            shared.push(cleanImap.replace(/^imap([0-9-]*)\./i, 'mail.'));
         }
     }
 
-    raw.push(
+    dedicated.push(
         `smtp.${domain}`,
         `smtps.${domain}`,
-        `mail.${domain}`,
+        `smtpa.${domain}`,
+        `vsmtp.${domain}`,
         `smtp.mail.${domain}`,
         `securesmtp.${domain}`,
-        domain
+        `smtpout.${domain}`
     );
 
-    if (detectedImapHost) {
-        raw.push(detectedImapHost);
-    }
+    shared.push(`mail.${domain}`, `mbox.${domain}`);
 
     if (baseDomain && baseDomain !== domain) {
-        raw.push(
+        dedicated.push(
             `smtp.${baseDomain}`,
             `smtps.${baseDomain}`,
-            `mail.${baseDomain}`
+            `smtpa.${baseDomain}`,
+            `vsmtp.${baseDomain}`,
+            `smtp.mail.${baseDomain}`,
+            `securesmtp.${baseDomain}`
         );
+        shared.push(`mail.${baseDomain}`, `mbox.${baseDomain}`);
+    }
+
+    for (const mx of (mxHosts || []).slice(0, 2)) {
+        const mxBase = getBaseDomain(mx);
+        if (mxBase && mxBase !== domain && mxBase !== baseDomain) {
+            dedicated.push(`smtp.${mxBase}`, `smtps.${mxBase}`, `vsmtp.${mxBase}`);
+            shared.push(`mail.${mxBase}`);
+        }
+    }
+
+    if (detectedImapHost) {
+        shared.push(detectedImapHost);
+    }
+    shared.push(domain);
+    if (baseDomain && baseDomain !== domain) {
+        shared.push(baseDomain);
     }
 
     const seen = new Set();
     const result = [];
-    for (const host of raw) {
-        const clean = String(host || '').trim().toLowerCase().replace(/\.$/, '');
-        if (!clean || seen.has(clean) || !isValidHostname(clean)) continue;
-        seen.add(clean);
-        result.push(clean);
-        if (result.length >= 10) break;
-    }
+    const addList = (arr, kind) => {
+        for (const host of arr) {
+            const clean = String(host || '').trim().toLowerCase().replace(/\.$/, '');
+            if (!clean || seen.has(clean) || !isValidHostname(clean)) continue;
+            seen.add(clean);
+            result.push({ host: clean, kind });
+            if (result.length >= 16) break;
+        }
+    };
+
+    addList(dedicated, 'dedicated');
+    if (result.length < 16) addList(shared, 'shared');
     return result;
 }
 
@@ -1267,51 +1328,80 @@ async function probeImapCandidates(domain, baseDomain, mxHosts) {
         .map(({ host, port, secure }) => ({ host, port, secure }));
 }
 
-async function probeSmtpCandidates(domain, baseDomain, detectedImapHost) {
-    const candidates = buildSmtpCandidates(domain, baseDomain, detectedImapHost);
+async function probeSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts) {
+    const candidates = buildSmtpCandidates(domain, baseDomain, detectedImapHost, mxHosts);
     const dnsChecks = await Promise.all(
-        candidates.map(async (host, idx) => ({
-            host,
+        candidates.map(async (item, idx) => ({
+            host: item.host,
+            kind: item.kind,
             idx,
-            ok: await resolvePublicHost(host)
+            ok: await resolvePublicHost(item.host)
         }))
     );
     const validHosts = dnsChecks.filter(x => x.ok);
-    if (!validHosts.length) return null;
+    if (!validHosts.length) {
+        return { smtp: null, smtpCandidates: [], smtpSource: '' };
+    }
 
     const smtpBannerRegex = /^220[\s-]/;
 
-    const tlsResults = await Promise.all(
-        validHosts.map(async item => {
-            const res = await probeBanner(item.host, 465, true, smtpBannerRegex, 3500);
-            return res ? { ...res, idx: item.idx } : null;
-        })
-    );
+    // Probe 465 (SSL/TLS) and 587 (STARTTLS) in parallel for speed
+    const [tlsResults, starttlsResults] = await Promise.all([
+        Promise.all(
+            validHosts.map(async item => {
+                const res = await probeBanner(item.host, 465, true, smtpBannerRegex, 4500);
+                return res ? { ...res, idx: item.idx, kind: item.kind } : null;
+            })
+        ),
+        Promise.all(
+            validHosts.map(async item => {
+                const res = await probeBanner(item.host, 587, false, smtpBannerRegex, 4500);
+                return res ? { ...res, idx: item.idx, kind: item.kind } : null;
+            })
+        )
+    ]);
 
-    const validTls = tlsResults.filter(Boolean);
-    if (validTls.length) {
-        validTls.sort((a, b) => {
-            if (a.tlsAuthorized !== b.tlsAuthorized) return a.tlsAuthorized ? -1 : 1;
+    const verified = [...tlsResults, ...starttlsResults].filter(Boolean);
+    if (verified.length) {
+        verified.sort((a, b) => {
+            // Prefer dedicated smtp.* over generic shared hosts
+            const aDed = a.kind === 'dedicated' ? 0 : 1;
+            const bDed = b.kind === 'dedicated' ? 0 : 1;
+            if (aDed !== bDed) return aDed - bDed;
+            // Prefer SSL/TLS 465 with valid cert, then STARTTLS 587, then unverified 465
+            const rank = x => (x.secure && x.tlsAuthorized ? 0 : !x.secure ? 1 : 2);
+            if (rank(a) !== rank(b)) return rank(a) - rank(b);
             return a.idx - b.idx;
         });
-        const best = validTls[0];
-        return { host: best.host, port: best.port, secure: best.secure };
+
+        const list = verified.slice(0, 5).map(({ host, port, secure }) => ({
+            host,
+            port,
+            secure
+        }));
+        return {
+            smtp: list[0],
+            smtpCandidates: list,
+            smtpSource: 'Live SMTP Probe'
+        };
     }
 
-    const starttlsResults = await Promise.all(
-        validHosts.map(async item => {
-            const res = await probeBanner(item.host, 587, false, smtpBannerRegex, 3500);
-            return res ? { ...res, idx: item.idx } : null;
-        })
-    );
-
-    const validStarttls = starttlsResults.filter(Boolean).sort((a, b) => a.idx - b.idx);
-    if (validStarttls.length) {
-        const best = validStarttls[0];
-        return { host: best.host, port: best.port, secure: best.secure };
+    // DNS-verified fallback (handles cloud hosts like Railway that block outbound 465/587
+    // or ISP SMTP servers with slow greetpause delays)
+    const fallbackList = [];
+    for (const item of validHosts.slice(0, 3)) {
+        fallbackList.push({ host: item.host, port: 465, secure: true, inferred: true });
+        if (fallbackList.length < 4) {
+            fallbackList.push({ host: item.host, port: 587, secure: false, inferred: true });
+        }
+        if (fallbackList.length >= 4) break;
     }
 
-    return null;
+    return {
+        smtp: fallbackList[0] || null,
+        smtpCandidates: fallbackList,
+        smtpSource: 'DNS Fallback'
+    };
 }
 
 async function autodiscoverMailConfig(emailInput, force = false) {
@@ -1402,29 +1492,48 @@ async function autodiscoverMailConfig(emailInput, force = false) {
         }
     }
 
-    if (imap && !smtp) {
-        smtp = await probeSmtpCandidates(domain, baseDomain, imap.host);
+    let smtpCandidates = [];
+    let smtpSource = '';
+
+    if (smtp && smtp.host) {
+        smtpCandidates = [smtp];
+        smtpSource = sourceLabel || 'Autoconfig';
+    } else {
+        const probedSmtp = await probeSmtpCandidates(domain, baseDomain, imap?.host || '', mxHosts);
+        if (probedSmtp && probedSmtp.smtp) {
+            smtp = probedSmtp.smtp;
+            smtpCandidates = probedSmtp.smtpCandidates || [smtp];
+            smtpSource = probedSmtp.smtpSource || '';
+        }
     }
 
-    const uniqueCandidates = [];
-    const seenKeys = new Set();
-    for (const c of candidates) {
-        if (!c || !c.host) continue;
-        const k = `${c.host}:${c.port}:${c.secure}`;
-        if (seenKeys.has(k)) continue;
-        seenKeys.add(k);
-        uniqueCandidates.push(c);
-    }
+    const dedupeList = list => {
+        const out = [];
+        const seen = new Set();
+        for (const c of list || []) {
+            if (!c || !c.host) continue;
+            const k = `${c.host}:${c.port}:${c.secure}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            out.push(c);
+        }
+        return out;
+    };
+
+    const uniqueCandidates = dedupeList(candidates);
+    const uniqueSmtpCandidates = dedupeList(smtpCandidates);
 
     const result = {
-        found: Boolean(imap),
+        found: Boolean(imap || smtp),
         domain,
         providerName: providerName || '',
-        source: source || 'none',
-        sourceLabel,
+        source: source || (smtp ? 'smtp-fallback' : 'none'),
+        sourceLabel: sourceLabel || smtpSource,
+        smtpSource,
         imap,
         smtp,
-        candidates: uniqueCandidates
+        candidates: uniqueCandidates,
+        smtpCandidates: uniqueSmtpCandidates
     };
 
     setCacheEntry(AUTODISCOVER_CACHE, AUTODISCOVER_CACHE_MAX, AUTODISCOVER_CACHE_TTL, domain, result);
