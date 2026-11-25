@@ -380,8 +380,19 @@ function addressList(list = []) {
     }).filter(Boolean).join(', ');
 }
 
+function hasAttachmentsInStructure(node) {
+    if (!node) return false;
+    if (node.disposition && String(node.disposition).toLowerCase() === 'attachment') return true;
+    if (node.dispositionParameters && node.dispositionParameters.filename) return true;
+    if (Array.isArray(node.childNodes)) {
+        return node.childNodes.some(child => hasAttachmentsInStructure(child));
+    }
+    return false;
+}
+
 function formatMessage(message, folder) {
     const envelope = message.envelope || {};
+    const flags = Array.from(message.flags || []);
 
     return {
         uid: message.uid,
@@ -390,7 +401,9 @@ function formatMessage(message, folder) {
         to: addressList(envelope.to),
         subject: envelope.subject || '(No subject)',
         date: message.internalDate || envelope.date || null,
-        flags: Array.from(message.flags || [])
+        flags,
+        flagged: flags.includes('\\Flagged'),
+        hasAttachments: hasAttachmentsInStructure(message.bodyStructure)
     };
 }
 
@@ -1855,12 +1868,7 @@ app.get('/api/inbox', async (req, res) => {
             const lock = await client.getMailboxLock(folder);
 
             try {
-                const uids = await client.search(
-                    { all: true },
-                    { uid: true }
-                );
-
-                const total = uids.length;
+                const total = Number(client.mailbox?.exists) || 0;
 
                 if (!total) {
                     return {
@@ -1875,31 +1883,37 @@ app.get('/api/inbox', async (req, res) => {
                     };
                 }
 
-                const start = Math.max(
-                    0,
-                    total - page * limit
+                const totalPages = Math.ceil(total / limit);
+                const endSeq = total - (page - 1) * limit;
+
+                if (endSeq < 1) {
+                    return {
+                        messages: [],
+                        total,
+                        page,
+                        limit,
+                        totalPages,
+                        hasPrevious: page > 1,
+                        hasNext: false,
+                        folder
+                    };
+                }
+
+                const startSeq = Math.max(1, endSeq - limit + 1);
+                const range = `${startSeq}:${endSeq}`;
+
+                const messages = await client.fetchAll(
+                    range,
+                    {
+                        uid: true,
+                        envelope: true,
+                        flags: true,
+                        internalDate: true,
+                        bodyStructure: true
+                    }
                 );
 
-                const end = total - (page - 1) * limit;
-
-                const selected = uids
-                    .slice(start, end)
-                    .reverse();
-
-                const messages = selected.length
-                    ? await client.fetchAll(
-                        selected,
-                        {
-                            uid: true,
-                            envelope: true,
-                            flags: true,
-                            internalDate: true
-                        },
-                        { uid: true }
-                    )
-                    : [];
-
-                const totalPages = Math.ceil(total / limit);
+                messages.reverse();
 
                 return {
                     messages: messages.map(m =>
@@ -1927,12 +1941,13 @@ app.get('/api/inbox', async (req, res) => {
 });
 
 // ========================================
-// SEARCH - FULL TEXT (BODY + HEADERS) & BROAD FOLDERS
+// SEARCH - FAST HEADER SEARCH + OPTIONAL BODY FALLBACK
 // ========================================
 
-const MAX_SEARCH_UIDS_PER_FOLDER = 300;
-const MAX_SEARCH_FOLDERS = 12;
-const MAX_TOTAL_SEARCH_RESULTS = 500;
+const MAX_SEARCH_UIDS_PER_FOLDER = 60;
+const MAX_SEARCH_FOLDERS = 5;
+const MAX_TOTAL_SEARCH_RESULTS = 120;
+const SEARCH_TIME_BUDGET_MS = 8500;
 
 function folderSearchPriority(mailbox) {
     const pathUpper = String(mailbox.path || '').toUpperCase();
@@ -1940,8 +1955,28 @@ function folderSearchPriority(mailbox) {
     if (pathUpper === 'INBOX' || special === '\\inbox') return 0;
     if (special === '\\sent' || pathUpper.includes('SENT')) return 1;
     if (special === '\\archive' || pathUpper.includes('ARCHIVE')) return 2;
-    if (special === '\\trash' || special === '\\junk') return 9;
+    if (special === '\\drafts' || pathUpper.includes('DRAFT')) return 4;
+    if (special === '\\trash' || pathUpper.includes('TRASH') || special === '\\junk' || pathUpper.includes('SPAM') || pathUpper.includes('JUNK')) return 9;
     return 3;
+}
+
+async function searchFolderUids(client, query, includeBody) {
+    if (includeBody) {
+        return await client.search({ text: query }, { uid: true });
+    }
+    try {
+        return await client.search(
+            { or: [{ subject: query }, { from: query }, { to: query }] },
+            { uid: true }
+        );
+    } catch {
+        // Some legacy IMAP servers reject nested OR; fall back to subject + from separately
+        const [bySubject, byFrom] = await Promise.all([
+            client.search({ subject: query }, { uid: true }).catch(() => []),
+            client.search({ from: query }, { uid: true }).catch(() => [])
+        ]);
+        return [...new Set([...(bySubject || []), ...(byFrom || [])])].sort((a, b) => a - b);
+    }
 }
 
 app.get('/api/search', async (req, res) => {
@@ -1955,6 +1990,7 @@ app.get('/api/search', async (req, res) => {
 
     const query = String(req.query.q || '').trim();
     const requestedFolder = String(req.query.folder || 'ALL').trim();
+    const includeBody = req.query.includeBody === '1' || req.query.includeBody === 'true';
     const { page, limit } = getPagination(req.query);
     const bypassCache = req.query.refresh === '1';
 
@@ -1969,15 +2005,19 @@ app.get('/api/search', async (req, res) => {
             username: config.username,
             host: config.host,
             query: query.toLowerCase(),
-            folder: requestedFolder.toUpperCase()
+            folder: requestedFolder.toUpperCase(),
+            includeBody
         }))
         .digest('hex');
 
-    try {
-        let allResults = bypassCache ? null : getCachedSearch(cacheKey);
+    const startedAt = Date.now();
 
-        if (!allResults) {
-            allResults = await withImap(config, async client => {
+    try {
+        let cachedEntry = bypassCache ? null : getCachedSearch(cacheKey);
+        let searchMode = includeBody ? 'body' : 'headers';
+
+        if (!cachedEntry) {
+            const searchResult = await withImap(config, async client => {
                 let folderPaths;
 
                 if (requestedFolder.toUpperCase() === 'ALL') {
@@ -1988,7 +2028,9 @@ app.get('/api/search', async (req, res) => {
                         folderSearchPriority(a) - folderSearchPriority(b)
                     );
 
-                    folderPaths = selectable
+                    const primary = selectable.filter(m => folderSearchPriority(m) < 9);
+                    const pool = primary.length ? primary : selectable;
+                    folderPaths = pool
                         .slice(0, MAX_SEARCH_FOLDERS)
                         .map(mailbox => mailbox.path);
                 } else {
@@ -1996,48 +2038,55 @@ app.get('/api/search', async (req, res) => {
                 }
 
                 const collected = [];
+                let usedMode = includeBody ? 'body' : 'headers';
 
-                for (const folder of folderPaths) {
-                    if (collected.length >= MAX_TOTAL_SEARCH_RESULTS) break;
+                const runPass = async (foldersToScan, useBody) => {
+                    for (const folder of foldersToScan) {
+                        if (collected.length >= MAX_TOTAL_SEARCH_RESULTS) break;
+                        if (Date.now() - startedAt > SEARCH_TIME_BUDGET_MS && collected.length > 0) break;
 
-                    let lock;
-                    try {
-                        lock = await client.getMailboxLock(folder);
+                        let lock;
+                        try {
+                            lock = await client.getMailboxLock(folder);
+                            if (!client.mailbox?.exists) continue;
 
-                        const uids = await client.search(
-                            { text: query },
-                            { uid: true }
-                        );
+                            const uids = await searchFolderUids(client, query, useBody);
+                            if (!uids || !uids.length) continue;
 
-                        if (!uids || !uids.length) continue;
+                            const remainingQuota = MAX_TOTAL_SEARCH_RESULTS - collected.length;
+                            const takeCount = Math.min(MAX_SEARCH_UIDS_PER_FOLDER, remainingQuota);
+                            const recentUids = uids.slice(-takeCount);
 
-                        const remainingQuota = MAX_TOTAL_SEARCH_RESULTS - collected.length;
-                        const takeCount = Math.min(MAX_SEARCH_UIDS_PER_FOLDER, remainingQuota);
-                        const recentUids = uids.slice(-takeCount);
+                            const messages = await client.fetchAll(
+                                recentUids,
+                                {
+                                    uid: true,
+                                    envelope: true,
+                                    flags: true,
+                                    internalDate: true,
+                                    bodyStructure: true
+                                },
+                                { uid: true }
+                            );
 
-                        const messages = await client.fetchAll(
-                            recentUids,
-                            {
-                                uid: true,
-                                envelope: true,
-                                flags: true,
-                                internalDate: true
-                            },
-                            { uid: true }
-                        );
-
-                        for (const message of messages) {
-                            collected.push(formatMessage(message, folder));
+                            for (const message of messages) {
+                                collected.push(formatMessage(message, folder));
+                            }
+                        } catch (err) {
+                            console.error('Search folder:', folder, err.message);
+                        } finally {
+                            if (lock) lock.release();
                         }
-                    } catch (err) {
-                        console.error(
-                            'Search folder:',
-                            folder,
-                            err.message
-                        );
-                    } finally {
-                        if (lock) lock.release();
                     }
+                };
+
+                await runPass(folderPaths, includeBody);
+
+                // Automatic fallback: if fast header search returned 0 results and we still have budget,
+                // do a quick body search in the primary folder (INBOX or selected folder)
+                if (!includeBody && collected.length === 0 && folderPaths.length > 0 && (Date.now() - startedAt) < 4500) {
+                    usedMode = 'headers+body';
+                    await runPass([folderPaths[0]], true);
                 }
 
                 collected.sort((a, b) =>
@@ -2045,16 +2094,21 @@ app.get('/api/search', async (req, res) => {
                     new Date(a.date || 0).getTime()
                 );
 
-                return collected;
+                return { items: collected, mode: usedMode };
             });
 
-            setCachedSearch(cacheKey, allResults);
+            cachedEntry = searchResult;
+            setCachedSearch(cacheKey, cachedEntry);
         }
+
+        searchMode = cachedEntry.mode || searchMode;
 
         res.json({
             query,
             folder: requestedFolder,
-            ...paginateMessages(allResults, page, limit)
+            searchMode,
+            durationMs: Date.now() - startedAt,
+            ...paginateMessages(cachedEntry.items || [], page, limit)
         });
     } catch (err) {
         sendError(res, err, 'Search');
@@ -2170,7 +2224,7 @@ app.post('/api/message/action', async (req, res) => {
         });
     }
 
-    if (!['read', 'unread', 'delete'].includes(action)) {
+    if (!['read', 'unread', 'delete', 'star', 'unstar', 'archive'].includes(action)) {
         return res.status(400).json({
             error: 'Invalid action.'
         });
@@ -2246,6 +2300,32 @@ app.post('/api/message/action', async (req, res) => {
                 return;
             }
 
+            if (action === 'archive') {
+                const mailboxes = await client.list();
+                let archiveBox = mailboxes.find(box =>
+                    String(box.specialUse || '').toLowerCase() === '\\archive'
+                );
+                if (!archiveBox) {
+                    const names = ['archive', 'archives', 'all mail', 'arsip', 'アーカイブ'];
+                    archiveBox = mailboxes.find(box =>
+                        names.includes(String(box.path).split('/').pop().toLowerCase())
+                    );
+                }
+                if (!archiveBox) {
+                    throw new Error('Folder Archive tidak ditemukan di akun email ini.');
+                }
+
+                const lock = await client.getMailboxLock(folder);
+                try {
+                    if (folder !== archiveBox.path) {
+                        await client.messageMove(validUIDs, archiveBox.path, { uid: true });
+                    }
+                } finally {
+                    lock.release();
+                }
+                return;
+            }
+
             const lock = await client.getMailboxLock(folder);
 
             try {
@@ -2261,6 +2341,18 @@ app.post('/api/message/action', async (req, res) => {
                         ['\\Seen'],
                         { uid: true }
                     );
+                } else if (action === 'star') {
+                    await client.messageFlagsAdd(
+                        validUIDs,
+                        ['\\Flagged'],
+                        { uid: true }
+                    );
+                } else if (action === 'unstar') {
+                    await client.messageFlagsRemove(
+                        validUIDs,
+                        ['\\Flagged'],
+                        { uid: true }
+                    );
                 }
             } finally {
                 lock.release();
@@ -2270,16 +2362,20 @@ app.post('/api/message/action', async (req, res) => {
         clearMessageCache(config, folder, validUIDs);
         clearInboxCacheForAccount(config, folder);
 
+        const actionMessages = {
+            read: 'Email ditandai sudah dibaca',
+            unread: 'Email ditandai belum dibaca',
+            delete: 'Email dipindahkan ke Sampah',
+            star: 'Email diberi bintang',
+            unstar: 'Bintang dihapus',
+            archive: 'Email diarsipkan'
+        };
+
         res.json({
             success: true,
             action,
             count: validUIDs.length,
-            message:
-                action === 'read'
-                    ? 'Emails marked as read'
-                    : action === 'unread'
-                    ? 'Emails marked as unread'
-                    : 'Emails moved to Trash'
+            message: actionMessages[action] || 'Aksi berhasil'
         });
 
     } catch (err) {
@@ -2359,6 +2455,41 @@ app.post('/api/send', async (req, res) => {
         sendError(res, err, 'Email sending');
     } finally {
         transporter.close();
+    }
+});
+
+// ========================================
+// TRANSLATE
+// ========================================
+
+app.post('/api/translate', async (req, res) => {
+    const config = getSession(req);
+    if (!config) {
+        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    }
+
+    const text = String(req.body?.text || '').trim().slice(0, 4500);
+    const targetLang = String(req.body?.targetLang || 'id').trim().slice(0, 10) || 'id';
+
+    if (!text) {
+        return res.json({ translatedText: '' });
+    }
+
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+            const response = await fetch(url, { signal: controller.signal });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            const translatedText = (data?.[0] || []).map(part => part?.[0] || '').join('');
+            res.json({ translatedText, detectedLang: data?.[2] || 'auto' });
+        } finally {
+            clearTimeout(timer);
+        }
+    } catch (err) {
+        sendError(res, err, 'Translation');
     }
 });
 
