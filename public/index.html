@@ -996,7 +996,11 @@ function renderThemeGrid(){
     if(chosen)toast(`Tema diubah ke ${chosen.displayName}`);
   }));
 }
-function openThemeModal(){renderThemeGrid();$('themeModal').classList.remove('hidden')}
+function openThemeModal(){
+  renderThemeGrid();
+  if($('themeModal').classList.contains('hidden'))pushUiHistory('themeModal');
+  $('themeModal').classList.remove('hidden');
+}
 applyThemeById(localStorage.getItem('danke_v3_theme')||'CARTOON_POP');
 $('themeBtn').onclick=openThemeModal;
 $('quickThemeBtn').onclick=openThemeModal;
@@ -1031,11 +1035,12 @@ async function api(url,options={}){
   return data;
 }
 function showLogin(canGoBack=false){
+  if(canGoBack&&$('loginPage').classList.contains('hidden'))pushUiHistory('login');
   $('loginPage').classList.remove('hidden');
   $('dashboard').classList.add('hidden');
   $('loginBackBtn').classList.toggle('hidden',!canGoBack);
   $('loginErrorBox').classList.add('hidden');
-  closeSidebar();
+  closeSidebar(true);
 }
 function showDashboard(){
   $('loginPage').classList.add('hidden');
@@ -1074,7 +1079,7 @@ $('togglePwdBtn').onclick=()=>{
   const inp=$('password');
   inp.type=inp.type==='password'?'text':'password';
 };
-$('loginBackBtn').onclick=()=>{if(activeAccount())showDashboard()};
+$('loginBackBtn').onclick=()=>{if(activeAccount())goBackOr(() => showDashboard())};
 
 function syncSecurityChips(){
   const imapSec=$('imapSecure').value==='true';
@@ -1271,6 +1276,7 @@ function renderProviderModalList(q=''){
 $('providerPickerBtn').onclick=()=>{
   $('providerSearchInput').value='';
   renderProviderModalList('');
+  if($('providerModal').classList.contains('hidden'))pushUiHistory('providerModal');
   $('providerModal').classList.remove('hidden');
   setTimeout(()=>$('providerSearchInput').focus(),40);
 };
@@ -1676,6 +1682,7 @@ async function doSearch(page=1,forceRefresh=false){
   const scopeVal=$('searchFolderSelect').value||'CURRENT';
   const targetFolder=scopeVal==='CURRENT'?state.currentFolder:scopeVal;
   const includeBody=$('searchIncludeBody').checked;
+  if(!state.searchMode)pushUiHistory('search');
   state.page=Math.max(1,Number(page)||1);state.searchMode=true;state.searchQuery=q;state.selected.clear();
   $('clearSearchBtn').classList.remove('hidden');
   $('pageTitle').textContent='Hasil Pencarian';
@@ -1737,7 +1744,9 @@ async function openMessage(uid,folder){
   const cacheKey=msgFolder+':'+uid;
   state.activeMessageKey=listKey;
   state.allowExternalImages=false;
+  const wasReading=$('dashboard').classList.contains('mobile-reading');
   $('dashboard').classList.add('mobile-reading');
+  if(!wasReading)pushUiHistory('message');
   const listMsg=state.messages.find(m=>Number(m.uid)===Number(uid)&&(m.folder||state.currentFolder)===msgFolder);
   const flagged=Boolean(listMsg&&(listMsg.flagged||(listMsg.flags||[]).includes('\\Flagged')));
   if(listMsg){
@@ -1751,7 +1760,7 @@ async function openMessage(uid,folder){
   if(cached){state.currentMessage={...cached,flagged};renderMessage();return}
 
   $('messageView').innerHTML=`<div class="detail-toolbar"><button type="button" class="btn btn-outline mobile-only" id="backMobileLoading">← Kembali</button><span style="font-size:13px;font-weight:600">Memuat isi email lengkap dari server...</span></div><div class="empty-state"><strong style="color:var(--on-bg)">Mengambil isi email...</strong></div>`;
-  $('backMobileLoading')?.addEventListener('click',()=>$('dashboard').classList.remove('mobile-reading'));
+  $('backMobileLoading')?.addEventListener('click',()=>goBackOr(()=>$('dashboard').classList.remove('mobile-reading')));
 
   try{
     const params=new URLSearchParams({folder:msgFolder});
@@ -1762,7 +1771,7 @@ async function openMessage(uid,folder){
     renderMessage();
   }catch(err){
     $('messageView').innerHTML=`<div class="detail-toolbar"><button type="button" class="btn btn-outline mobile-only" id="backMobileErr">← Kembali</button></div><div class="empty-state"><strong style="color:var(--error)">Gagal membuka email</strong><span style="font-size:13px">${esc(err.message)}</span></div>`;
-    $('backMobileErr')?.addEventListener('click',()=>$('dashboard').classList.remove('mobile-reading'));
+    $('backMobileErr')?.addEventListener('click',()=>goBackOr(()=>$('dashboard').classList.remove('mobile-reading')));
   }
 }
 
@@ -1822,7 +1831,7 @@ function renderMessage(){
       </div>
     </div>`;
 
-  $('backMessage')?.addEventListener('click',()=>$('dashboard').classList.remove('mobile-reading'));
+  $('backMessage')?.addEventListener('click',()=>goBackOr(()=>$('dashboard').classList.remove('mobile-reading')));
   $('detailStarBtn').onclick=()=>toggleStarMessage(m.uid,m.folder,Boolean(m.flagged));
   $('archiveMessage').onclick=()=>actionMessages('archive',[{uid:m.uid,folder:m.folder}]).then(()=>{state.currentMessage=null;state.activeMessageKey='';renderEmptyDetail()});
   $('deleteMessage').onclick=()=>actionMessages('delete',[{uid:m.uid,folder:m.folder}]).then(()=>{state.currentMessage=null;state.activeMessageKey='';renderEmptyDetail()});
@@ -1902,8 +1911,9 @@ function openCompose(keepFields=false){
   $('composeSmtpHost').value=a.smtpHost||'';
   $('composeSmtpPort').value=a.smtpPort||465;
   $('composeSmtpSecure').value=String(a.smtpSecure!==false);
+  if($('composeModal').classList.contains('hidden'))pushUiHistory('composeModal');
   $('composeModal').classList.remove('hidden');
-  closeSidebar();
+  closeSidebar(true);
 }
 $('composeBtn').onclick=()=>openCompose(false);
 $('toggleCcBtn').onclick=()=>$('composeCcWrap').classList.toggle('hidden');
@@ -1926,15 +1936,62 @@ $('composeForm').addEventListener('submit',async e=>{
 });
 
 /* ========================================
-   MODALS & MOBILE SIDEBAR
+   MODALS, MOBILE SIDEBAR & SWIPE-BACK NAVIGATION
    ======================================== */
-document.querySelectorAll('[data-close]').forEach(btn=>btn.onclick=()=>$(btn.dataset.close).classList.add('hidden'));
-document.querySelectorAll('.modal-backdrop').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.add('hidden')}));
-function openSidebar(){$('sidebar').classList.add('open');$('sidebarOverlay').classList.add('active')}
-function closeSidebar(){$('sidebar').classList.remove('open');$('sidebarOverlay').classList.remove('active')}
+let handlingPopState=false;
+let uiHistoryDepth=0;
+
+function pushUiHistory(view){
+  if(handlingPopState)return;
+  try{
+    uiHistoryDepth++;
+    history.pushState({dankeView:view,depth:uiHistoryDepth},'');
+  }catch{}
+}
+function goBackOr(fallback){
+  if(uiHistoryDepth>0&&history.state&&history.state.dankeView){
+    history.back();
+  }else if(typeof fallback==='function'){
+    fallback();
+  }
+}
+
+window.handleAndroidBack=function(fromNative=false){
+  if(fromNative&&uiHistoryDepth>0&&history.state&&history.state.dankeView){
+    history.back();
+    return true;
+  }
+  if(!$('providerModal').classList.contains('hidden')){$('providerModal').classList.add('hidden');return true}
+  if(!$('composeModal').classList.contains('hidden')){$('composeModal').classList.add('hidden');return true}
+  if(!$('themeModal').classList.contains('hidden')){$('themeModal').classList.add('hidden');return true}
+  if($('sidebar').classList.contains('open')){closeSidebar(true);return true}
+  if(!$('loginPage').classList.contains('hidden')&&activeAccount()){showDashboard();return true}
+  if($('dashboard').classList.contains('mobile-reading')){$('dashboard').classList.remove('mobile-reading');return true}
+  if(state.searchMode){clearSearch();return true}
+  return false;
+};
+
+window.addEventListener('popstate',()=>{
+  handlingPopState=true;
+  uiHistoryDepth=Math.max(0,uiHistoryDepth-1);
+  try{window.handleAndroidBack()}finally{handlingPopState=false}
+});
+
+document.querySelectorAll('[data-close]').forEach(btn=>btn.onclick=()=>goBackOr(()=>$(btn.dataset.close).classList.add('hidden')));
+document.querySelectorAll('.modal-backdrop').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)goBackOr(()=>bg.classList.add('hidden'))}));
+function openSidebar(){
+  if(!$('sidebar').classList.contains('open'))pushUiHistory('sidebar');
+  $('sidebar').classList.add('open');$('sidebarOverlay').classList.add('active');
+}
+function closeSidebar(silent=false){
+  if(!silent&&$('sidebar').classList.contains('open')&&history.state?.dankeView==='sidebar'){
+    history.back();return;
+  }
+  $('sidebar').classList.remove('open');$('sidebarOverlay').classList.remove('active');
+}
 $('menuBtn').onclick=openSidebar;
-$('sidebarClose').onclick=closeSidebar;
-$('sidebarOverlay').onclick=closeSidebar;
+$('sidebarClose').onclick=()=>closeSidebar(false);
+$('sidebarOverlay').onclick=()=>closeSidebar(false);
 
 /* ========================================
    INIT
